@@ -2965,19 +2965,25 @@ function renderPerfTab(){
             bar3data.push([xi,si,v]);
           });
         });
+        // Horizontal 3D bars: x=series, y=etapa, z=value
+        const bar3dataH=[];
+        roots.forEach((r,yi)=>{
+          [rBudget[yi],rConsumed[yi],rReal[yi]].forEach((v,xi)=>{
+            bar3dataH.push([xi,yi,v]);
+          });
+        });
         c3.setOption({backgroundColor:bg,
-          tooltip:{formatter:p=>`${rLabels[p.data[0]]}<br/>${series3[p.data[1]]}: ${p.data[2]}h`},
-          xAxis3D:{type:'category',data:rLabels,axisLabel:{color:txtColor,fontSize:9}},
-          yAxis3D:{type:'category',data:series3,axisLabel:{color:txtColor,fontSize:10}},
-          zAxis3D:{type:'value',name:'Horas',axisLabel:{color:txtColor,fontSize:9}},
-          grid3D:{boxWidth:120,boxDepth:60,boxHeight:70,
-            light:{main:{intensity:1.2,shadow:true},ambient:{intensity:.4}},
-            viewControl:{alpha:25,beta:40,animationDurationUpdate:0,rotateSensitivity:0,zoomSensitivity:0,panSensitivity:0}},
-          series:[{type:'bar3D',data:bar3data,shading:'lambert',
-            itemStyle:{opacity:.88},
-            colorBy:'data',
-            encode:{x:0,y:1,z:2,tooltip:[0,1,2]},
-            itemStyle:{color:p=>colors3[p.data[1]]||'#38bdf8'}}]
+          tooltip:{formatter:p=>`${rLabels[p.data[1]]}<br/>${series3[p.data[0]]}: <b>${p.data[2]}h</b>`},
+          xAxis3D:{type:'category',data:series3,axisLabel:{color:txtColor,fontSize:10},axisLine:{lineStyle:{color:'#334155'}}},
+          yAxis3D:{type:'category',data:rLabels,axisLabel:{color:txtColor,fontSize:9},axisLine:{lineStyle:{color:'#334155'}}},
+          zAxis3D:{type:'value',name:'h',axisLabel:{color:txtColor,fontSize:9},axisLine:{lineStyle:{color:'#334155'}}},
+          grid3D:{boxWidth:80,boxDepth:100,boxHeight:60,
+            light:{main:{intensity:1.4,shadow:true,shadowQuality:'high'},ambient:{intensity:.5}},
+            viewControl:{alpha:18,beta:-25,animationDurationUpdate:0,rotateSensitivity:0,zoomSensitivity:0,panSensitivity:0}},
+          series:[{type:'bar3D',data:bar3dataH,shading:'lambert',
+            bevelSize:0.2,bevelSmoothness:2,
+            itemStyle:{opacity:.92,color:p=>colors3[p.data[0]]||'#38bdf8'},
+            label:{show:false}}]
         });
       }
     }
@@ -2994,16 +3000,24 @@ function renderPerfTab(){
             costData.push([xi,si,v]);
           });
         });
+        const costDataH=[];
+        roots.forEach((r,yi)=>{
+          [rCostPlan[yi],rCostReal[yi]].forEach((v,xi)=>{
+            costDataH.push([xi,yi,v]);
+          });
+        });
         c4.setOption({backgroundColor:bg,
-          tooltip:{formatter:p=>`${rLabels[p.data[0]]}<br/>${costSeries[p.data[1]]}: R$ ${Number(p.data[2]).toLocaleString('pt-BR',{minimumFractionDigits:2})}`},
-          xAxis3D:{type:'category',data:rLabels,axisLabel:{color:txtColor,fontSize:9}},
-          yAxis3D:{type:'category',data:costSeries,axisLabel:{color:txtColor,fontSize:10}},
-          zAxis3D:{type:'value',name:'R$',axisLabel:{color:txtColor,fontSize:9}},
-          grid3D:{boxWidth:120,boxDepth:50,boxHeight:70,
-            light:{main:{intensity:1.2,shadow:true},ambient:{intensity:.4}},
-            viewControl:{alpha:25,beta:40,animationDurationUpdate:0,rotateSensitivity:0,zoomSensitivity:0,panSensitivity:0}},
-          series:[{type:'bar3D',data:costData,shading:'lambert',
-            itemStyle:{opacity:.88,color:p=>costColors[p.data[1]]||'#a78bfa'}}]
+          tooltip:{formatter:p=>`${rLabels[p.data[1]]}<br/>${costSeries[p.data[0]]}: <b>R$ ${Number(p.data[2]).toLocaleString('pt-BR',{minimumFractionDigits:2})}</b>`},
+          xAxis3D:{type:'category',data:costSeries,axisLabel:{color:txtColor,fontSize:10},axisLine:{lineStyle:{color:'#334155'}}},
+          yAxis3D:{type:'category',data:rLabels,axisLabel:{color:txtColor,fontSize:9},axisLine:{lineStyle:{color:'#334155'}}},
+          zAxis3D:{type:'value',name:'R$',axisLabel:{color:txtColor,fontSize:9,formatter:v=>'R$'+Number(v).toLocaleString('pt-BR')},axisLine:{lineStyle:{color:'#334155'}}},
+          grid3D:{boxWidth:60,boxDepth:100,boxHeight:60,
+            light:{main:{intensity:1.4,shadow:true,shadowQuality:'high'},ambient:{intensity:.5}},
+            viewControl:{alpha:18,beta:-25,animationDurationUpdate:0,rotateSensitivity:0,zoomSensitivity:0,panSensitivity:0}},
+          series:[{type:'bar3D',data:costDataH,shading:'lambert',
+            bevelSize:0.2,bevelSmoothness:2,
+            itemStyle:{opacity:.92,color:p=>costColors[p.data[0]]||'#a78bfa'},
+            label:{show:false}}]
         });
       }
     }
