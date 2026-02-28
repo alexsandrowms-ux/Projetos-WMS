@@ -1585,37 +1585,65 @@ function renderStages(){
     const overBudget=remaining<0;
     const barCls=overBudget?'hbudget-over':pctUsed>=90?'hbudget-warn':'hbudget-ok';
     const lastKidIdx=kids.length-1;
+    const realizado=kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
+    const ps=prazoStatus(root);
     return`<div class="stage-section">
-      <div class="sroot">
-        <div class="sroot-bar" style="background:${col}"></div>
-        <div class="sroot-body" onclick="toggleKids('${root.id}')">
-          <span class="snum" style="background:${col}22;color:${col};border:1px solid ${col}44">${esc(root.num)||'–'}</span>
-          <span class="sname" title="${esc(root.name)}">${esc(root.name)}</span>
-          <div style="flex:1;min-width:0">
-            <div class="smeta">
-              <span>📦 Orçamento: <strong>${budget}h</strong></span>
-              <span>▶ Consumido: <strong>${consumed}h</strong></span>
-              ${kids.length>0?`<span>✔ Realizado: <strong style="color:var(--green)">${kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)}h</strong></span>`:''}
-              ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}">${overBudget?'⚠️ +'+Math.abs(remaining)+'h excedido':remaining===0?'✅ Exato':'💚 '+remaining+'h livre'}</span>`:''}
-              <span>👤 ${esc(root.executor||'—')}</span>
-              <span>📅 ${fDS(root.date)}</span>
-              ${root.dateEnd?`<span>🏁 ${fDS(root.dateEnd)}</span>`:''}
-              <span class="badge ${SB[root.status]||'badge-gray'}">${SE[root.status]||''} ${root.status}</span>
-              ${root.dateReal?`<span style="font-size:11px;color:var(--green)">✅ Concluída em: <strong>${fDS(root.dateReal)}</strong></span>`:''}
-              ${(()=>{const ps=prazoStatus(root);return`<span class="ps-badge ${ps.cls}">${ps.icon} ${ps.label}</span>`;})()}
+      <div class="sroot" style="border:1px solid var(--border);border-left:3px solid ${col};border-radius:var(--r);overflow:hidden;margin-bottom:4px;transition:border-color .15s,box-shadow .15s">
+        <div style="display:flex;align-items:stretch">
+          <div class="sroot-body" onclick="toggleKids('${root.id}')">
+            <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40;font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px;flex-shrink:0">${esc(root.num)||'–'}</span>
+            <div style="flex:1;min-width:0">
+              <span class="sname" title="${esc(root.name)}" style="font-weight:700;font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(root.name)}</span>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px">
+                <span class="badge ${SB[root.status]||'badge-gray'}" style="font-size:9px">${SE[root.status]||''} ${root.status}</span>
+                <span class="ps-badge ${ps.cls}" style="font-size:9px">${ps.icon} ${ps.label}</span>
+                ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}" style="font-size:9px">${overBudget?'⚠️ +'+Math.abs(remaining)+'h':remaining===0?'✅ Exato':'💚 '+remaining+'h livre'}</span>`:''}
+              </div>
             </div>
-            ${kids.length>0?`<div class="hbudget">
-              <span style="font-size:10px;color:var(--dim);min-width:28px">${pctUsed}%</span>
-              <div class="hbudget-bar-wrap"><div class="hbudget-bar ${barCls}" style="width:${pctUsed}%"></div></div>
-              <span class="hbudget-label" style="color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'}">${overBudget?'⚠️':''} ${consumed}/${budget}h</span>
-            </div>`:''}
+            <span class="schev open" id="chev_${root.id}" style="color:var(--dim);font-size:11px;flex-shrink:0;transition:transform .2s;padding:0 4px">▼</span>
           </div>
-          <span class="schev open" id="chev_${root.id}">▼</span>
+          <div class="sroot-acts">
+            <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${root.id}')">✏️</button>
+            <button class="btn btn-success btn-xs" onclick="openStageModal(true,null,'${root.id}')">+ Sub</button>
+            <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${root.id}')">🗑</button>
+          </div>
         </div>
-        <div class="sroot-acts">
-          <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${root.id}')">✏️</button>
-          <button class="btn btn-success btn-xs" onclick="openStageModal(true,null,'${root.id}')">+ Sub</button>
-          <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${root.id}')">🗑</button>
+        <div style="display:flex;align-items:center;gap:20px;padding:6px 14px 8px 46px;border-top:1px solid rgba(255,255,255,.05);flex-wrap:wrap">
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Responsável</span>
+            <span style="font-size:12px;font-weight:600;color:var(--text)">${esc(root.executor||'—')}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Início</span>
+            <span style="font-size:12px;font-weight:600;color:var(--text)">${fDS(root.date)||'—'}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Término Plan.</span>
+            <span style="font-size:12px;font-weight:600;color:var(--text)">${fDS(root.dateEnd)||'—'}</span>
+          </div>
+          ${root.dateReal?`<div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Conclusão</span>
+            <span style="font-size:12px;font-weight:600;color:var(--green)">${fDS(root.dateReal)}</span>
+          </div>`:''}
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Orçamento</span>
+            <span style="font-size:12px;font-weight:700;color:var(--amber)">${budget}h</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Consumido</span>
+            <span style="font-size:12px;font-weight:700;color:var(--text)">${consumed}h</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:1px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Realizado</span>
+            <span style="font-size:12px;font-weight:700;color:var(--green)">${realizado}h</span>
+          </div>
+          ${kids.length>0?`<div style="flex:1;min-width:140px;display:flex;flex-direction:column;gap:3px">
+            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">${pctUsed}% do orçamento</span>
+            <div class="hbudget" style="margin-top:0">
+              <div class="hbudget-bar-wrap"><div class="hbudget-bar ${barCls}" style="width:${pctUsed}%"></div></div>
+              <span style="font-size:10px;font-weight:700;color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'};white-space:nowrap">${consumed}/${budget}h</span>
+            </div>
+          </div>`:''}
         </div>
       </div>
       <div class="substages-wrap" id="kids_${root.id}">
@@ -1625,7 +1653,7 @@ function renderStages(){
           <div class="ssrow-body">
             <div class="sc sc-name">
               <span class="sc-lbl">Sub-etapa</span>
-              <span class="sc-val" style="color:var(--text);font-weight:600" title="${esc(k.name)}">
+              <span class="sc-val" style="font-weight:600" title="${esc(k.name)}">
                 <span style="color:${col};font-weight:800;margin-right:5px">${esc(k.num)||'–'}</span>${esc(k.name)}
               </span>
             </div>
@@ -1656,7 +1684,7 @@ function renderStages(){
             </div>
             <div class="sc sc-sm">
               <span class="sc-lbl">Prazo</span>
-              <span class="ps-badge ${kps.cls}" style="margin-top:2px">${kps.icon} ${kps.label}</span>
+              <span class="ps-badge ${kps.cls}" style="margin-top:2px;font-size:9px">${kps.icon} ${kps.label}</span>
             </div>
           </div>
           <div class="ssrow-acts">
