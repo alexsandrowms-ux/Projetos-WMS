@@ -300,6 +300,7 @@ textarea.fc{resize:vertical;min-height:60px}
   .sidebar{width:180px}
 }
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -532,12 +533,16 @@ textarea.fc{resize:vertical;min-height:60px}
           <div class="dtab on" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
           <div class="dtab" id="dtab-gantt"  onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
           <div class="dtab" id="dtab-cost"   onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
+          <div class="dtab" id="dtab-perf"   onclick="switchTab(this,'tab-perf');renderPerfTab()">📈 Análise de Performance</div>
         </div>
         <div id="tab-stages">
           <div id="stages-list"></div>
           <div class="add-root-btn" onclick="openStageModal()">
             <span style="font-size:17px;color:var(--accent)">+</span> Adicionar Etapa Principal
           </div>
+        </div>
+        <div id="tab-perf" style="display:none">
+          <div id="perf-content" style="padding:4px 0"></div>
         </div>
         <div id="tab-cost" style="display:none">
           <div id="cost-content"></div>
@@ -1595,6 +1600,7 @@ function renderDetail(){
   document.getElementById('tab-stages').style.display='block';
   document.getElementById('tab-gantt').style.display='none';
   if(document.getElementById('tab-cost')) document.getElementById('tab-cost').style.display='none';
+  if(document.getElementById('tab-perf')) document.getElementById('tab-perf').style.display='none';
 }
 
 // ════════════════════════════════════
@@ -2842,12 +2848,143 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
+// ════════════════════════════════════
+// PERFORMANCE TAB — CHARTS
+// ════════════════════════════════════
+let _perfCharts=[];
+function destroyPerfCharts(){_perfCharts.forEach(c=>{try{c.destroy();}catch(e){}});_perfCharts=[];}
+
+function renderPerfTab(){
+  const proj=getP(S.cur);if(!proj)return;
+  const el=document.getElementById('perf-content');if(!el)return;
+  destroyPerfCharts();
+
+  const stages=proj.stages||[];
+  const roots=stages.filter(s=>!s.parentId);
+  const subs=stages.filter(s=>s.parentId);
+  const defRate=parseFloat(proj.defaultRate)||0;
+
+  // Status distribution
+  const stMap={Pendente:0,'Em Andamento':0,'Concluído':0,'Bloqueado':0};
+  stages.forEach(s=>{if(stMap[s.status]!==undefined)stMap[s.status]++;});
+
+  // Prazo distribution
+  const pzMap={'Finalizada':0,'Dentro do Prazo':0,'Em Risco':0,'Atrasada':0,'Não Iniciada':0,'Sem prazo':0};
+  stages.forEach(s=>{const p=prazoStatus(s);const k=Object.keys(pzMap).find(k=>p.label.startsWith(k))||'Sem prazo';pzMap[k]++;});
+
+  // Budget/hours per root
+  const rLabels=roots.map(r=>(r.num?r.num+' ':'')+r.name.substring(0,18));
+  const rBudget=roots.map(r=>parseFloat(r.hours)||0);
+  const rConsumed=roots.map(r=>{const k=stages.filter(s=>s.parentId===r.id);return k.length>0?k.reduce((a,s)=>a+(parseFloat(s.hours)||0),0):parseFloat(r.hours)||0;});
+  const rReal=roots.map(r=>stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0));
+
+  // Cost per root
+  const rCostPlan=roots.map(r=>Math.round((parseFloat(r.hours)||0)*(r.hourRate||defRate)*100)/100);
+  const rCostReal=roots.map(r=>{const rate=r.hourRate||defRate;return Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)*rate*100)/100;});
+  const hasCost=rCostPlan.some(v=>v>0);
+
+  // Burndown
+  const done=subs.filter(s=>s.status==='Concluído'&&s.dateReal).sort((a,b)=>a.dateReal.localeCompare(b.dateReal));
+  const totalH=roots.reduce((a,r)=>a+(parseFloat(r.hours)||0),0);
+  let acc=0;
+  const bLabels=['Início',...done.map(s=>fDS(s.dateReal))];
+  const bData=[totalH,...done.map(s=>{acc+=(parseFloat(s.hoursReal)||0);return Math.max(0,totalH-acc);})];
+  const bIdeal=bLabels.map((_,i)=>Math.round(totalH*(1-i/Math.max(bLabels.length-1,1))));
+
+  const gGrid={color:'rgba(255,255,255,.05)'};
+  const gTick={color:'#64748b',font:{size:10}};
+  const gLeg={labels:{color:'#94a3b8',font:{size:11}}};
+
+  el.innerHTML=`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="card" style="padding:16px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:12px">📊 Status das Etapas</div>
+      <div style="height:220px;position:relative"><canvas id="ch-status"></canvas></div>
+    </div>
+    <div class="card" style="padding:16px">
+      <div style="font-size:12px;font-weight:700;margin-bottom:12px">🗓️ Situação de Prazo</div>
+      <div style="height:220px;position:relative"><canvas id="ch-prazo"></canvas></div>
+    </div>
+  </div>
+  <div class="card" style="padding:16px;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;margin-bottom:12px">📦 Orçamento × Consumido × Realizado por Etapa (h)</div>
+    <div style="height:260px;position:relative"><canvas id="ch-budget"></canvas></div>
+  </div>
+  ${hasCost?`<div class="card" style="padding:16px;margin-bottom:16px">
+    <div style="font-size:12px;font-weight:700;margin-bottom:12px">💰 Custo Planejado × Real por Etapa (R$)</div>
+    <div style="height:260px;position:relative"><canvas id="ch-cost"></canvas></div>
+  </div>`:''}
+  ${bLabels.length>1?`<div class="card" style="padding:16px">
+    <div style="font-size:12px;font-weight:700;margin-bottom:12px">📉 Burndown de Horas</div>
+    <div style="height:240px;position:relative"><canvas id="ch-burn"></canvas></div>
+  </div>`:''}`;
+
+  const donutOpts={responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11},padding:10,boxWidth:12}}}};
+
+  // Status donut
+  const stLabels=Object.keys(stMap).filter(k=>stMap[k]>0);
+  _perfCharts.push(new Chart(document.getElementById('ch-status'),{
+    type:'doughnut',
+    data:{labels:stLabels,datasets:[{data:stLabels.map(k=>stMap[k]),backgroundColor:['#475569','#3b82f6','#22c55e','#ef4444'],borderWidth:0,hoverOffset:8}]},
+    options:donutOpts
+  }));
+
+  // Prazo donut
+  const pzColors={'Finalizada':'#22c55e','Dentro do Prazo':'#38bdf8','Em Risco':'#f59e0b','Atrasada':'#ef4444','Não Iniciada':'#a78bfa','Sem prazo':'#475569'};
+  const pzLabels=Object.keys(pzMap).filter(k=>pzMap[k]>0);
+  _perfCharts.push(new Chart(document.getElementById('ch-prazo'),{
+    type:'doughnut',
+    data:{labels:pzLabels,datasets:[{data:pzLabels.map(k=>pzMap[k]),backgroundColor:pzLabels.map(k=>pzColors[k]||'#475569'),borderWidth:0,hoverOffset:8}]},
+    options:donutOpts
+  }));
+
+  // Budget bar
+  _perfCharts.push(new Chart(document.getElementById('ch-budget'),{
+    type:'bar',
+    data:{labels:rLabels,datasets:[
+      {label:'Orçamento',data:rBudget,backgroundColor:'rgba(245,158,11,.65)',borderRadius:4},
+      {label:'Consumido (plan.)',data:rConsumed,backgroundColor:'rgba(14,165,233,.55)',borderRadius:4},
+      {label:'Realizado',data:rReal,backgroundColor:'rgba(34,197,94,.65)',borderRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:gLeg},
+      scales:{x:{ticks:gTick,grid:gGrid},y:{ticks:gTick,grid:gGrid,beginAtZero:true}}}
+  }));
+
+  // Cost bar
+  if(hasCost){
+    _perfCharts.push(new Chart(document.getElementById('ch-cost'),{
+      type:'bar',
+      data:{labels:rLabels,datasets:[
+        {label:'Custo Planejado (R$)',data:rCostPlan,backgroundColor:'rgba(245,158,11,.65)',borderRadius:4},
+        {label:'Custo Real (R$)',data:rCostReal,backgroundColor:'rgba(167,139,250,.65)',borderRadius:4}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:gLeg},
+        scales:{x:{ticks:gTick,grid:gGrid},
+          y:{ticks:{...gTick,callback:v=>'R$'+Number(v).toLocaleString('pt-BR')},grid:gGrid,beginAtZero:true}}}
+    }));
+  }
+
+  // Burndown line
+  if(bLabels.length>1){
+    _perfCharts.push(new Chart(document.getElementById('ch-burn'),{
+      type:'line',
+      data:{labels:bLabels,datasets:[
+        {label:'Horas Restantes',data:bData,borderColor:'#38bdf8',backgroundColor:'rgba(14,165,233,.12)',fill:true,tension:.35,pointBackgroundColor:'#38bdf8',pointRadius:4},
+        {label:'Linha Ideal',data:bIdeal,borderColor:'rgba(100,116,139,.45)',borderDash:[6,4],pointRadius:0,fill:false}
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:gLeg},
+        scales:{x:{ticks:gTick,grid:gGrid},y:{ticks:gTick,grid:gGrid,beginAtZero:true}}}
+    }));
+  }
+}
+
 function switchTab(el,tid){
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  ['tab-stages','tab-gantt','tab-cost'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display=id===tid?'block':'none';});
+  ['tab-stages','tab-gantt','tab-cost','tab-perf'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display=id===tid?'block':'none';});
   if(tid==='tab-gantt')renderGantt();
   if(tid==='tab-cost')renderCostTab();
+  if(tid==='tab-perf')renderPerfTab();
 }
 
 // Drag & drop
