@@ -426,10 +426,10 @@ textarea.fc{resize:vertical;min-height:60px}
           <div class="sb-av" id="sb-av"></div>
           <div class="sb-av-overlay">📷</div>
         </div>
-        <label class="sb-photo-btn">
+        <label class="sb-photo-btn" onclick="document.getElementById('sb-file-input').click()">
           📷 Trocar foto
-          <input type="file" accept="image/*" style="display:none" onchange="handleSidebarAvatar(this)">
         </label>
+        <input type="file" id="sb-file-input" accept="image/*" style="display:none" onchange="handleSidebarAvatar(this)">
         <div class="sb-name" id="sb-name">—</div>
         <div class="sb-role" id="sb-role">—</div><br>
         <div class="pw-chip pw-ok" id="sb-pw">🟢 Senha válida</div>
@@ -1182,18 +1182,23 @@ function doLogout(){
 function handleSidebarAvatar(input){
   const file = input.files[0];
   if(!file) return;
-  if(file.size > 2*1024*1024){toast('Imagem muito grande (máx 2MB)','err');return;}
+  if(file.size > 2*1024*1024){toast('Imagem muito grande (máx 2MB)','err');input.value='';return;}
   const reader = new FileReader();
   reader.onload = e => {
-    // Save to current user
+    const base64 = e.target.result;
     const users = getUsers();
     const idx = users.findIndex(u=>u.id===CU?.id);
-    if(idx<0) return;
-    users[idx].avatar = e.target.result;
-    CU.avatar = e.target.result;
+    if(idx<0){toast('Usuário não encontrado','err');return;}
+    users[idx].avatar = base64;
+    CU.avatar = base64;
     putUsers(users);
     saveSession();
-    updateSidebar();
+    // Render directly into the circle
+    const av = document.getElementById('sb-av');
+    av.textContent='';
+    av.innerHTML=`<img src="${base64}" style="width:64px;height:64px;object-fit:cover;border-radius:50%;display:block">`;
+    av.style.cssText='overflow:hidden;width:64px;height:64px;border-radius:50%';
+    input.value=''; // reset so same file can be selected again
     toast('Foto atualizada ✓');
   };
   reader.readAsDataURL(file);
