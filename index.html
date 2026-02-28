@@ -2444,8 +2444,8 @@ function exportHTML(projs){
       const rc=PCOLS[ri%PCOLS.length];const kids=cm[r.id]||[];
       const defRate=parseFloat(p.defaultRate)||0;
       function rowCells(s,indent){
-        const rate=s.hourRate||defRate;const hp=parseFloat(s.hours)||0;const hr=parseFloat(s.hoursReal)||0;
-        const cp=hp*rate;const cr=hr*rate;const vr=cp-cr;
+        const rate=s.hourRate||defRate;const hp=Math.round((parseFloat(s.hours)||0)*100)/100;const hr=Math.round((parseFloat(s.hoursReal)||0)*100)/100;
+        const cp=Math.round(hp*rate*100)/100;const cr=Math.round(hr*rate*100)/100;const vr=Math.round((cp-cr)*100)/100;
         const ps2=prazoStatus(s);
         const prefix=indent?`<td style="padding-left:18px">${esc(s.num||'')}</td><td style="padding-left:18px">↳ ${esc(s.name)}</td>`:`<td>${esc(s.num||'')}</td><td><strong>${esc(s.name)}</strong></td>`;
         return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td>${hp}h</td><td>${hr}h</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
@@ -2457,8 +2457,8 @@ function exportHTML(projs){
       const allS=p.stages||[];
       const totHP=allS.reduce((a,s)=>a+(parseFloat(s.hours)||0),0);
       const totHR=allS.reduce((a,s)=>a+getHoursReal(s,allS),0);
-      const totCP=allS.reduce((a,s)=>{const r=s.hourRate||defRate;return a+(parseFloat(s.hours)||0)*r;},0);
-      const totCR=allS.reduce((a,s)=>{const r=s.hourRate||defRate;return a+getHoursReal(s,allS)*r;},0);
+      const totCP=Math.round(allS.reduce((a,s)=>{const r=s.hourRate||defRate;return a+(parseFloat(s.hours)||0)*r;},0)*100)/100;
+      const totCR=Math.round(allS.reduce((a,s)=>{const r=s.hourRate||defRate;return a+getHoursReal(s,allS)*r;},0)*100)/100;
       const totV=totCP-totCR;
       const cur=v=>'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
       return`<tfoot><tr style="background:#f1f5f9;font-weight:800;border-top:2px solid #cbd5e1">
