@@ -647,7 +647,10 @@ textarea.fc{resize:vertical;min-height:60px}
         <div class="fg"><label>Horas Planejadas</label><input class="fc" type="number" id="fs-hours" placeholder="Ex: 8" min="0"></div>
       </div>
       <div class="frow">
-        <div class="fg"><label>Horas Realizadas</label><input class="fc" type="number" id="fs-hoursreal" placeholder="Ex: 10" min="0"></div>
+        <div class="fg" id="fs-hoursreal-wrap"><label>Horas Realizadas</label>
+          <input class="fc" type="number" id="fs-hoursreal" placeholder="Ex: 10" min="0">
+          <span id="fs-hoursreal-auto" style="display:none;font-size:12px;color:var(--green);padding:8px 4px;font-weight:600"></span>
+        </div>
         <div class="fg"><label>💰 Valor/hora (R$) <span style="font-size:10px;color:var(--dim)">(vazio = padrão do projeto)</span></label><input class="fc" type="number" id="fs-rate" placeholder="Ex: 150.00" min="0" step="0.01"></div>
       </div>
       <div class="frow">
@@ -1588,6 +1591,7 @@ function renderStages(){
             <div class="smeta">
               <span>📦 Orçamento: <strong>${budget}h</strong></span>
               <span>▶ Consumido: <strong>${consumed}h</strong></span>
+              ${kids.length>0?`<span>✔ Realizado: <strong style="color:var(--green)">${kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)}h</strong></span>`:''}
               ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}">${overBudget?'⚠️ +'+Math.abs(remaining)+'h excedido':remaining===0?'✅ Exato':'💚 '+remaining+'h livre'}</span>`:''}
               <span>👤 ${esc(root.executor||'—')}</span>
               <span>📅 ${fDS(root.date)}</span>
@@ -1645,6 +1649,15 @@ function renderStages(){
 // ════════════════════════════════════
 // EVM — EARNED VALUE MANAGEMENT (PMBOK)
 // ════════════════════════════════════
+// Returns effective hoursReal: for root = sum of kids, for sub = own value
+function getHoursReal(stage, allStages){
+  const kids = allStages.filter(s=>s.parentId===stage.id);
+  if(kids.length>0){
+    return kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
+  }
+  return parseFloat(stage.hoursReal)||0;
+}
+
 function calcEVM(proj){
   const stages = (proj.stages||[]);
   const defRate = parseFloat(proj.defaultRate)||0;
@@ -1655,7 +1668,7 @@ function calcEVM(proj){
   stages.forEach(s=>{
     const rate      = s.hourRate || defRate;
     const hPlan     = parseFloat(s.hours)||0;
-    const hReal     = parseFloat(s.hoursReal)||0;
+    const hReal     = getHoursReal(s, stages);
     const dateEnd   = s.dateEnd ? new Date(s.dateEnd+'T00:00:00') : null;
     const done      = s.status === 'Concluído';
 
@@ -2080,8 +2093,28 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   document.getElementById('fs-date').value=stage?.date||'';
   document.getElementById('fs-dateend').value=stage?.dateEnd||'';
   document.getElementById('fs-datereal').value=stage?.dateReal||'';
-  if(document.getElementById('fs-hoursreal')) document.getElementById('fs-hoursreal').value=stage?.hoursReal||'';
   if(document.getElementById('fs-rate')) document.getElementById('fs-rate').value=stage?.hourRate||'';
+  // Horas Realizadas: root = auto (soma das sub-etapas), sub = manual
+  const proj2=getP(S.cur);
+  const isRoot = !(document.getElementById('fs-parent')?.value || (stage?.parentId) || defParent);
+  const hrWrap = document.getElementById('fs-hoursreal-wrap');
+  const hrAuto = document.getElementById('fs-hoursreal-auto');
+  const hrInput = document.getElementById('fs-hoursreal');
+  if(hrWrap && hrAuto && hrInput){
+    if(!isNew && stage && !stage.parentId){
+      // Editing root: show auto sum
+      const kids2=(proj2?.stages||[]).filter(s=>s.parentId===stage.id);
+      const autoSum=kids2.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
+      hrInput.value='';
+      hrInput.style.display='none';
+      hrAuto.textContent=autoSum+'h (automático — soma das sub-etapas)';
+      hrAuto.style.display='block';
+    } else {
+      hrInput.style.display='';
+      hrInput.value=stage?.hoursReal||'';
+      hrAuto.style.display='none';
+    }
+  }
   document.getElementById('fs-hours').value=stage?.hours||'';
   document.getElementById('fs-status').value=stage?.status||'Pendente';
   const roots=(proj?.stages||[]).filter(s=>!s.parentId&&s.id!==editId);
@@ -2105,7 +2138,7 @@ function saveStage(){
     dateEnd:document.getElementById('fs-dateend').value,
     dateReal:document.getElementById('fs-datereal').value,
     hours:document.getElementById('fs-hours').value,
-    hoursReal:document.getElementById('fs-hoursreal')?.value||'',
+    hoursReal: (document.getElementById('fs-parent')?.value||_defParent) ? (document.getElementById('fs-hoursreal')?.value||'') : '', // root = auto from kids
     hourRate:parseFloat(document.getElementById('fs-rate')?.value)||0,
     status:document.getElementById('fs-status').value,
     parentId:document.getElementById('fs-parent').value||null};
@@ -2323,7 +2356,7 @@ function flatStages(proj){
   return(proj.stages||[]).map(s=>{
     const rate   = s.hourRate || defRate;
     const hPlan  = parseFloat(s.hours)||0;
-    const hReal  = parseFloat(s.hoursReal)||0;
+    const hReal  = getHoursReal(s, proj.stages||[]);
     const cPlan  = hPlan * rate;
     const cReal  = hReal * rate;
     const varVal = cPlan - cReal;
