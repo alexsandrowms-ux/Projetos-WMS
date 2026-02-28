@@ -291,6 +291,11 @@ textarea.fc{resize:vertical;min-height:60px}
             <button class="pw-eye" onclick="toggleEye('li-pass',this)">👁</button>
           </div>
         </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;margin-top:2px">
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12px;color:var(--mid)">
+            <input type="checkbox" id="li-remember" style="accent-color:var(--accent);width:13px;height:13px"> Lembrar email
+          </label>
+        </div>
         <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;font-size:14px" onclick="doLogin()">Entrar</button>
       </div>
 
@@ -423,6 +428,7 @@ textarea.fc{resize:vertical;min-height:60px}
       </div>
       <div class="sb-bottom">
         <div class="sb-item" onclick="openMyKey()"><span class="sb-icon">🔑</span>Minha Chave</div>
+        <div class="sb-item" onclick="openBackup()"><span class="sb-icon">💾</span>Backup / Restaurar</div>
         <div class="sb-item" onclick="doLogout()"><span class="sb-icon">🚪</span>Sair</div>
       </div>
     </div>
@@ -809,6 +815,45 @@ textarea.fc{resize:vertical;min-height:60px}
   </div>
 </div>
 
+<!-- ══ MODAL: BACKUP ══ -->
+<div class="overlay" id="modal-backup">
+  <div class="modal modal-lg">
+    <div class="mhdr"><div class="mtitle">💾 Backup / Restaurar Dados</div><button class="mclose" onclick="closeModal('modal-backup')">×</button></div>
+    <div class="mbody">
+      <div style="background:rgba(14,165,233,.07);border:1px solid rgba(14,165,233,.18);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--mid);margin-bottom:18px;line-height:1.6">
+        💡 Use o <strong style="color:var(--text)">backup</strong> para salvar todos os seus dados (projetos, etapas e usuários) em um arquivo <code style="background:var(--bg4);padding:1px 5px;border-radius:3px">.json</code> e <strong style="color:var(--text)">restaurar</strong> quando trocar de navegador, computador ou atualizar o sistema no GitHub.
+      </div>
+
+      <!-- Export -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">📤 Exportar Backup</div>
+        <div style="font-size:12px;color:var(--mid);margin-bottom:12px">Baixa um arquivo com todos os projetos, etapas e usuários cadastrados.</div>
+        <div style="display:flex;gap:8px;align-items:center" id="backup-stats"></div>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="doBackupExport()">⬇️ Baixar backup.json</button>
+      </div>
+
+      <!-- Import -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">📥 Restaurar Backup</div>
+        <div style="font-size:12px;color:var(--mid);margin-bottom:12px">Selecione um arquivo de backup exportado anteriormente. <strong style="color:var(--amber)">⚠️ Substituirá os dados atuais.</strong></div>
+        <div class="drop-zone" id="backup-drop" style="padding:18px">
+          <input type="file" accept=".json" onchange="handleBackupFile(this.files[0])">
+          <span class="drop-icon" style="font-size:28px">📂</span>
+          <div class="drop-lbl">Clique ou arraste o arquivo backup.json</div>
+        </div>
+        <div id="backup-preview" style="display:none;margin-top:10px">
+          <div style="background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.2);border-radius:6px;padding:12px;margin-bottom:10px">
+            <div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:6px">✅ Arquivo válido</div>
+            <div id="backup-preview-info" style="font-size:12px;color:var(--mid)"></div>
+          </div>
+          <button class="btn btn-danger" onclick="doBackupImport()">⚠️ Restaurar e substituir dados atuais</button>
+        </div>
+      </div>
+    </div>
+    <div class="mfooter"><button class="btn btn-ghost" onclick="closeModal('modal-backup')">Fechar</button></div>
+  </div>
+</div>
+
 <!-- ══ MODAL: CONFIRMAÇÃO ══ -->
 <div class="overlay" id="modal-confirm">
   <div class="modal modal-sm">
@@ -944,6 +989,7 @@ function showAuthMsg(id,msg,isOk=false){
 function doLogin(){
   const email=document.getElementById('li-email').value.trim().toLowerCase();
   const pass=document.getElementById('li-pass').value;
+  const remember=document.getElementById('li-remember')?.checked||false;
   document.getElementById('login-err').style.display='none';
   document.getElementById('login-ok').style.display='none';
   if(!email||!pass){showAuthMsg('login-err','Preencha email e senha.');return;}
@@ -955,6 +1001,7 @@ function doLogin(){
   const days=pwDaysLeft(user.expiry);
   if(days<=0){showAuthMsg('login-err','Senha expirada. Contate o administrador.');return;}
   CU=user;saveSession();
+  saveRememberedEmail(email, remember);
   if(days<=7){
     showAuthMsg('login-ok',`⚠️ Sua senha expira em ${days} dia(s). Solicite renovação.`,true);
     setTimeout(enterApp,2000);
@@ -1938,6 +1985,117 @@ function deleteUser(uid_){
 // MODAL UTILS & TAB
 // ════════════════════════════════════
 // ════════════════════════════════════
+// REMEMBER EMAIL
+// ════════════════════════════════════
+const EMAIL_KEY = 'axl_rem_email';
+
+function loadRememberedEmail(){
+  try{
+    const saved = localStorage.getItem(EMAIL_KEY);
+    if(saved){
+      const {email, remember} = JSON.parse(saved);
+      if(remember && email){
+        document.getElementById('li-email').value = email;
+        document.getElementById('li-remember').checked = true;
+      }
+    }
+  }catch(e){}
+}
+
+function saveRememberedEmail(email, remember){
+  try{
+    if(remember){
+      localStorage.setItem(EMAIL_KEY, JSON.stringify({email, remember:true}));
+    } else {
+      localStorage.removeItem(EMAIL_KEY);
+    }
+  }catch(e){}
+}
+
+// ════════════════════════════════════
+// BACKUP / RESTORE
+// ════════════════════════════════════
+let _backupData = null;
+
+function openBackup(){
+  _backupData = null;
+  document.getElementById('backup-preview').style.display='none';
+  document.getElementById('backup-drop').style.borderColor='';
+  document.getElementById('backup-drop').querySelector('.drop-icon').textContent='📂';
+  document.getElementById('backup-drop').querySelector('.drop-lbl').textContent='Clique ou arraste o arquivo backup.json';
+  // Show stats
+  const ps = S.projects.length;
+  const es = S.projects.reduce((a,p)=>a+(p.stages||[]).length,0);
+  const us = getUsers().length;
+  document.getElementById('backup-stats').innerHTML = `
+    <span class="badge badge-blue">📁 ${ps} projeto(s)</span>
+    <span class="badge badge-amber">📋 ${es} etapa(s)</span>
+    <span class="badge badge-purple">👥 ${us} usuário(s)</span>`;
+  openModal('modal-backup');
+}
+
+function doBackupExport(){
+  const backup = {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    exportedBy: CU?.name || '—',
+    wmsData: S,
+    users: getUsers()
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  const date = new Date().toISOString().split('T')[0];
+  a.href = URL.createObjectURL(blob);
+  a.download = `WMS_backup_${date}.json`;
+  a.click();
+  toast('Backup exportado ✓');
+}
+
+function handleBackupFile(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.wmsData || !data.users){
+        toast('Arquivo inválido — não é um backup WMS','err'); return;
+      }
+      _backupData = data;
+      const ps = data.wmsData?.projects?.length || 0;
+      const es = (data.wmsData?.projects||[]).reduce((a,p)=>a+(p.stages||[]).length,0);
+      const us = data.users?.length || 0;
+      const date = data.exportedAt ? new Date(data.exportedAt).toLocaleString('pt-BR') : '—';
+      document.getElementById('backup-preview-info').innerHTML =
+        `Exportado em: <strong style="color:var(--text)">${date}</strong> por <strong style="color:var(--text)">${data.exportedBy||'—'}</strong><br>
+         Contém: <strong style="color:var(--text)">${ps}</strong> projeto(s) · <strong style="color:var(--text)">${es}</strong> etapa(s) · <strong style="color:var(--text)">${us}</strong> usuário(s)`;
+      document.getElementById('backup-preview').style.display='block';
+      document.getElementById('backup-drop').style.borderColor='var(--green)';
+      document.getElementById('backup-drop').querySelector('.drop-icon').textContent='✅';
+      document.getElementById('backup-drop').querySelector('.drop-lbl').textContent=file.name;
+    }catch(err){
+      toast('Erro ao ler arquivo: '+err.message,'err');
+    }
+  };
+  reader.readAsText(file,'UTF-8');
+}
+
+function doBackupImport(){
+  if(!_backupData){toast('Nenhum arquivo carregado','err');return;}
+  S = _backupData.wmsData;
+  putUsers(_backupData.users);
+  saveS();
+  closeModal('modal-backup');
+  toast(`Backup restaurado — ${S.projects.length} projeto(s) importado(s) ✓`,'ok');
+  // Reload CU from restored users if session exists
+  if(CU){
+    const fresh = getUsers().find(u=>u.id===CU.id);
+    if(fresh){CU=fresh;updateSidebar();}
+  }
+  showPage('dashboard');
+  _backupData = null;
+}
+
+// ════════════════════════════════════
 // MY KEY
 // ════════════════════════════════════
 function openMyKey(){
@@ -2021,6 +2179,7 @@ function seed(){
 async function init(){
   await loadS();
   if(!S.initialized){S.initialized=true;seed();saveS();}
+  loadRememberedEmail();
   if(loadSession()){enterApp();}
   // else auth-screen is visible by default
 }
