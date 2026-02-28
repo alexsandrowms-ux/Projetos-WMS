@@ -511,6 +511,7 @@ textarea.fc{resize:vertical;min-height:60px}
             <button class="btn btn-danger btn-sm" onclick="askDeleteProject()">🗑 Excluir</button>
           </div>
         </div>
+        <div id="det-hours-warn"></div>
         <div class="hours-grid" id="det-hours"></div>
         <div class="tabs">
           <div class="dtab on" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
@@ -1532,8 +1533,7 @@ function renderDetail(){
     <span class="badge ${SB[proj.status]||'badge-gray'}">${proj.status}</span>
     <span class="badge badge-gray">📅 ${fD(proj.startDate)} → ${fD(proj.endDate)}</span>
     <span class="badge badge-amber">⏱️ ${proj.totalHours||0}h FAP</span>`;
-  // Project hours validation warning
-  const stagesEl = document.getElementById('stages-list');
+  // Project hours validation warning — inject BEFORE the grid
   let warnHtml = '';
   if(st.projBudget>0 && st.projDiff!==0){
     const over = st.projDiff>0;
@@ -1541,20 +1541,20 @@ function renderDetail(){
       ${over?'⚠️':'💡'}
       <span>${over
         ? `Total das etapas (<strong>${st.totalRootBudget}h</strong>) excede o FAP do projeto (<strong>${st.projBudget}h</strong>) em <strong style="color:#ef4444">+${st.projDiff}h</strong>`
-        : `Total das etapas (<strong>${st.totalRootBudget}h</strong>) está abaixo do FAP do projeto (<strong>${st.projBudget}h</strong>) — faltam alocar <strong>${Math.abs(st.projDiff)}h</strong>`
+        : `Total das etapas (<strong>${st.totalRootBudget}h</strong>) está abaixo do FAP (<strong>${st.projBudget}h</strong>) — faltam alocar <strong>${Math.abs(st.projDiff)}h</strong>`
       }</span>
     </div>`;
   }
+  // Insert warning above grid (outside it)
+  const warnEl = document.getElementById('det-hours-warn');
+  if(warnEl) warnEl.innerHTML = warnHtml;
   document.getElementById('det-hours').innerHTML=`
-    ${warnHtml}
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
     <div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div>
     <div class="hcard"><div class="hval" style="color:var(--amber)">${st.totalRootBudget}h</div><div class="hlbl">Etapas (orçamento)</div></div>
     <div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div>
     <div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>
     <div class="hcard"><div class="hval" style="color:${c}">${st.pct}%</div><div class="hlbl">Progresso</div></div>
-    <div class="hcard"><div class="hval">${(proj.stages||[]).filter(s=>!s.parentId).length}</div><div class="hlbl">Etapas</div></div>
-    </div>`;
+    <div class="hcard"><div class="hval">${(proj.stages||[]).filter(s=>!s.parentId).length}</div><div class="hlbl">Etapas</div></div>`;
   renderStages();
   // reset tab
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
