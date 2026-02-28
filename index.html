@@ -636,6 +636,10 @@ textarea.fc{resize:vertical;min-height:60px}
         <div class="fg"><label>Horas Planejadas</label><input class="fc" type="number" id="fs-hours" placeholder="Ex: 8" min="0"></div>
       </div>
       <div class="frow">
+        <div class="fg"><label>Horas Realizadas</label><input class="fc" type="number" id="fs-hoursreal" placeholder="Ex: 10" min="0"></div>
+        <div class="fg"><label>💰 Valor/hora (R$) <span style="font-size:10px;color:var(--dim)">(vazio = padrão do projeto)</span></label><input class="fc" type="number" id="fs-rate" placeholder="Ex: 150.00" min="0" step="0.01"></div>
+      </div>
+      <div class="frow">
         <div class="fg"><label>📅 Início Planejado</label><input class="fc" type="date" id="fs-date"></div>
         <div class="fg"><label>🏁 Término Planejado *</label><input class="fc" type="date" id="fs-dateend"></div>
       </div>
@@ -2021,8 +2025,8 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   document.getElementById('fs-date').value=stage?.date||'';
   document.getElementById('fs-dateend').value=stage?.dateEnd||'';
   document.getElementById('fs-datereal').value=stage?.dateReal||'';
-  document.getElementById('fs-hoursreal').value=stage?.hoursReal||'';
-  document.getElementById('fs-rate').value=stage?.hourRate||'';
+  if(document.getElementById('fs-hoursreal')) document.getElementById('fs-hoursreal').value=stage?.hoursReal||'';
+  if(document.getElementById('fs-rate')) document.getElementById('fs-rate').value=stage?.hourRate||'';
   document.getElementById('fs-hours').value=stage?.hours||'';
   document.getElementById('fs-status').value=stage?.status||'Pendente';
   const roots=(proj?.stages||[]).filter(s=>!s.parentId&&s.id!==editId);
@@ -2046,8 +2050,8 @@ function saveStage(){
     dateEnd:document.getElementById('fs-dateend').value,
     dateReal:document.getElementById('fs-datereal').value,
     hours:document.getElementById('fs-hours').value,
-    hoursReal:document.getElementById('fs-hoursreal').value,
-    hourRate:parseFloat(document.getElementById('fs-rate').value)||0,
+    hoursReal:document.getElementById('fs-hoursreal')?.value||'',
+    hourRate:parseFloat(document.getElementById('fs-rate')?.value)||0,
     status:document.getElementById('fs-status').value,
     parentId:document.getElementById('fs-parent').value||null};
   if(_eStageId){const i=proj.stages.findIndex(s=>s.id===_eStageId);if(i>=0)proj.stages[i]={...proj.stages[i],...d};toast('Etapa atualizada ✓');}
