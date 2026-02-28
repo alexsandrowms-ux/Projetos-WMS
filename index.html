@@ -300,7 +300,8 @@ textarea.fc{resize:vertical;min-height:60px}
   .sidebar{width:180px}
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
 </head>
 <body>
 
@@ -2849,10 +2850,18 @@ function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
 // ════════════════════════════════════
-// PERFORMANCE TAB — CHARTS
+// PERFORMANCE TAB — CHARTS (ECharts 3D)
 // ════════════════════════════════════
 let _perfCharts=[];
-function destroyPerfCharts(){_perfCharts.forEach(c=>{try{c.destroy();}catch(e){}});_perfCharts=[];}
+function destroyPerfCharts(){_perfCharts.forEach(c=>{try{c.dispose();}catch(e){}});_perfCharts=[];}
+
+function mkChart(id){
+  const el=document.getElementById(id);
+  if(!el)return null;
+  const c=echarts.init(el,null,{renderer:'canvas'});
+  _perfCharts.push(c);
+  return c;
+}
 
 function renderPerfTab(){
   const proj=getP(S.cur);if(!proj)return;
@@ -2864,16 +2873,16 @@ function renderPerfTab(){
   const subs=stages.filter(s=>s.parentId);
   const defRate=parseFloat(proj.defaultRate)||0;
 
-  // Status distribution
+  // Status
   const stMap={Pendente:0,'Em Andamento':0,'Concluído':0,'Bloqueado':0};
   stages.forEach(s=>{if(stMap[s.status]!==undefined)stMap[s.status]++;});
 
-  // Prazo distribution
+  // Prazo
   const pzMap={'Finalizada':0,'Dentro do Prazo':0,'Em Risco':0,'Atrasada':0,'Não Iniciada':0,'Sem prazo':0};
   stages.forEach(s=>{const p=prazoStatus(s);const k=Object.keys(pzMap).find(k=>p.label.startsWith(k))||'Sem prazo';pzMap[k]++;});
 
-  // Budget/hours per root
-  const rLabels=roots.map(r=>(r.num?r.num+' ':'')+r.name.substring(0,18));
+  // Hours per root
+  const rLabels=roots.map(r=>(r.num?r.num+' ':'')+r.name.substring(0,16));
   const rBudget=roots.map(r=>parseFloat(r.hours)||0);
   const rConsumed=roots.map(r=>{const k=stages.filter(s=>s.parentId===r.id);return k.length>0?k.reduce((a,s)=>a+(parseFloat(s.hours)||0),0):parseFloat(r.hours)||0;});
   const rReal=roots.map(r=>stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0));
@@ -2891,91 +2900,134 @@ function renderPerfTab(){
   const bData=[totalH,...done.map(s=>{acc+=(parseFloat(s.hoursReal)||0);return Math.max(0,totalH-acc);})];
   const bIdeal=bLabels.map((_,i)=>Math.round(totalH*(1-i/Math.max(bLabels.length-1,1))));
 
-  const gGrid={color:'rgba(255,255,255,.05)'};
-  const gTick={color:'#64748b',font:{size:10}};
-  const gLeg={labels:{color:'#94a3b8',font:{size:11}}};
-
   el.innerHTML=`
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card" style="padding:16px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:12px">📊 Status das Etapas</div>
-      <div style="height:220px;position:relative"><canvas id="ch-status"></canvas></div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 Status das Etapas</div>
+      <div id="ch-status" style="height:260px"></div>
     </div>
     <div class="card" style="padding:16px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:12px">🗓️ Situação de Prazo</div>
-      <div style="height:220px;position:relative"><canvas id="ch-prazo"></canvas></div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🗓️ Situação de Prazo</div>
+      <div id="ch-prazo" style="height:260px"></div>
     </div>
   </div>
   <div class="card" style="padding:16px;margin-bottom:16px">
-    <div style="font-size:12px;font-weight:700;margin-bottom:12px">📦 Orçamento × Consumido × Realizado por Etapa (h)</div>
-    <div style="height:260px;position:relative"><canvas id="ch-budget"></canvas></div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px">📦 Orçamento × Consumido × Realizado por Etapa (h)</div>
+    <div id="ch-budget" style="height:320px"></div>
   </div>
   ${hasCost?`<div class="card" style="padding:16px;margin-bottom:16px">
-    <div style="font-size:12px;font-weight:700;margin-bottom:12px">💰 Custo Planejado × Real por Etapa (R$)</div>
-    <div style="height:260px;position:relative"><canvas id="ch-cost"></canvas></div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px">💰 Custo Planejado × Real por Etapa (R$)</div>
+    <div id="ch-cost" style="height:320px"></div>
   </div>`:''}
   ${bLabels.length>1?`<div class="card" style="padding:16px">
-    <div style="font-size:12px;font-weight:700;margin-bottom:12px">📉 Burndown de Horas</div>
-    <div style="height:240px;position:relative"><canvas id="ch-burn"></canvas></div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px">📉 Burndown de Horas</div>
+    <div id="ch-burn" style="height:280px"></div>
   </div>`:''}`;
 
-  const donutOpts={responsive:true,maintainAspectRatio:false,cutout:'68%',plugins:{legend:{position:'right',labels:{color:'#94a3b8',font:{size:11},padding:10,boxWidth:12}}}};
+  setTimeout(()=>{
+    const txtColor='#94a3b8';
+    const bg='transparent';
 
-  // Status donut
-  const stLabels=Object.keys(stMap).filter(k=>stMap[k]>0);
-  _perfCharts.push(new Chart(document.getElementById('ch-status'),{
-    type:'doughnut',
-    data:{labels:stLabels,datasets:[{data:stLabels.map(k=>stMap[k]),backgroundColor:['#475569','#3b82f6','#22c55e','#ef4444'],borderWidth:0,hoverOffset:8}]},
-    options:donutOpts
-  }));
+    // ── Pizza 3D: Status ──
+    const stLabels=Object.keys(stMap).filter(k=>stMap[k]>0);
+    const stColors=['#475569','#3b82f6','#22c55e','#ef4444'];
+    const c1=mkChart('ch-status');
+    if(c1) c1.setOption({backgroundColor:bg,
+      series:[{type:'pie',radius:['35%','70%'],center:['50%','50%'],
+        itemStyle:{shadowBlur:20,shadowColor:'rgba(0,0,0,.4)',borderRadius:6},
+        label:{color:txtColor,fontSize:11},
+        emphasis:{itemStyle:{shadowBlur:30}},
+        data:stLabels.map((k,i)=>({name:k,value:stMap[k],itemStyle:{color:stColors[i%stColors.length]}}))}]
+    });
 
-  // Prazo donut
-  const pzColors={'Finalizada':'#22c55e','Dentro do Prazo':'#38bdf8','Em Risco':'#f59e0b','Atrasada':'#ef4444','Não Iniciada':'#a78bfa','Sem prazo':'#475569'};
-  const pzLabels=Object.keys(pzMap).filter(k=>pzMap[k]>0);
-  _perfCharts.push(new Chart(document.getElementById('ch-prazo'),{
-    type:'doughnut',
-    data:{labels:pzLabels,datasets:[{data:pzLabels.map(k=>pzMap[k]),backgroundColor:pzLabels.map(k=>pzColors[k]||'#475569'),borderWidth:0,hoverOffset:8}]},
-    options:donutOpts
-  }));
+    // ── Pizza 3D: Prazo ──
+    const pzColors={'Finalizada':'#22c55e','Dentro do Prazo':'#38bdf8','Em Risco':'#f59e0b','Atrasada':'#ef4444','Não Iniciada':'#a78bfa','Sem prazo':'#475569'};
+    const pzLabels=Object.keys(pzMap).filter(k=>pzMap[k]>0);
+    const c2=mkChart('ch-prazo');
+    if(c2) c2.setOption({backgroundColor:bg,
+      series:[{type:'pie',radius:['35%','70%'],center:['50%','50%'],
+        itemStyle:{shadowBlur:20,shadowColor:'rgba(0,0,0,.4)',borderRadius:6},
+        label:{color:txtColor,fontSize:11},
+        emphasis:{itemStyle:{shadowBlur:30}},
+        data:pzLabels.map(k=>({name:k,value:pzMap[k],itemStyle:{color:pzColors[k]||'#475569'}}))}]
+    });
 
-  // Budget bar
-  _perfCharts.push(new Chart(document.getElementById('ch-budget'),{
-    type:'bar',
-    data:{labels:rLabels,datasets:[
-      {label:'Orçamento',data:rBudget,backgroundColor:'rgba(245,158,11,.65)',borderRadius:4},
-      {label:'Consumido (plan.)',data:rConsumed,backgroundColor:'rgba(14,165,233,.55)',borderRadius:4},
-      {label:'Realizado',data:rReal,backgroundColor:'rgba(34,197,94,.65)',borderRadius:4}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:gLeg},
-      scales:{x:{ticks:gTick,grid:gGrid},y:{ticks:gTick,grid:gGrid,beginAtZero:true}}}
-  }));
+    // ── Bar 3D: Budget ──
+    if(roots.length>0){
+      const c3=mkChart('ch-budget');
+      if(c3&&typeof echarts.graphic!=='undefined'){
+        // Build bar3D data: [x_idx, series_idx, value]
+        const series3=['Orçamento','Consumido','Realizado'];
+        const colors3=['#f59e0b','#38bdf8','#22c55e'];
+        const bar3data=[];
+        roots.forEach((r,xi)=>{
+          [rBudget[xi],rConsumed[xi],rReal[xi]].forEach((v,si)=>{
+            bar3data.push([xi,si,v]);
+          });
+        });
+        c3.setOption({backgroundColor:bg,
+          tooltip:{formatter:p=>`${rLabels[p.data[0]]}<br/>${series3[p.data[1]]}: ${p.data[2]}h`},
+          xAxis3D:{type:'category',data:rLabels,axisLabel:{color:txtColor,fontSize:9}},
+          yAxis3D:{type:'category',data:series3,axisLabel:{color:txtColor,fontSize:10}},
+          zAxis3D:{type:'value',name:'Horas',axisLabel:{color:txtColor,fontSize:9}},
+          grid3D:{boxWidth:120,boxDepth:60,boxHeight:70,
+            light:{main:{intensity:1.2,shadow:true},ambient:{intensity:.4}},
+            viewControl:{alpha:25,beta:40,animationDurationUpdate:800}},
+          series:[{type:'bar3D',data:bar3data,shading:'lambert',
+            itemStyle:{opacity:.88},
+            colorBy:'data',
+            encode:{x:0,y:1,z:2,tooltip:[0,1,2]},
+            itemStyle:{color:p=>colors3[p.data[1]]||'#38bdf8'}}]
+        });
+      }
+    }
 
-  // Cost bar
-  if(hasCost){
-    _perfCharts.push(new Chart(document.getElementById('ch-cost'),{
-      type:'bar',
-      data:{labels:rLabels,datasets:[
-        {label:'Custo Planejado (R$)',data:rCostPlan,backgroundColor:'rgba(245,158,11,.65)',borderRadius:4},
-        {label:'Custo Real (R$)',data:rCostReal,backgroundColor:'rgba(167,139,250,.65)',borderRadius:4}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:gLeg},
-        scales:{x:{ticks:gTick,grid:gGrid},
-          y:{ticks:{...gTick,callback:v=>'R$'+Number(v).toLocaleString('pt-BR')},grid:gGrid,beginAtZero:true}}}
-    }));
-  }
+    // ── Bar 3D: Cost ──
+    if(hasCost){
+      const c4=mkChart('ch-cost');
+      if(c4){
+        const costSeries=['Planejado','Real'];
+        const costColors=['#f59e0b','#a78bfa'];
+        const costData=[];
+        roots.forEach((r,xi)=>{
+          [rCostPlan[xi],rCostReal[xi]].forEach((v,si)=>{
+            costData.push([xi,si,v]);
+          });
+        });
+        c4.setOption({backgroundColor:bg,
+          tooltip:{formatter:p=>`${rLabels[p.data[0]]}<br/>${costSeries[p.data[1]]}: R$ ${Number(p.data[2]).toLocaleString('pt-BR',{minimumFractionDigits:2})}`},
+          xAxis3D:{type:'category',data:rLabels,axisLabel:{color:txtColor,fontSize:9}},
+          yAxis3D:{type:'category',data:costSeries,axisLabel:{color:txtColor,fontSize:10}},
+          zAxis3D:{type:'value',name:'R$',axisLabel:{color:txtColor,fontSize:9}},
+          grid3D:{boxWidth:120,boxDepth:50,boxHeight:70,
+            light:{main:{intensity:1.2,shadow:true},ambient:{intensity:.4}},
+            viewControl:{alpha:25,beta:40,animationDurationUpdate:800}},
+          series:[{type:'bar3D',data:costData,shading:'lambert',
+            itemStyle:{opacity:.88,color:p=>costColors[p.data[1]]||'#a78bfa'}}]
+        });
+      }
+    }
 
-  // Burndown line
-  if(bLabels.length>1){
-    _perfCharts.push(new Chart(document.getElementById('ch-burn'),{
-      type:'line',
-      data:{labels:bLabels,datasets:[
-        {label:'Horas Restantes',data:bData,borderColor:'#38bdf8',backgroundColor:'rgba(14,165,233,.12)',fill:true,tension:.35,pointBackgroundColor:'#38bdf8',pointRadius:4},
-        {label:'Linha Ideal',data:bIdeal,borderColor:'rgba(100,116,139,.45)',borderDash:[6,4],pointRadius:0,fill:false}
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:gLeg},
-        scales:{x:{ticks:gTick,grid:gGrid},y:{ticks:gTick,grid:gGrid,beginAtZero:true}}}
-    }));
-  }
+    // ── Burndown 3D line ──
+    if(bLabels.length>1){
+      const c5=mkChart('ch-burn');
+      if(c5) c5.setOption({backgroundColor:bg,
+        tooltip:{trigger:'axis'},
+        legend:{textStyle:{color:txtColor},top:0},
+        xAxis:{type:'category',data:bLabels,axisLabel:{color:txtColor,fontSize:10},axisLine:{lineStyle:{color:'#334155'}}},
+        yAxis:{type:'value',axisLabel:{color:txtColor,fontSize:10},splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
+        series:[
+          {name:'Horas Restantes',type:'line',data:bData,smooth:true,
+            lineStyle:{color:'#38bdf8',width:3,shadowColor:'rgba(56,189,248,.5)',shadowBlur:12},
+            areaStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'rgba(56,189,248,.35)'},{offset:1,color:'rgba(56,189,248,.02)'}]}},
+            itemStyle:{color:'#38bdf8'},symbolSize:7},
+          {name:'Linha Ideal',type:'line',data:bIdeal,smooth:false,
+            lineStyle:{color:'rgba(100,116,139,.5)',type:'dashed',width:2},
+            itemStyle:{color:'#64748b'},symbol:'none'}
+        ]
+      });
+    }
+  }, 100);
 }
 
 function switchTab(el,tid){
