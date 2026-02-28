@@ -681,8 +681,23 @@ textarea.fc{resize:vertical;min-height:60px}
           </select>
         </div>
       </div>
-      <div class="fg"><label>É sub-etapa de (etapa pai)</label>
-        <select class="fc" id="fs-parent"><option value="">— Etapa raiz (sem pai) —</option></select>
+      <div class="frow">
+        <div class="fg"><label>É sub-etapa de (etapa pai)</label>
+          <select class="fc" id="fs-parent"><option value="">— Etapa raiz (sem pai) —</option></select>
+        </div>
+        <div class="fg"><label>🎨 Cor de fundo</label>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px" id="fs-bgcolors">
+            <div class="stage-color-opt sel" data-c="" style="width:28px;height:28px;border-radius:6px;border:2px solid var(--accent);background:var(--bg3);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:13px" title="Padrão">○</div>
+            <div class="stage-color-opt" data-c="rgba(14,165,233,.08)"  style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(14,165,233,.25);cursor:pointer" title="Azul"></div>
+            <div class="stage-color-opt" data-c="rgba(34,197,94,.08)"   style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(34,197,94,.25);cursor:pointer" title="Verde"></div>
+            <div class="stage-color-opt" data-c="rgba(245,158,11,.08)"  style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(245,158,11,.25);cursor:pointer" title="Amarelo"></div>
+            <div class="stage-color-opt" data-c="rgba(239,68,68,.08)"   style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(239,68,68,.25);cursor:pointer" title="Vermelho"></div>
+            <div class="stage-color-opt" data-c="rgba(167,139,250,.08)" style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(167,139,250,.25);cursor:pointer" title="Roxo"></div>
+            <div class="stage-color-opt" data-c="rgba(244,114,182,.08)" style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(244,114,182,.25);cursor:pointer" title="Rosa"></div>
+            <div class="stage-color-opt" data-c="rgba(6,182,212,.08)"   style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(6,182,212,.25);cursor:pointer" title="Ciano"></div>
+            <div class="stage-color-opt" data-c="rgba(251,146,60,.08)"  style="width:28px;height:28px;border-radius:6px;border:2px solid transparent;background:rgba(251,146,60,.25);cursor:pointer" title="Laranja"></div>
+          </div>
+        </div>
       </div>
     </div>
     <div class="mfooter">
@@ -1602,7 +1617,7 @@ function renderStages(){
     const realizado=kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
     const ps=prazoStatus(root);
     return`<div class="stage-section">
-      <div class="sroot" style="border-left:3px solid ${col}">
+      <div class="sroot" style="border-left:3px solid ${col}${root.bgColor?`;background:${root.bgColor}`:''}">
         <div style="display:flex;align-items:stretch">
           <div class="sroot-body" onclick="toggleKids('${root.id}')">
             <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40">${esc(root.num)||'–'}</span>
@@ -1639,7 +1654,7 @@ function renderStages(){
       </div>
       <div class="substages-wrap" id="kids_${root.id}">
         ${kids.map((k,ki)=>{const kps=prazoStatus(k);return`
-        <div class="ssrow">
+        <div class="ssrow" style="${k.bgColor?`background:${k.bgColor}`:''}">
           <div class="ssrow-bar" style="background:${col}"></div>
           <div class="ssrow-body">
             <div class="ss-name">
@@ -2146,6 +2161,16 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   const roots=(proj?.stages||[]).filter(s=>!s.parentId&&s.id!==editId);
   const curPar=stage?.parentId||defParent||'';
   document.getElementById('fs-parent').innerHTML='<option value="">— Etapa raiz (sem pai) —</option>'+roots.map(r=>`<option value="${r.id}" ${r.id===curPar?'selected':''}>${esc(r.num||'')} ${esc(r.name)}</option>`).join('');
+  // Init bg color picker
+  const curBg = stage?.bgColor||'';
+  document.querySelectorAll('.stage-color-opt').forEach(el=>{
+    el.style.border = el.dataset.c === curBg ? '2px solid var(--accent)' : '2px solid transparent';
+    if(!el.dataset.c && !curBg) el.style.border = '2px solid var(--accent)';
+    el.onclick = ()=>{
+      document.querySelectorAll('.stage-color-opt').forEach(e=>e.style.border='2px solid transparent');
+      el.style.border = '2px solid var(--accent)';
+    };
+  });
   openModal('modal-stage');
 }
 function applyPillar(){
@@ -2176,7 +2201,8 @@ function saveStage(){
     hoursReal: (document.getElementById('fs-parent')?.value||_defParent) ? (document.getElementById('fs-hoursreal')?.value||'') : '', // root = auto from kids
     hourRate:parseFloat(document.getElementById('fs-rate')?.value)||0,
     status:document.getElementById('fs-status').value,
-    parentId:document.getElementById('fs-parent').value||null};
+    parentId:document.getElementById('fs-parent').value||null,
+    bgColor:(()=>{const sel=document.querySelector('.stage-color-opt[style*="var(--accent)"]');return sel?sel.dataset.c:'';})()};
   if(_eStageId){const i=proj.stages.findIndex(s=>s.id===_eStageId);if(i>=0)proj.stages[i]={...proj.stages[i],...d};toast('Etapa atualizada ✓');}
   else{proj.stages.push({id:uid(),...d});toast('Etapa adicionada ✓');}
   autoNumberStages(proj);
