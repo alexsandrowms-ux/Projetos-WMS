@@ -2897,8 +2897,8 @@ function renderPerfTab(){
   const totalH=roots.reduce((a,r)=>a+(parseFloat(r.hours)||0),0);
   let acc=0;
   const bLabels=['Início',...done.map(s=>fDS(s.dateReal))];
-  const bData=[totalH,...done.map(s=>{acc+=(parseFloat(s.hoursReal)||0);return Math.max(0,totalH-acc);})];
-  const bIdeal=bLabels.map((_,i)=>Math.round(totalH*(1-i/Math.max(bLabels.length-1,1))));
+  const bData=[totalH,...done.map(s=>{acc+=Math.round((parseFloat(s.hoursReal)||0)*100)/100;return Math.round(Math.max(0,totalH-acc)*100)/100;})];
+  const bIdeal=bLabels.map((_,i)=>Math.round(totalH*(1-i/Math.max(bLabels.length-1,1))*100)/100);
 
   el.innerHTML=`
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
@@ -2972,7 +2972,7 @@ function renderPerfTab(){
           zAxis3D:{type:'value',name:'Horas',axisLabel:{color:txtColor,fontSize:9}},
           grid3D:{boxWidth:120,boxDepth:60,boxHeight:70,
             light:{main:{intensity:1.2,shadow:true},ambient:{intensity:.4}},
-            viewControl:{alpha:25,beta:40,animationDurationUpdate:800}},
+            viewControl:{alpha:25,beta:40,animationDurationUpdate:0,rotateSensitivity:0,zoomSensitivity:0,panSensitivity:0}},
           series:[{type:'bar3D',data:bar3data,shading:'lambert',
             itemStyle:{opacity:.88},
             colorBy:'data',
@@ -3001,7 +3001,7 @@ function renderPerfTab(){
           zAxis3D:{type:'value',name:'R$',axisLabel:{color:txtColor,fontSize:9}},
           grid3D:{boxWidth:120,boxDepth:50,boxHeight:70,
             light:{main:{intensity:1.2,shadow:true},ambient:{intensity:.4}},
-            viewControl:{alpha:25,beta:40,animationDurationUpdate:800}},
+            viewControl:{alpha:25,beta:40,animationDurationUpdate:0,rotateSensitivity:0,zoomSensitivity:0,panSensitivity:0}},
           series:[{type:'bar3D',data:costData,shading:'lambert',
             itemStyle:{opacity:.88,color:p=>costColors[p.data[1]]||'#a78bfa'}}]
         });
@@ -3012,7 +3012,7 @@ function renderPerfTab(){
     if(bLabels.length>1){
       const c5=mkChart('ch-burn');
       if(c5) c5.setOption({backgroundColor:bg,
-        tooltip:{trigger:'axis'},
+        tooltip:{trigger:'axis',formatter:params=>params.map(p=>`${p.marker}${p.seriesName}: <b>${Number(p.value).toFixed(2)}h</b>`).join('<br>')},
         legend:{textStyle:{color:txtColor},top:0},
         xAxis:{type:'category',data:bLabels,axisLabel:{color:txtColor,fontSize:10},axisLine:{lineStyle:{color:'#334155'}}},
         yAxis:{type:'value',axisLabel:{color:txtColor,fontSize:10},splitLine:{lineStyle:{color:'rgba(255,255,255,.06)'}}},
