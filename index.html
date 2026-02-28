@@ -1142,13 +1142,17 @@ function stats(proj){
   const a=proj.stages||[];
   const roots=a.filter(s=>!s.parentId);
   const h=x=>{const n=parseFloat(x.hours);return isNaN(n)?0:n;};
-  // Planejadas = soma das etapas raiz (orçamento total)
+  // Planejadas = soma das horas das etapas raiz (orçamento total)
   const pl=roots.reduce((s,x)=>s+h(x),0);
-  // Realizadas = sub-etapas concluídas (ou raiz sem filhos concluída)
-  const dn=a.filter(x=>x.status==='Concluído').reduce((s,x)=>s+h(x),0);
+  // Realizadas = soma das horas REAIS das sub-etapas (trabalho efetivamente feito)
+  // Para raiz sem filhos, usa hoursReal da própria etapa se concluída
+  const subs=a.filter(x=>x.parentId);
+  const dn = subs.length > 0
+    ? subs.reduce((s,k)=>s+(parseFloat(k.hoursReal)||0),0)
+    : roots.filter(r=>r.status==='Concluído').reduce((s,r)=>s+(parseFloat(r.hoursReal)||h(r)),0);
   const fap=parseFloat(proj.totalHours)||0;
   const base=fap>0?fap:pl;
-  // Soma das horas das sub-etapas por etapa raiz (consumo)
+  // Soma das horas das sub-etapas por etapa raiz (consumo planejado)
   const rootStats=roots.map(r=>{
     const kids=a.filter(s=>s.parentId===r.id);
     const budget=h(r);
