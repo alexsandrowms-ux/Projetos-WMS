@@ -1144,12 +1144,11 @@ function stats(proj){
   const h=x=>{const n=parseFloat(x.hours);return isNaN(n)?0:n;};
   // Planejadas = soma das horas das etapas raiz (orçamento total)
   const pl=roots.reduce((s,x)=>s+h(x),0);
-  // Realizadas = soma das horas REAIS das sub-etapas (trabalho efetivamente feito)
-  // Para raiz sem filhos, usa hoursReal da própria etapa se concluída
+  // Realizadas = soma das hoursReal efetivamente preenchidas nas sub-etapas
   const subs=a.filter(x=>x.parentId);
   const dn = subs.length > 0
-    ? subs.reduce((s,k)=>s+(parseFloat(k.hoursReal)||0),0)
-    : roots.filter(r=>r.status==='Concluído').reduce((s,r)=>s+(parseFloat(r.hoursReal)||h(r)),0);
+    ? subs.reduce((s,k)=>s+(parseFloat(k.hoursReal)||0), 0)
+    : roots.filter(r=>r.status==='Concluído').reduce((s,r)=>s+(parseFloat(r.hoursReal)||0), 0);
   const fap=parseFloat(proj.totalHours)||0;
   const base=fap>0?fap:pl;
   // Soma das horas das sub-etapas por etapa raiz (consumo planejado)
@@ -1657,7 +1656,7 @@ function renderStages(){
 function getHoursReal(stage, allStages){
   const kids = allStages.filter(s=>s.parentId===stage.id);
   if(kids.length>0){
-    return kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
+    return kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0), 0);
   }
   return parseFloat(stage.hoursReal)||0;
 }
@@ -2135,6 +2134,15 @@ function applyPillar(){
 function saveStage(){
   const name=document.getElementById('fs-name').value.trim();if(!name){toast('Informe o nome da etapa','err');return;}
   const proj=getP(S.cur);if(!proj)return;if(!proj.stages)proj.stages=[];
+  // Validação: sub-etapa concluída exige Horas Realizadas
+  const statusVal=document.getElementById('fs-status')?.value;
+  const parentVal=document.getElementById('fs-parent')?.value||_defParent;
+  const hoursRealVal=parseFloat(document.getElementById('fs-hoursreal')?.value);
+  if(statusVal==='Concluído' && parentVal && (isNaN(hoursRealVal)||hoursRealVal<=0)){
+    toast('⚠️ Informe as Horas Realizadas antes de concluir a sub-etapa','err');
+    document.getElementById('fs-hoursreal')?.focus();
+    return;
+  }
   const d={name,
     num:document.getElementById('fs-num').value.trim(),
     executor:document.getElementById('fs-executor').value.trim(),
