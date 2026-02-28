@@ -281,7 +281,8 @@ textarea.fc{resize:vertical;min-height:60px}
   .kpi-grid{grid-template-columns:1fr 1fr}
   .frow{grid-template-columns:1fr}
   .proj-grid{grid-template-columns:1fr}
-  .smeta{display:none}
+  .sc-md,.sc-sm{display:none}
+  .sroot-stats{gap:10px;padding-left:14px}
   .sidebar{width:180px}
 }
 </style>
@@ -1618,20 +1619,44 @@ function renderStages(){
         </div>
       </div>
       <div class="substages-wrap" id="kids_${root.id}">
-        ${kids.map((k,ki)=>`
+        ${kids.map((k,ki)=>{const kps=prazoStatus(k);return`
         <div class="ssrow">
           <div class="ssrow-bar" style="background:${col}"></div>
           <div class="ssrow-body">
-            <span class="ssnum" style="color:${col};font-weight:700">${esc(k.num)||'–'}</span>
-            <span class="ssname" title="${esc(k.name)}">${esc(k.name)}</span>
-            <div class="smeta">
-              <span>⏱️ ${k.hours||0}h</span>
-              <span>👤 ${esc(k.executor||'—')}</span>
-              <span>📅 ${fDS(k.date)}</span>
-              ${k.dateEnd?`<span>🏁 ${fDS(k.dateEnd)}</span>`:''}
-              <span class="badge ${SB[k.status]||'badge-gray'}">${SE[k.status]||''} ${k.status}</span>
-              ${k.dateReal?`<span style="font-size:11px;color:var(--green)">✅ Concluída em: <strong>${fDS(k.dateReal)}</strong></span>`:''}
-              ${(()=>{const ps=prazoStatus(k);return`<span class="ps-badge ${ps.cls}">${ps.icon} ${ps.label}</span>`;})()}
+            <div class="sc sc-name">
+              <span class="sc-lbl">Sub-etapa</span>
+              <span class="sc-val" style="color:var(--text);font-weight:600" title="${esc(k.name)}">
+                <span style="color:${col};font-weight:800;margin-right:5px">${esc(k.num)||'–'}</span>${esc(k.name)}
+              </span>
+            </div>
+            <div class="sc sc-md">
+              <span class="sc-lbl">Responsável</span>
+              <span class="sc-val">${esc(k.executor||'—')}</span>
+            </div>
+            <div class="sc sc-sm">
+              <span class="sc-lbl">Início</span>
+              <span class="sc-val">${fDS(k.date)||'—'}</span>
+            </div>
+            <div class="sc sc-sm">
+              <span class="sc-lbl">Término</span>
+              <span class="sc-val">${fDS(k.dateEnd)||'—'}</span>
+            </div>
+            <div class="sc sc-sm">
+              <span class="sc-lbl">H. Plan.</span>
+              <span class="sc-val" style="color:var(--amber)">${k.hours||0}h</span>
+            </div>
+            <div class="sc sc-sm">
+              <span class="sc-lbl">H. Real</span>
+              <span class="sc-val" style="color:var(--green)">${k.hoursReal||'—'}</span>
+            </div>
+            ${k.dateReal?`<div class="sc sc-sm"><span class="sc-lbl">Conclusão</span><span class="sc-val" style="color:var(--green)">${fDS(k.dateReal)}</span></div>`:''}
+            <div class="sc sc-sm">
+              <span class="sc-lbl">Status</span>
+              <span class="badge ${SB[k.status]||'badge-gray'}" style="font-size:9px;margin-top:2px">${SE[k.status]||''} ${k.status}</span>
+            </div>
+            <div class="sc sc-sm">
+              <span class="sc-lbl">Prazo</span>
+              <span class="ps-badge ${kps.cls}" style="margin-top:2px">${kps.icon} ${kps.label}</span>
             </div>
           </div>
           <div class="ssrow-acts">
@@ -1640,7 +1665,7 @@ function renderStages(){
             <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${k.id}')">✏️</button>
             <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${k.id}')">🗑</button>
           </div>
-        </div>`).join('')}
+        </div>`}).join('')}
         <div class="add-sub-btn" onclick="openStageModal(true,null,'${root.id}')">
           <span style="font-size:14px;color:var(--accent)">+</span> Sub-etapa em <strong style="color:var(--accent)">&nbsp;${esc(root.num||root.name)}</strong>
         </div>
