@@ -184,6 +184,13 @@ textarea.fc{resize:vertical;min-height:60px}
 .gtbl tr td.gname-cell{cursor:pointer}
 .gtbl tr td.gname-cell:hover{color:var(--accent)}
 .gantt-toolbar{display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ps-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap;letter-spacing:.03em}
+.ps-done  {background:rgba(34,197,94,.15); color:#22c55e;border:1px solid rgba(34,197,94,.3)}
+.ps-ok    {background:rgba(14,165,233,.12);color:#38bdf8;border:1px solid rgba(14,165,233,.25)}
+.ps-risk  {background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+.ps-late  {background:rgba(239,68,68,.12); color:#ef4444;border:1px solid rgba(239,68,68,.25)}
+.ps-future{background:rgba(167,139,250,.1);color:#a78bfa;border:1px solid rgba(167,139,250,.2)}
+.ps-none  {background:rgba(100,130,160,.08);color:var(--dim);border:1px solid var(--border)}
 .gantt-add-btn{display:flex;align-items:center;gap:7px;padding:7px 14px;border:1.5px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--dim);font-size:12px;font-weight:500;transition:all .15s;background:none;font-family:var(--sans)}
 .gantt-add-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(14,165,233,.05)}
 
@@ -497,12 +504,16 @@ textarea.fc{resize:vertical;min-height:60px}
         <div class="tabs">
           <div class="dtab on" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
           <div class="dtab" id="dtab-gantt"  onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
+          <div class="dtab" id="dtab-cost"   onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
         </div>
         <div id="tab-stages">
           <div id="stages-list"></div>
           <div class="add-root-btn" onclick="openStageModal()">
             <span style="font-size:17px;color:var(--accent)">+</span> Adicionar Etapa Principal
           </div>
+        </div>
+        <div id="tab-cost" style="display:none">
+          <div id="cost-content"></div>
         </div>
         <div id="tab-gantt" style="display:none">
           <div class="card" style="padding:11px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -526,6 +537,13 @@ textarea.fc{resize:vertical;min-height:60px}
                 <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)"><span style="width:18px;height:18px;border-radius:3px;background:#3d5470;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#e2eaf4">◑</span> Em Andamento</div>
                 <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)"><span style="width:18px;height:18px;border-radius:3px;background:#3d5470;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#e2eaf4">●</span> Concluído</div>
                 <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)"><span style="width:18px;height:18px;border-radius:3px;background:#3d5470;display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:#e2eaf4">✕</span> Bloqueado</div>
+                <hr style="border:none;border-top:1px solid var(--border);margin:6px 0">
+                <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Prazo (PMBOK)</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)">✅ Finalizada</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)">🟢 Dentro do Prazo</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)">🟡 Em Risco (≤7 dias)</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)">🔴 Atrasada</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--mid)">🔵 Não Iniciada</div>
               </div>
             </div>
             <div>
@@ -580,6 +598,9 @@ textarea.fc{resize:vertical;min-height:60px}
       </div>
       <div class="frow">
         <div class="fg"><label>Total de Horas FAP</label><input class="fc" type="number" id="fp-hours" placeholder="Ex: 120" min="0"></div>
+        <div class="fg"><label>💰 Valor/hora Padrão (R$)</label><input class="fc" type="number" id="fp-rate" placeholder="Ex: 150.00" min="0" step="0.01"></div>
+      </div>
+      <div class="frow">
         <div class="fg"><label>Cor do Projeto</label><div class="cswatches" id="cswatches"></div></div>
       </div>
       <div class="fg"><label>Observações</label><textarea class="fc" id="fp-desc" placeholder="Notas gerais do projeto"></textarea></div>
@@ -612,10 +633,14 @@ textarea.fc{resize:vertical;min-height:60px}
       <div class="fg"><label>Nome da Etapa *</label><input class="fc" id="fs-name" placeholder="Ex: Escopo e Modelagem"></div>
       <div class="frow">
         <div class="fg"><label>Executante</label><input class="fc" id="fs-executor" placeholder="Nome do responsável"></div>
-        <div class="fg"><label>Data Prevista</label><input class="fc" type="date" id="fs-date"></div>
+        <div class="fg"><label>Horas Planejadas</label><input class="fc" type="number" id="fs-hours" placeholder="Ex: 8" min="0"></div>
       </div>
       <div class="frow">
-        <div class="fg"><label>Horas Planejadas</label><input class="fc" type="number" id="fs-hours" placeholder="Ex: 8" min="0"></div>
+        <div class="fg"><label>📅 Início Planejado</label><input class="fc" type="date" id="fs-date"></div>
+        <div class="fg"><label>🏁 Término Planejado *</label><input class="fc" type="date" id="fs-dateend"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>✅ Término Real</label><input class="fc" type="date" id="fs-datereal" placeholder="Preencher ao concluir"></div>
         <div class="fg"><label>Status</label>
           <select class="fc" id="fs-status">
             <option>Pendente</option><option>Em Andamento</option><option>Concluído</option><option>Bloqueado</option>
@@ -1411,6 +1436,7 @@ function renderDash(){
     <div class="kpi"><div class="kpi-lbl">Total Projetos</div><div class="kpi-val">${ps.length}</div><div class="kpi-sub">${act} ativos · ${dn} concluídos</div></div>
     <div class="kpi"><div class="kpi-lbl">Em Andamento</div><div class="kpi-val" style="color:var(--accent)">${act}</div><div class="kpi-sub">${dn} concluídos</div></div>
     <div class="kpi"><div class="kpi-lbl">Horas FAP Total</div><div class="kpi-val" style="color:var(--amber)">${ps.reduce((a,p)=>a+(+p.totalHours||0),0)}h</div><div class="kpi-sub">em ${ps.length} projeto(s)</div></div>
+    ${(()=>{const totalBac=ps.reduce((a,p)=>{const ev=calcEVM(p);return a+ev.BAC;},0);const totalAc=ps.reduce((a,p)=>{const ev=calcEVM(p);return a+ev.AC;},0);return totalBac>0?`<div class="kpi"><div class="kpi-lbl">💰 Orçamento Total</div><div class="kpi-val" style="color:var(--green);font-size:18px">${fCur(totalBac)}</div><div class="kpi-sub">Custo real: ${fCur(totalAc)}</div></div>`:''})()}
     <div class="kpi"><div class="kpi-lbl">Etapas Cadastradas</div><div class="kpi-val" style="color:var(--green)">${ps.reduce((a,p)=>a+(p.stages||[]).length,0)}</div><div class="kpi-sub">todos os projetos</div></div>`;
   renderCards('dash-grid',ps);
 }
@@ -1487,6 +1513,7 @@ function renderDetail(){
   document.getElementById('dtab-stages').classList.add('on');
   document.getElementById('tab-stages').style.display='block';
   document.getElementById('tab-gantt').style.display='none';
+  if(document.getElementById('tab-cost')) document.getElementById('tab-cost').style.display='none';
 }
 
 // ════════════════════════════════════
@@ -1511,7 +1538,10 @@ function renderStages(){
             <span>⏱️ ${totH}h</span>
             <span>👤 ${esc(root.executor||'—')}</span>
             <span>📅 ${fDS(root.date)}</span>
+            ${root.dateEnd?`<span>🏁 ${fDS(root.dateEnd)}</span>`:''}
             <span class="badge ${SB[root.status]||'badge-gray'}">${SE[root.status]||''} ${root.status}</span>
+            ${root.dateReal?`<span style="font-size:11px;color:var(--green)">✅ Concluída em: <strong>${fDS(root.dateReal)}</strong></span>`:''}
+            ${(()=>{const ps=prazoStatus(root);return`<span class="ps-badge ${ps.cls}">${ps.icon} ${ps.label}</span>`;})()}
           </div>
           <span class="schev open" id="chev_${root.id}">▼</span>
         </div>
@@ -1532,7 +1562,10 @@ function renderStages(){
               <span>⏱️ ${k.hours||0}h</span>
               <span>👤 ${esc(k.executor||'—')}</span>
               <span>📅 ${fDS(k.date)}</span>
+              ${k.dateEnd?`<span>🏁 ${fDS(k.dateEnd)}</span>`:''}
               <span class="badge ${SB[k.status]||'badge-gray'}">${SE[k.status]||''} ${k.status}</span>
+              ${k.dateReal?`<span style="font-size:11px;color:var(--green)">✅ Concluída em: <strong>${fDS(k.dateReal)}</strong></span>`:''}
+              ${(()=>{const ps=prazoStatus(k);return`<span class="ps-badge ${ps.cls}">${ps.icon} ${ps.label}</span>`;})()}
             </div>
           </div>
           <div class="ssrow-acts">
@@ -1548,6 +1581,88 @@ function renderStages(){
       </div>
     </div>`;
   }).join('');
+}
+
+// ════════════════════════════════════
+// EVM — EARNED VALUE MANAGEMENT (PMBOK)
+// ════════════════════════════════════
+function calcEVM(proj){
+  const stages = (proj.stages||[]);
+  const defRate = parseFloat(proj.defaultRate)||0;
+  const today   = new Date(); today.setHours(0,0,0,0);
+
+  let BAC=0, PV=0, EV=0, AC=0;
+
+  stages.forEach(s=>{
+    const rate      = s.hourRate || defRate;
+    const hPlan     = parseFloat(s.hours)||0;
+    const hReal     = parseFloat(s.hoursReal)||0;
+    const dateEnd   = s.dateEnd ? new Date(s.dateEnd+'T00:00:00') : null;
+    const done      = s.status === 'Concluído';
+
+    // BAC = total planned cost
+    BAC += hPlan * rate;
+
+    // PV = planned cost of work scheduled by today
+    if(dateEnd && dateEnd <= today) PV += hPlan * rate;
+
+    // EV = planned cost of work actually completed
+    if(done) EV += hPlan * rate;
+
+    // AC = actual cost (real hours * rate)
+    AC += hReal * rate;
+  });
+
+  const CV    = EV - AC;                          // Cost Variance
+  const SV    = EV - PV;                          // Schedule Variance
+  const CPI   = AC > 0 ? EV / AC : 1;             // Cost Performance Index
+  const SPI   = PV > 0 ? EV / PV : 1;             // Schedule Performance Index
+  const EAC   = CPI > 0 ? BAC / CPI : BAC;        // Estimate at Completion
+  const ETC   = EAC - AC;                         // Estimate to Complete
+  const VAC   = BAC - EAC;                         // Variance at Completion
+  const pctBudget = BAC > 0 ? Math.round(AC/BAC*100) : 0;
+  const pctComplete = BAC > 0 ? Math.round(EV/BAC*100) : 0;
+
+  return {BAC,PV,EV,AC,CV,SV,CPI,SPI,EAC,ETC,VAC,pctBudget,pctComplete,defRate};
+}
+
+function fCur(v){
+  return 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function cpiColor(cpi){
+  if(cpi>=1)return'var(--green)';
+  if(cpi>=0.9)return'var(--amber)';
+  return'var(--red)';
+}
+
+// ════════════════════════════════════
+// PRAZO STATUS (PMBOK)
+// ════════════════════════════════════
+function prazoStatus(stage){
+  const today = new Date(); today.setHours(0,0,0,0);
+  const dateStart = stage.date    ? new Date(stage.date+'T00:00:00')    : null;
+  const dateEnd   = stage.dateEnd ? new Date(stage.dateEnd+'T00:00:00') : null;
+
+  // Finalizada — independente do prazo
+  if(stage.status === 'Concluído'){
+    return {label:'Finalizada', cls:'ps-done', icon:'✅'};
+  }
+  // Sem data de término — não calculável
+  if(!dateEnd){
+    return {label:'Sem prazo', cls:'ps-none', icon:'⚪'};
+  }
+  // Ainda não iniciou (data início futura)
+  if(dateStart && today < dateStart){
+    return {label:'Não Iniciada', cls:'ps-future', icon:'🔵'};
+  }
+  const diffDays = Math.ceil((dateEnd - today) / 86400000);
+  if(diffDays < 0){
+    return {label:`Atrasada ${Math.abs(diffDays)}d`, cls:'ps-late', icon:'🔴'};
+  }
+  if(diffDays <= 7){
+    return {label:`Em Risco ${diffDays}d`, cls:'ps-risk', icon:'🟡'};
+  }
+  return {label:'Dentro do Prazo', cls:'ps-ok', icon:'🟢'};
 }
 
 // ════════════════════════════════════
@@ -1599,6 +1714,152 @@ function toggleKids(id){
 }
 
 // ════════════════════════════════════
+// COST TAB
+// ════════════════════════════════════
+function renderCostTab(){
+  const proj=getP(S.cur); if(!proj) return;
+  const e=calcEVM(proj);
+  const el=document.getElementById('cost-content'); if(!el) return;
+  const defRate = e.defRate;
+
+  // Warn if no rate set
+  const noRate = !defRate && !(proj.stages||[]).some(s=>s.hourRate>0);
+  const warnHtml = noRate ? `<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--amber)">
+    ⚠️ Nenhum valor/hora definido. Configure o <strong>valor padrão no projeto</strong> ou por <strong>etapa individualmente</strong>.
+  </div>` : '';
+
+  const cpi_c = cpiColor(e.CPI);
+  const spi_c = cpiColor(e.SPI);
+  const cv_c  = e.CV >= 0 ? 'var(--green)' : 'var(--red)';
+  const sv_c  = e.SV >= 0 ? 'var(--green)' : 'var(--red)';
+  const vac_c = e.VAC >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Stages table with cost per stage
+  const stages = (proj.stages||[]);
+  const roots  = stages.filter(s=>!s.parentId);
+
+  const stageRows = roots.map((r,ri)=>{
+    const col   = PCOLS[ri%PCOLS.length];
+    const kids  = stages.filter(s=>s.parentId===r.id);
+    const all   = [r,...kids];
+    const rRate = r.hourRate || defRate;
+    const rHP   = parseFloat(r.hours)||0;
+    const rHR   = parseFloat(r.hoursReal)||0;
+    const rPlan = rHP * rRate;
+    const rAC   = rHR * rRate;
+    const rDiff = rPlan - rAC;
+    const rootRow = `<tr style="background:rgba(251,146,60,.06)">
+      <td style="font-weight:700;color:${col};padding:7px 10px">${esc(r.num)||'—'} ${esc(r.name)}</td>
+      <td style="text-align:center;padding:7px 6px;font-size:11px">${rHP}h</td>
+      <td style="text-align:center;padding:7px 6px;font-size:11px">${rHR}h</td>
+      <td style="text-align:center;padding:7px 6px;font-size:11px">${rRate>0?fCur(rRate):'<span style="color:var(--dim)">—</span>'}</td>
+      <td style="text-align:right;padding:7px 8px;font-size:11px;color:var(--amber)">${rRate>0?fCur(rPlan):'—'}</td>
+      <td style="text-align:right;padding:7px 8px;font-size:11px">${rRate>0?fCur(rAC):'—'}</td>
+      <td style="text-align:right;padding:7px 8px;font-size:11px;color:${rDiff>=0?'var(--green)':'var(--red)'}">${rRate>0?(rDiff>=0?'+':'')+fCur(rDiff):'—'}</td>
+      <td style="text-align:center;padding:7px 6px"><span class="badge ${SB[r.status]||'badge-gray'}" style="font-size:9px">${r.status}</span></td>
+    </tr>`;
+    const kidRows = kids.map(k=>{
+      const kRate = k.hourRate || defRate;
+      const kHP   = parseFloat(k.hours)||0;
+      const kHR   = parseFloat(k.hoursReal)||0;
+      const kPlan = kHP * kRate;
+      const kAC   = kHR * kRate;
+      const kDiff = kPlan - kAC;
+      return `<tr>
+        <td style="padding:5px 10px;font-size:11px;color:var(--mid)">└ ${esc(k.num)||'—'} ${esc(k.name)}</td>
+        <td style="text-align:center;padding:5px 6px;font-size:11px">${kHP}h</td>
+        <td style="text-align:center;padding:5px 6px;font-size:11px">${kHR}h</td>
+        <td style="text-align:center;padding:5px 6px;font-size:11px">${kRate>0?fCur(kRate):'<span style="color:var(--dim)">—</span>'}</td>
+        <td style="text-align:right;padding:5px 8px;font-size:11px;color:var(--amber)">${kRate>0?fCur(kPlan):'—'}</td>
+        <td style="text-align:right;padding:5px 8px;font-size:11px">${kRate>0?fCur(kAC):'—'}</td>
+        <td style="text-align:right;padding:5px 8px;font-size:11px;color:${kDiff>=0?'var(--green)':'var(--red)'}">${kRate>0?(kDiff>=0?'+':'')+fCur(kDiff):'—'}</td>
+        <td style="text-align:center;padding:5px 6px"><span class="badge ${SB[k.status]||'badge-gray'}" style="font-size:9px">${k.status}</span></td>
+      </tr>`;
+    }).join('');
+    return rootRow + kidRows;
+  }).join('');
+
+  el.innerHTML = `
+  ${warnHtml}
+
+  <!-- KPIs EVM -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px">
+    ${kpiCard('BAC','Orçamento Total',fCur(e.BAC),'var(--accent)','Budget at Completion')}
+    ${kpiCard('EV','Valor Agregado',fCur(e.EV),'var(--green)','Earned Value — valor do trabalho concluído')}
+    ${kpiCard('PV','Valor Planejado',fCur(e.PV),'var(--amber)','Planned Value — o que deveria estar feito hoje')}
+    ${kpiCard('AC','Custo Real',fCur(e.AC),'var(--purple)','Actual Cost — o que foi efetivamente gasto')}
+    ${kpiCard('EAC','Previsão Final',fCur(e.EAC),e.VAC>=0?'var(--green)':'var(--red)','Estimate at Completion — projeção do custo total')}
+    ${kpiCard('VAC','Variação Final',(e.VAC>=0?'+':'')+fCur(e.VAC),vac_c,'Variance at Completion — sobra ou estouro previsto')}
+  </div>
+
+  <!-- Índices de performance -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:20px">
+    <div class="card" style="padding:14px;text-align:center">
+      <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">CPI · Eficiência de Custo</div>
+      <div style="font-size:28px;font-weight:800;color:${cpi_c}">${e.CPI.toFixed(2)}</div>
+      <div style="font-size:11px;color:var(--mid);margin-top:4px">${e.CPI>=1?'✅ Abaixo do orçamento':e.CPI>=0.9?'⚠️ Em risco':'🔴 Acima do orçamento'}</div>
+    </div>
+    <div class="card" style="padding:14px;text-align:center">
+      <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">SPI · Eficiência de Prazo</div>
+      <div style="font-size:28px;font-weight:800;color:${spi_c}">${e.SPI.toFixed(2)}</div>
+      <div style="font-size:11px;color:var(--mid);margin-top:4px">${e.SPI>=1?'✅ Adiantado':'🔴 Atrasado'}</div>
+    </div>
+    <div class="card" style="padding:14px;text-align:center">
+      <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">CV · Variação de Custo</div>
+      <div style="font-size:24px;font-weight:800;color:${cv_c}">${(e.CV>=0?'+':'')+fCur(e.CV)}</div>
+      <div style="font-size:11px;color:var(--mid);margin-top:4px">${e.CV>=0?'✅ Dentro do orçamento':'🔴 Estouro de custo'}</div>
+    </div>
+    <div class="card" style="padding:14px;text-align:center">
+      <div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">% Orçamento Consumido</div>
+      <div style="font-size:28px;font-weight:800;color:var(--accent)">${e.pctBudget}%</div>
+      <div style="font-size:11px;color:var(--mid);margin-top:4px">${e.pctComplete}% do escopo entregue</div>
+    </div>
+  </div>
+
+  <!-- Tabela por etapa -->
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:600">📋 Custo por Etapa</div>
+    <div style="overflow-x:auto">
+      <table style="border-collapse:collapse;width:100%;min-width:700px">
+        <thead>
+          <tr style="background:var(--bg3)">
+            <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em">Etapa</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase">H. Plan.</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase">H. Real</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase">R$/h</th>
+            <th style="padding:8px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase">Custo Plan.</th>
+            <th style="padding:8px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase">Custo Real</th>
+            <th style="padding:8px 8px;text-align:right;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase">Variação</th>
+            <th style="padding:8px 6px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase">Status</th>
+          </tr>
+        </thead>
+        <tbody>${stageRows}</tbody>
+        <tfoot>
+          <tr style="background:var(--bg3);border-top:2px solid var(--border)">
+            <td style="padding:9px 10px;font-weight:700;font-size:12px">TOTAL</td>
+            <td style="text-align:center;padding:9px 6px;font-size:12px;font-weight:700">${stages.reduce((a,s)=>a+(parseFloat(s.hours)||0),0)}h</td>
+            <td style="text-align:center;padding:9px 6px;font-size:12px;font-weight:700">${stages.reduce((a,s)=>a+(parseFloat(s.hoursReal)||0),0)}h</td>
+            <td></td>
+            <td style="text-align:right;padding:9px 8px;font-size:12px;font-weight:700;color:var(--amber)">${fCur(e.BAC)}</td>
+            <td style="text-align:right;padding:9px 8px;font-size:12px;font-weight:700;color:var(--purple)">${fCur(e.AC)}</td>
+            <td style="text-align:right;padding:9px 8px;font-size:12px;font-weight:700;color:${(e.BAC-e.AC)>=0?'var(--green)':'var(--red)'}">${((e.BAC-e.AC)>=0?'+':'')+fCur(e.BAC-e.AC)}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>`;
+}
+
+function kpiCard(code, label, value, color, tip){
+  return `<div class="card" style="padding:14px" title="${tip}">
+    <div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px">${code}</div>
+    <div style="font-size:11px;color:var(--mid);margin-bottom:6px">${label}</div>
+    <div style="font-size:18px;font-weight:800;color:${color}">${value}</div>
+  </div>`;
+}
+
+// ════════════════════════════════════
 // GANTT
 // ════════════════════════════════════
 function renderGantt(){
@@ -1623,15 +1884,25 @@ function renderGantt(){
       <th style="min-width:90px">Executante</th>
       <th style="min-width:44px;text-align:center">Horas</th>
       <th style="min-width:90px;text-align:center">Ações</th>
+      <th style="min-width:90px;text-align:center;font-size:10px">✅ Conclusão Real</th>
       ${wks.map(w=>`<th class="wk">${w.lb}</th>`).join('')}
     </tr></thead><tbody>`;
 
   rows.forEach(r=>{
     const rd=r.date?new Date(r.date+'T00:00:00'):null;
+    const rdStart = r.date    ? new Date(r.date+'T00:00:00')    : null;
+    const rdEnd   = r.dateEnd ? new Date(r.dateEnd+'T00:00:00') : rdStart;
+    const ps      = prazoStatus(r);
     const cells=wks.map(w=>{
-      if(!rd)return'<td class="gcell"></td>';
-      if(rd>=w.s&&rd<=w.e){
-        return`<td class="gcell"><div class="gbar" style="background:${r.col}" title="Duplo clique para editar: ${esc(r.name)}" ondblclick="ganttEditStage('${r.id}')">${SE[r.status]||''}</div></td>`;
+      if(!rdStart && !rdEnd) return '<td class="gcell"></td>';
+      const inBar = rdStart && rdEnd
+        ? (w.e >= rdStart && w.s <= rdEnd)
+        : (rdStart && rdStart>=w.s && rdStart<=w.e);
+      if(inBar){
+        const isFirst = rdStart && rdStart>=w.s && rdStart<=w.e;
+        const isLast  = rdEnd   && rdEnd>=w.s   && rdEnd<=w.e;
+        const br = isFirst&&isLast?'4px': isFirst?'4px 0 0 4px': isLast?'0 4px 4px 0':'0';
+        return`<td class="gcell"><div class="gbar" style="background:${r.col};border-radius:${br}" title="${esc(r.name)} | ${ps.label}" ondblclick="ganttEditStage('${r.id}')">${isFirst?SE[r.status]||'':''}</div></td>`;
       }
       return'<td class="gcell"></td>';
     }).join('');
@@ -1641,11 +1912,24 @@ function renderGantt(){
       ${!r.parentId?`<button class="btn btn-success btn-xs" title="Adicionar sub-etapa" onclick="openStageModal(true,null,'${r.id}')">+ Sub</button>`:''}
       <button class="btn btn-danger btn-xs" title="Excluir" onclick="askDeleteStage('${r.id}')">🗑</button>`;
 
-    h+=`<tr class="${r.isRoot?'groot':''}" id="grow_${r.id}">
+    const drReal = r.dateReal ? new Date(r.dateReal+'T00:00:00') : null;
+    // Mark actual finish on Gantt: overlay a thin green line on the bar week
+    const cellsWithReal = cells.replace(
+      /(<td class="gcell">(<div class="gbar"[^>]+>)[^<]*<\/div><\/td>)/,
+      (m, full, divTag) => drReal ? full.replace('</div></td>',
+        `<div style="position:absolute;right:0;top:0;bottom:0;width:3px;background:#22c55e;border-radius:0 4px 4px 0" title="Conclusão real: ${fDS(r.dateReal)}"></div></div></td>`) : m
+    );
+
+    const dateRealCell = r.dateReal
+      ? `<td style="font-size:11px;color:var(--green);text-align:center;white-space:nowrap">✅ ${fDS(r.dateReal)}</td>`
+      : `<td style="font-size:11px;color:var(--dim);text-align:center">—</td>`;
+
+    h+=`<tr class="${r.isRoot?'groot':''}" id="grow_${r.id}" style="position:relative">
       <td class="gname gname-cell" title="${esc(r.name)}" ondblclick="ganttEditStage('${r.id}')">${r.isRoot?'':' └ '}${esc(r.num)||''} ${esc(r.name)}</td>
       <td style="font-size:11px;color:var(--mid)">${esc(r.executor||'—')}</td>
       <td style="font-size:11px;color:var(--mid);text-align:center">${r.hours||0}h</td>
       <td style="text-align:center;white-space:nowrap;padding:3px 6px"><div style="display:flex;gap:3px;justify-content:center">${actBtns}</div></td>
+      ${dateRealCell}
       ${cells}
     </tr>`;
   });
@@ -1682,6 +1966,7 @@ function openProjModal(editCur=false,editId=null){
   document.getElementById('fp-start').value=p?.startDate||new Date().toISOString().split('T')[0];
   document.getElementById('fp-end').value=p?.endDate||'';
   document.getElementById('fp-hours').value=p?.totalHours||'';
+  document.getElementById('fp-rate').value=p?.defaultRate||'';
   document.getElementById('fp-desc').value=p?.desc||'';
   const sc=p?.color||COLORS[0];
   document.getElementById('cswatches').innerHTML=COLORS.map(c=>`<div class="csw ${c===sc?'sel':''}" style="background:${c}" onclick="pickColor('${c}')" data-c="${c}"></div>`).join('');
@@ -1694,7 +1979,7 @@ function saveProject(){
   const client=document.getElementById('fp-client').value.trim();
   if(!name){toast('Informe o nome do projeto','err');return;}
   if(!client){toast('Informe o nome do cliente','err');return;}
-  const d={name,client,owner:document.getElementById('fp-owner').value.trim(),status:document.getElementById('fp-status').value,startDate:document.getElementById('fp-start').value,endDate:document.getElementById('fp-end').value,totalHours:document.getElementById('fp-hours').value,desc:document.getElementById('fp-desc').value.trim(),color:getColor()};
+  const d={name,client,owner:document.getElementById('fp-owner').value.trim(),status:document.getElementById('fp-status').value,startDate:document.getElementById('fp-start').value,endDate:document.getElementById('fp-end').value,totalHours:document.getElementById('fp-hours').value,defaultRate:parseFloat(document.getElementById('fp-rate').value)||0,desc:document.getElementById('fp-desc').value.trim(),color:getColor()};
   if(_eProjId){
     const i=S.projects.findIndex(p=>p.id===_eProjId);
     if(i>=0)S.projects[i]={...S.projects[i],...d};
@@ -1734,6 +2019,10 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   document.getElementById('fs-name').value=stage?.name||'';
   document.getElementById('fs-executor').value=stage?.executor||'';
   document.getElementById('fs-date').value=stage?.date||'';
+  document.getElementById('fs-dateend').value=stage?.dateEnd||'';
+  document.getElementById('fs-datereal').value=stage?.dateReal||'';
+  document.getElementById('fs-hoursreal').value=stage?.hoursReal||'';
+  document.getElementById('fs-rate').value=stage?.hourRate||'';
   document.getElementById('fs-hours').value=stage?.hours||'';
   document.getElementById('fs-status').value=stage?.status||'Pendente';
   const roots=(proj?.stages||[]).filter(s=>!s.parentId&&s.id!==editId);
@@ -1750,7 +2039,17 @@ function applyPillar(){
 function saveStage(){
   const name=document.getElementById('fs-name').value.trim();if(!name){toast('Informe o nome da etapa','err');return;}
   const proj=getP(S.cur);if(!proj)return;if(!proj.stages)proj.stages=[];
-  const d={name,num:document.getElementById('fs-num').value.trim(),executor:document.getElementById('fs-executor').value.trim(),date:document.getElementById('fs-date').value,hours:document.getElementById('fs-hours').value,status:document.getElementById('fs-status').value,parentId:document.getElementById('fs-parent').value||null};
+  const d={name,
+    num:document.getElementById('fs-num').value.trim(),
+    executor:document.getElementById('fs-executor').value.trim(),
+    date:document.getElementById('fs-date').value,
+    dateEnd:document.getElementById('fs-dateend').value,
+    dateReal:document.getElementById('fs-datereal').value,
+    hours:document.getElementById('fs-hours').value,
+    hoursReal:document.getElementById('fs-hoursreal').value,
+    hourRate:parseFloat(document.getElementById('fs-rate').value)||0,
+    status:document.getElementById('fs-status').value,
+    parentId:document.getElementById('fs-parent').value||null};
   if(_eStageId){const i=proj.stages.findIndex(s=>s.id===_eStageId);if(i>=0)proj.stages[i]={...proj.stages[i],...d};toast('Etapa atualizada ✓');}
   else{proj.stages.push({id:uid(),...d});toast('Etapa adicionada ✓');}
   autoNumberStages(proj);
@@ -2324,8 +2623,9 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 function switchTab(el,tid){
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  ['tab-stages','tab-gantt'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display=id===tid?'block':'none';});
+  ['tab-stages','tab-gantt','tab-cost'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display=id===tid?'block':'none';});
   if(tid==='tab-gantt')renderGantt();
+  if(tid==='tab-cost')renderCostTab();
 }
 
 // Drag & drop
