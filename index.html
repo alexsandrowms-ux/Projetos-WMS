@@ -2339,7 +2339,7 @@ function exportHTML(projs){
     const roots=(p.stages||[]).filter(s=>!s.parentId);
     const cm={};(p.stages||[]).filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
     body+=`<div class="ps"><div class="ph" style="border-left:5px solid ${c}"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:18px;font-weight:800;color:${c};margin-bottom:4px">${esc(p.name)}</div><div style="font-size:12px;color:#64748b">Cliente: ${esc(p.client||'—')} · Responsável: ${esc(p.owner||'—')} · ${p.status}</div><div style="font-size:12px;color:#64748b">${fD(p.startDate)} → ${fD(p.endDate)} · FAP: ${p.totalHours||0}h</div></div><div style="display:flex;gap:14px">${[{l:'Planejadas',v:st.pl+'h'},{l:'Realizadas',v:st.dn+'h',c:'#22c55e'},{l:'Progresso',v:st.pct+'%',c}].map(k=>`<div style="text-align:center"><div style="font-size:20px;font-weight:800;color:${k.c||'#1e293b'}">${k.v}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase">${k.l}</div></div>`).join('')}</div></div></div>
-    <table class="st"><thead><tr><th>Num</th><th>Etapa</th><th>Tipo</th><th>Executante</th><th>Data</th><th>Horas</th><th>Status</th></tr></thead><tbody>
+    <table class="st"><thead><tr><th>Num</th><th>Etapa</th><th>Tipo</th><th>Executante</th><th>Início Plan.</th><th>Término Plan.</th><th>H. Plan.</th><th>H. Real</th><th>Custo Plan.</th><th>Custo Real</th><th>Variação</th><th>Status</th><th>Prazo</th></tr></thead><tbody>
     ${roots.map((r,ri)=>{
       const rc=PCOLS[ri%PCOLS.length];const kids=cm[r.id]||[];
       const defRate=parseFloat(p.defaultRate)||0;
