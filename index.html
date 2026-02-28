@@ -139,40 +139,48 @@ textarea.fc{resize:vertical;min-height:60px}
 .dtab.on{background:var(--bg4);color:var(--text)}
 
 /* ── STAGES ── */
-.stage-section{margin-bottom:5px}
-.sroot{display:flex;align-items:stretch;background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.25);border-radius:var(--r);overflow:hidden;transition:border-color .15s}
-.sroot:hover{border-color:rgba(251,146,60,.45)}
-.sroot-bar{width:4px;flex-shrink:0}
-.sroot-body{display:flex;align-items:center;gap:10px;padding:10px 13px;flex:1;min-width:0;cursor:pointer}
-.sroot-acts{display:flex;align-items:center;gap:5px;padding:7px 10px;border-left:1px solid var(--border);flex-shrink:0;background:rgba(0,0,0,.12);flex-wrap:wrap}
-.substages-wrap{margin-left:20px;margin-top:3px;display:flex;flex-direction:column;gap:3px}
+.stage-section{margin-bottom:6px}
+
+/* Root */
+.sroot{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.sroot:hover{border-color:var(--border2);box-shadow:0 2px 10px rgba(0,0,0,.15)}
+.sroot-body{display:flex;align-items:center;gap:10px;padding:11px 14px;flex:1;min-width:0;cursor:pointer}
+.sroot-acts{display:flex;align-items:center;gap:4px;padding:8px 10px;border-left:1px solid var(--border);flex-shrink:0;background:rgba(0,0,0,.1)}
+.sr-pills{display:flex;align-items:center;gap:5px;flex-wrap:wrap;flex-shrink:0}
+.sr-row2{display:flex;align-items:center;padding:0 14px 8px 46px;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.05)}
+.sri{display:flex;flex-direction:column;gap:1px;padding:6px 16px 6px 0;border-right:1px solid rgba(255,255,255,.06);margin-right:16px}
+.sri:last-child{border-right:none;margin-right:0}
+.sri-l{font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600;white-space:nowrap}
+.sri-v{font-size:12px;font-weight:700;color:var(--text);white-space:nowrap}
+.sri-bar{flex:1;min-width:140px;border-right:none}
+
+/* Sub-stage */
+.substages-wrap{margin-left:20px;margin-top:3px;display:flex;flex-direction:column;gap:3px;border-left:2px solid var(--border);padding-left:8px}
 .ssrow{display:flex;align-items:stretch;background:var(--bg2);border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:all .15s}
 .ssrow:hover{border-color:var(--border2);background:var(--bg3)}
-.ssrow-bar{width:3px;flex-shrink:0;opacity:.6}
-.ssrow-body{display:flex;align-items:stretch;flex:1;min-width:0;overflow-x:auto}
+.ssrow-bar{width:3px;flex-shrink:0;opacity:.5}
+.ssrow-body{display:flex;align-items:stretch;flex:1;min-width:0}
 .ssrow-acts{display:flex;align-items:center;gap:3px;padding:5px 8px;border-left:1px solid var(--border);flex-shrink:0;background:rgba(0,0,0,.08)}
-.sc{padding:7px 10px;display:flex;flex-direction:column;justify-content:center;gap:2px;border-right:1px solid rgba(255,255,255,.05);flex-shrink:0}
-.sc-lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600;white-space:nowrap}
-.sc-val{font-size:12px;color:var(--text);font-weight:500;white-space:nowrap}
-.sc-name{flex:1;min-width:180px}
-.sc-md{width:110px}
-.sc-sm{width:74px}
+.ss-name{display:flex;align-items:center;gap:6px;padding:10px 14px;flex:1;min-width:160px;border-right:1px solid rgba(255,255,255,.06)}
+.ss-num{font-size:10px;font-weight:800;flex-shrink:0}
+.ss-title{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ss-grid{display:flex;align-items:stretch;flex-shrink:0}
+.ssi{display:flex;flex-direction:column;justify-content:center;gap:2px;padding:8px 12px;border-right:1px solid rgba(255,255,255,.05);min-width:64px}
+.ssi:last-child{border-right:none}
+.ssi-l{font-size:9px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);font-weight:600;white-space:nowrap}
+.ssi-v{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap}
+
 .btn-move{background:none;border:1px solid var(--border);border-radius:4px;color:var(--dim);cursor:pointer;font-size:11px;padding:2px 5px;line-height:1;transition:all .12s;font-family:var(--sans)}
 .btn-move:hover{border-color:var(--accent);color:var(--accent);background:rgba(14,165,233,.07)}
 .btn-move:disabled{opacity:.25;cursor:default;pointer-events:none}
-.snum{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;flex-shrink:0;font-family:var(--sans)}
-.sname{font-weight:600;font-size:12.5px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.ssnum{font-size:10px;font-weight:700;color:var(--dim);min-width:30px;flex-shrink:0;font-family:var(--sans)}
-.ssname{font-size:12px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.smeta{display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap}
-.smeta span{font-size:11px;color:var(--mid);white-space:nowrap}
-.hbudget{display:flex;align-items:center;gap:8px;flex-wrap:nowrap;margin-top:6px;width:100%}
+.snum{font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px;flex-shrink:0;letter-spacing:.02em}
+.sname{font-weight:700;font-size:13px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbudget{display:flex;align-items:center;gap:8px;flex-wrap:nowrap}
 .hbudget-bar-wrap{flex:1;height:6px;background:var(--bg4);border-radius:3px;min-width:60px;overflow:hidden}
 .hbudget-bar{height:100%;border-radius:3px;transition:width .3s}
 .hbudget-ok{background:var(--green)}
 .hbudget-warn{background:var(--amber)}
 .hbudget-over{background:#ef4444}
-.hbudget-label{font-size:11px;font-weight:700;white-space:nowrap}
 .badge-over{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3);font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700}
 .badge-left{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25);font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700}
 .badge-exact{background:rgba(14,165,233,.1);color:var(--accent);border:1px solid rgba(14,165,233,.25);font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700}
@@ -1594,19 +1602,17 @@ function renderStages(){
     const realizado=kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
     const ps=prazoStatus(root);
     return`<div class="stage-section">
-      <div class="sroot" style="border:1px solid var(--border);border-left:3px solid ${col};border-radius:var(--r);overflow:hidden;margin-bottom:4px;transition:border-color .15s,box-shadow .15s">
+      <div class="sroot" style="border-left:3px solid ${col}">
         <div style="display:flex;align-items:stretch">
           <div class="sroot-body" onclick="toggleKids('${root.id}')">
-            <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40;font-size:10px;font-weight:800;padding:3px 7px;border-radius:5px;flex-shrink:0">${esc(root.num)||'–'}</span>
-            <div style="flex:1;min-width:0">
-              <span class="sname" title="${esc(root.name)}" style="font-weight:700;font-size:13px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(root.name)}</span>
-              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:3px">
-                <span class="badge ${SB[root.status]||'badge-gray'}" style="font-size:9px">${SE[root.status]||''} ${root.status}</span>
-                <span class="ps-badge ${ps.cls}" style="font-size:9px">${ps.icon} ${ps.label}</span>
-                ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}" style="font-size:9px">${overBudget?'⚠️ +'+Math.abs(remaining)+'h':remaining===0?'✅ Exato':'💚 '+remaining+'h livre'}</span>`:''}
-              </div>
+            <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40">${esc(root.num)||'–'}</span>
+            <span class="sname">${esc(root.name)}</span>
+            <div class="sr-pills">
+              <span class="badge ${SB[root.status]||'badge-gray'}" style="font-size:9px">${SE[root.status]||''} ${root.status}</span>
+              <span class="ps-badge ${ps.cls}" style="font-size:9px">${ps.icon} ${ps.label}</span>
+              ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}" style="font-size:9px">${overBudget?'⚠️ +'+Math.abs(remaining)+'h':remaining===0?'✅ Exato':'💚 '+remaining+'h livre'}</span>`:''}
             </div>
-            <span class="schev open" id="chev_${root.id}" style="color:var(--dim);font-size:11px;flex-shrink:0;transition:transform .2s;padding:0 4px">▼</span>
+            <span class="schev open" id="chev_${root.id}">▼</span>
           </div>
           <div class="sroot-acts">
             <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${root.id}')">✏️</button>
@@ -1614,40 +1620,19 @@ function renderStages(){
             <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${root.id}')">🗑</button>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:20px;padding:6px 14px 8px 46px;border-top:1px solid rgba(255,255,255,.05);flex-wrap:wrap">
-          <div style="display:flex;flex-direction:column;gap:1px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Responsável</span>
-            <span style="font-size:12px;font-weight:600;color:var(--text)">${esc(root.executor||'—')}</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:1px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Início</span>
-            <span style="font-size:12px;font-weight:600;color:var(--text)">${fDS(root.date)||'—'}</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:1px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Término Plan.</span>
-            <span style="font-size:12px;font-weight:600;color:var(--text)">${fDS(root.dateEnd)||'—'}</span>
-          </div>
-          ${root.dateReal?`<div style="display:flex;flex-direction:column;gap:1px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Conclusão</span>
-            <span style="font-size:12px;font-weight:600;color:var(--green)">${fDS(root.dateReal)}</span>
-          </div>`:''}
-          <div style="display:flex;flex-direction:column;gap:1px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Orçamento</span>
-            <span style="font-size:12px;font-weight:700;color:var(--amber)">${budget}h</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:1px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Consumido</span>
-            <span style="font-size:12px;font-weight:700;color:var(--text)">${consumed}h</span>
-          </div>
-          <div style="display:flex;flex-direction:column;gap:1px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">Realizado</span>
-            <span style="font-size:12px;font-weight:700;color:var(--green)">${realizado}h</span>
-          </div>
-          ${kids.length>0?`<div style="flex:1;min-width:140px;display:flex;flex-direction:column;gap:3px">
-            <span style="font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:600">${pctUsed}% do orçamento</span>
-            <div class="hbudget" style="margin-top:0">
+        <div class="sr-row2">
+          <div class="sri"><span class="sri-l">Responsável</span><span class="sri-v">${esc(root.executor||'—')}</span></div>
+          <div class="sri"><span class="sri-l">Início</span><span class="sri-v">${fDS(root.date)||'—'}</span></div>
+          <div class="sri"><span class="sri-l">Término Plan.</span><span class="sri-v">${fDS(root.dateEnd)||'—'}</span></div>
+          ${root.dateReal?`<div class="sri"><span class="sri-l">Conclusão</span><span class="sri-v" style="color:var(--green)">${fDS(root.dateReal)}</span></div>`:''}
+          <div class="sri"><span class="sri-l">Orçamento</span><span class="sri-v" style="color:var(--amber)">${budget}h</span></div>
+          <div class="sri"><span class="sri-l">Consumido</span><span class="sri-v">${consumed}h</span></div>
+          <div class="sri"><span class="sri-l">Realizado</span><span class="sri-v" style="color:var(--green)">${realizado}h</span></div>
+          ${kids.length>0?`<div class="sri sri-bar">
+            <span class="sri-l">${pctUsed}% do orçamento</span>
+            <div class="hbudget" style="margin-top:3px">
               <div class="hbudget-bar-wrap"><div class="hbudget-bar ${barCls}" style="width:${pctUsed}%"></div></div>
-              <span style="font-size:10px;font-weight:700;color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'};white-space:nowrap">${consumed}/${budget}h</span>
+              <span style="font-size:10px;font-weight:700;white-space:nowrap;color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'}">${consumed}/${budget}h</span>
             </div>
           </div>`:''}
         </div>
@@ -1657,40 +1642,19 @@ function renderStages(){
         <div class="ssrow">
           <div class="ssrow-bar" style="background:${col}"></div>
           <div class="ssrow-body">
-            <div class="sc sc-name">
-              <span class="sc-lbl">Sub-etapa</span>
-              <span class="sc-val" style="font-weight:600" title="${esc(k.name)}">
-                <span style="color:${col};font-weight:800;margin-right:5px">${esc(k.num)||'–'}</span>${esc(k.name)}
-              </span>
+            <div class="ss-name">
+              <span class="ss-num" style="color:${col}">${esc(k.num)||'–'}</span>
+              <span class="ss-title" title="${esc(k.name)}">${esc(k.name)}</span>
             </div>
-            <div class="sc sc-md">
-              <span class="sc-lbl">Responsável</span>
-              <span class="sc-val">${esc(k.executor||'—')}</span>
-            </div>
-            <div class="sc sc-sm">
-              <span class="sc-lbl">Início</span>
-              <span class="sc-val">${fDS(k.date)||'—'}</span>
-            </div>
-            <div class="sc sc-sm">
-              <span class="sc-lbl">Término</span>
-              <span class="sc-val">${fDS(k.dateEnd)||'—'}</span>
-            </div>
-            <div class="sc sc-sm">
-              <span class="sc-lbl">H. Plan.</span>
-              <span class="sc-val" style="color:var(--amber)">${k.hours||0}h</span>
-            </div>
-            <div class="sc sc-sm">
-              <span class="sc-lbl">H. Real</span>
-              <span class="sc-val" style="color:var(--green)">${k.hoursReal||'—'}</span>
-            </div>
-            ${k.dateReal?`<div class="sc sc-sm"><span class="sc-lbl">Conclusão</span><span class="sc-val" style="color:var(--green)">${fDS(k.dateReal)}</span></div>`:''}
-            <div class="sc sc-sm">
-              <span class="sc-lbl">Status</span>
-              <span class="badge ${SB[k.status]||'badge-gray'}" style="font-size:9px;margin-top:2px">${SE[k.status]||''} ${k.status}</span>
-            </div>
-            <div class="sc sc-sm">
-              <span class="sc-lbl">Prazo</span>
-              <span class="ps-badge ${kps.cls}" style="margin-top:2px;font-size:9px">${kps.icon} ${kps.label}</span>
+            <div class="ss-grid">
+              <div class="ssi"><span class="ssi-l">Responsável</span><span class="ssi-v">${esc(k.executor||'—')}</span></div>
+              <div class="ssi"><span class="ssi-l">Início</span><span class="ssi-v">${fDS(k.date)||'—'}</span></div>
+              <div class="ssi"><span class="ssi-l">Término</span><span class="ssi-v">${fDS(k.dateEnd)||'—'}</span></div>
+              <div class="ssi"><span class="ssi-l">H. Plan.</span><span class="ssi-v" style="color:var(--amber)">${k.hours||0}h</span></div>
+              <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal||'—'}</span></div>
+              ${k.dateReal?`<div class="ssi"><span class="ssi-l">Conclusão</span><span class="ssi-v" style="color:var(--green)">${fDS(k.dateReal)}</span></div>`:''}
+              <div class="ssi"><span class="ssi-l">Status</span><span class="badge ${SB[k.status]||'badge-gray'}" style="font-size:9px;margin-top:2px">${SE[k.status]||''} ${k.status}</span></div>
+              <div class="ssi"><span class="ssi-l">Prazo</span><span class="ps-badge ${kps.cls}" style="font-size:9px;margin-top:2px">${kps.icon} ${kps.label}</span></div>
             </div>
           </div>
           <div class="ssrow-acts">
