@@ -43,14 +43,18 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .app-shell{display:none;flex-direction:column;height:100vh}
 .topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;z-index:100}
 .logo{font-family:var(--display);font-size:16px;font-weight:800;letter-spacing:-.02em}
-.logo .ax{color:#4ade80}.logo .il{color:var(--accent)}
+.logo .ax{color:#facc15}.logo .il{color:#38bdf8}
 .topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center}
 .app-body{display:flex;flex:1;overflow:hidden}
 
 /* ── SIDEBAR ── */
 .sidebar{width:210px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
 .sb-user{padding:14px 14px 12px;border-bottom:1px solid var(--border)}
-.sb-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;font-family:var(--display);margin-bottom:8px}
+.sb-av{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;font-family:var(--display);margin-bottom:8px;position:relative;cursor:pointer;flex-shrink:0}
+.sb-av-wrap{position:relative;width:64px;height:64px;margin-bottom:10px;cursor:pointer}
+.sb-av-wrap:hover .sb-av-overlay{opacity:1}
+.sb-av-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:18px}
+.sb-av-input{position:absolute;inset:0;opacity:0;cursor:pointer;border-radius:50%;z-index:2}
 .sb-name{font-size:12.5px;font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-role{font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
 .role-admin{background:rgba(167,139,250,.14);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
@@ -417,7 +421,11 @@ textarea.fc{resize:vertical;min-height:60px}
     <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="sb-user">
-        <div class="sb-av" id="sb-av"></div>
+        <div class="sb-av-wrap" title="Clique para trocar a foto">
+          <div class="sb-av" id="sb-av"></div>
+          <div class="sb-av-overlay">📷</div>
+          <input type="file" accept="image/*" class="sb-av-input" onchange="handleSidebarAvatar(this)">
+        </div>
         <div class="sb-name" id="sb-name">—</div>
         <div class="sb-role" id="sb-role">—</div><br>
         <div class="pw-chip pw-ok" id="sb-pw">🟢 Senha válida</div>
@@ -1167,6 +1175,26 @@ function doLogout(){
   switchAuthTab('login');
 }
 
+function handleSidebarAvatar(input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 2*1024*1024){toast('Imagem muito grande (máx 2MB)','err');return;}
+  const reader = new FileReader();
+  reader.onload = e => {
+    // Save to current user
+    const users = getUsers();
+    const idx = users.findIndex(u=>u.id===CU?.id);
+    if(idx<0) return;
+    users[idx].avatar = e.target.result;
+    CU.avatar = e.target.result;
+    putUsers(users);
+    saveSession();
+    updateSidebar();
+    toast('Foto atualizada ✓');
+  };
+  reader.readAsDataURL(file);
+}
+
 function updateSidebar(){
   if(!CU)return;
   const initials=CU.name.split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase();
@@ -1174,10 +1202,10 @@ function updateSidebar(){
   const av=document.getElementById('sb-av');
   if(CU.avatar){
     av.innerHTML=`<img src="${CU.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-    av.style.cssText='overflow:hidden';av.textContent='';
+    av.style.cssText='overflow:hidden;width:64px;height:64px;border-radius:50%';av.textContent='';
   } else {
     av.innerHTML='';av.textContent=initials;
-    av.style.cssText=`background:${color}18;color:${color};border:1px solid ${color}33`;
+    av.style.cssText=`background:${color}18;color:${color};border:2px solid ${color}44;width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800`;
   }
   document.getElementById('sb-name').textContent=CU.name;
   document.getElementById('sb-role').textContent=CU.role==='admin'?'Administrador':'Usuário';
