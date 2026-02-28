@@ -1181,26 +1181,23 @@ function doLogout(){
 
 function handleSidebarAvatar(input){
   const file = input.files[0];
-  if(!file) return;
+  if(!file){return;}
   if(file.size > 2*1024*1024){toast('Imagem muito grande (máx 2MB)','err');input.value='';return;}
   const reader = new FileReader();
   reader.onload = e => {
     const base64 = e.target.result;
     const users = getUsers();
     const idx = users.findIndex(u=>u.id===CU?.id);
-    if(idx<0){toast('Usuário não encontrado','err');return;}
+    if(idx<0){toast('Erro ao salvar foto','err');return;}
     users[idx].avatar = base64;
-    CU.avatar = base64;
+    CU = {...CU, avatar: base64};
     putUsers(users);
     saveSession();
-    // Render directly into the circle
-    const av = document.getElementById('sb-av');
-    av.textContent='';
-    av.innerHTML=`<img src="${base64}" style="width:64px;height:64px;object-fit:cover;border-radius:50%;display:block">`;
-    av.style.cssText='overflow:hidden;width:64px;height:64px;border-radius:50%';
-    input.value=''; // reset so same file can be selected again
+    input.value='';
+    updateSidebar();
     toast('Foto atualizada ✓');
   };
+  reader.onerror = ()=> toast('Erro ao ler imagem','err');
   reader.readAsDataURL(file);
 }
 
@@ -1210,11 +1207,12 @@ function updateSidebar(){
   const color=CU.role==='admin'?'#a78bfa':'#0ea5e9';
   const av=document.getElementById('sb-av');
   if(CU.avatar){
-    av.innerHTML=`<img src="${CU.avatar}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
-    av.style.cssText='overflow:hidden;width:64px;height:64px;border-radius:50%';av.textContent='';
+    av.style.cssText='width:64px;height:64px;border-radius:50%;overflow:hidden;flex-shrink:0';
+    av.innerHTML=`<img src="${CU.avatar}" style="width:100%;height:100%;object-fit:cover;display:block">`;
   } else {
-    av.innerHTML='';av.textContent=initials;
-    av.style.cssText=`background:${color}18;color:${color};border:2px solid ${color}44;width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800`;
+    av.innerHTML='';
+    av.textContent=initials;
+    av.style.cssText=`width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;font-family:var(--display);background:${color}18;color:${color};border:2px solid ${color}44;flex-shrink:0`;
   }
   document.getElementById('sb-name').textContent=CU.name;
   document.getElementById('sb-role').textContent=CU.role==='admin'?'Administrador':'Usuário';
