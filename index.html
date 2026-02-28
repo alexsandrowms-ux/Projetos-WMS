@@ -2264,20 +2264,59 @@ function doExport(fmt){
 }
 
 function flatStages(proj){
-  return(proj.stages||[]).map(s=>({projeto:proj.name,cliente:proj.client||'',responsavel:proj.owner||'',status_projeto:proj.status,num:s.num||'',nome:s.name,executante:s.executor||'',data:fD(s.date),horas:s.hours||'',status:s.status,tipo:s.parentId?'Sub-etapa':'Etapa'}));
+  const defRate = parseFloat(proj.defaultRate)||0;
+  return(proj.stages||[]).map(s=>{
+    const rate   = s.hourRate || defRate;
+    const hPlan  = parseFloat(s.hours)||0;
+    const hReal  = parseFloat(s.hoursReal)||0;
+    const cPlan  = hPlan * rate;
+    const cReal  = hReal * rate;
+    const varVal = cPlan - cReal;
+    return {
+      projeto:proj.name, cliente:proj.client||'', responsavel:proj.owner||'',
+      status_projeto:proj.status, num:s.num||'', nome:s.name,
+      executante:s.executor||'', data_inicio:fD(s.date), data_fim:fD(s.dateEnd),
+      data_real:fD(s.dateReal), horas_plan:hPlan, horas_real:hReal,
+      valor_hora:rate||'', custo_plan:cPlan||'', custo_real:cReal||'',
+      variacao:varVal||'', status:s.status,
+      prazo:(()=>{const ps=prazoStatus(s);return ps.label;})(),
+      tipo:s.parentId?'Sub-etapa':'Etapa'
+    };
+  });
 }
 
 function exportXLSX(projs){
   const rows=[];projs.forEach(p=>rows.push(...flatStages(p)));
   if(!rows.length){toast('Nenhuma etapa para exportar','warn');return;}
-  const hdrs=['Projeto','Cliente','Responsável','Status Projeto','Num','Etapa / Atividade','Executante','Data Prevista','Horas','Status','Tipo'];
-  const wsData=[hdrs,...rows.map(r=>[r.projeto,r.cliente,r.responsavel,r.status_projeto,r.num,r.nome,r.executante,r.data,r.horas,r.status,r.tipo])];
   const wb=XLSX.utils.book_new();
+
+  // ── Aba 1: Atividades com custos ──
+  const hdrs=['Projeto','Cliente','Responsável','Status Projeto','Num','Etapa / Atividade','Tipo','Executante',
+    'Início Plan.','Término Plan.','Término Real','H. Plan.','H. Real',
+    'Valor/h (R$)','Custo Plan. (R$)','Custo Real (R$)','Variação (R$)','Status','Prazo'];
+  const wsData=[hdrs,...rows.map(r=>[
+    r.projeto,r.cliente,r.responsavel,r.status_projeto,r.num,r.nome,r.tipo,r.executante,
+    r.data_inicio,r.data_fim,r.data_real,r.horas_plan,r.horas_real,
+    r.valor_hora,r.custo_plan,r.custo_real,r.variacao,r.status,r.prazo
+  ])];
   const ws=XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols']=[{wch:28},{wch:22},{wch:18},{wch:15},{wch:8},{wch:35},{wch:18},{wch:13},{wch:7},{wch:13},{wch:10}];
+  ws['!cols']=[{wch:24},{wch:18},{wch:16},{wch:13},{wch:6},{wch:32},{wch:9},{wch:16},
+    {wch:12},{wch:12},{wch:12},{wch:8},{wch:7},{wch:10},{wch:14},{wch:14},{wch:12},{wch:13},{wch:15}];
   XLSX.utils.book_append_sheet(wb,ws,'Atividades WMS');
-  const sum=[['Projeto','Cliente','Status','Horas FAP','Planejadas','Realizadas','%','Etapas'],...projs.map(p=>{const st=stats(p);return[p.name,p.client||'',p.status,p.totalHours||0,st.pl,st.dn,st.pct+'%',(p.stages||[]).length];})];
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(sum),'Resumo');
+
+  // ── Aba 2: Resumo EVM por projeto ──
+  const evmHdrs=['Projeto','Cliente','Status','H.FAP','H.Plan.','H.Real.','%Progresso','Etapas',
+    'Orçamento (BAC)','Valor Agregado (EV)','Custo Real (AC)','Variação Custo (CV)','CPI','SPI','Previsão Final (EAC)','Var. Final (VAC)'];
+  const evmRows=projs.map(p=>{
+    const st=stats(p); const e=calcEVM(p);
+    return[p.name,p.client||'',p.status,p.totalHours||0,st.pl,st.dn,st.pct+'%',(p.stages||[]).length,
+      e.BAC,e.EV,e.AC,e.CV,parseFloat(e.CPI.toFixed(2)),parseFloat(e.SPI.toFixed(2)),e.EAC,e.VAC];
+  });
+  const wsEVM=XLSX.utils.aoa_to_sheet([evmHdrs,...evmRows]);
+  wsEVM['!cols']=[{wch:24},{wch:16},{wch:12},{wch:6},{wch:7},{wch:7},{wch:10},{wch:7},
+    {wch:15},{wch:15},{wch:13},{wch:14},{wch:6},{wch:6},{wch:15},{wch:13}];
+  XLSX.utils.book_append_sheet(wb,wsEVM,'EVM — Custos');
+
   XLSX.writeFile(wb,`WMS_${new Date().toISOString().split('T')[0]}.xlsx`);
   toast('Excel exportado ✓');closeModal('modal-export');
 }
@@ -2301,7 +2340,17 @@ function exportHTML(projs){
     const cm={};(p.stages||[]).filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
     body+=`<div class="ps"><div class="ph" style="border-left:5px solid ${c}"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:18px;font-weight:800;color:${c};margin-bottom:4px">${esc(p.name)}</div><div style="font-size:12px;color:#64748b">Cliente: ${esc(p.client||'—')} · Responsável: ${esc(p.owner||'—')} · ${p.status}</div><div style="font-size:12px;color:#64748b">${fD(p.startDate)} → ${fD(p.endDate)} · FAP: ${p.totalHours||0}h</div></div><div style="display:flex;gap:14px">${[{l:'Planejadas',v:st.pl+'h'},{l:'Realizadas',v:st.dn+'h',c:'#22c55e'},{l:'Progresso',v:st.pct+'%',c}].map(k=>`<div style="text-align:center"><div style="font-size:20px;font-weight:800;color:${k.c||'#1e293b'}">${k.v}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase">${k.l}</div></div>`).join('')}</div></div></div>
     <table class="st"><thead><tr><th>Num</th><th>Etapa</th><th>Tipo</th><th>Executante</th><th>Data</th><th>Horas</th><th>Status</th></tr></thead><tbody>
-    ${roots.map((r,ri)=>{const rc=PCOLS[ri%PCOLS.length];const kids=cm[r.id]||[];return`<tr style="border-left:3px solid ${rc}"><td>${esc(r.num||'')}</td><td><strong>${esc(r.name)}</strong></td><td>Etapa</td><td>${esc(r.executor||'—')}</td><td>${fD(r.date)}</td><td>${r.hours||0}h</td><td><span class="sb sb-${(r.status||'').toLowerCase().replace(/ /g,'-')}">${r.status}</span></td></tr>`+kids.map(k=>`<tr><td style="padding-left:18px">${esc(k.num||'')}</td><td style="padding-left:18px">↳ ${esc(k.name)}</td><td>Sub-etapa</td><td>${esc(k.executor||'—')}</td><td>${fD(k.date)}</td><td>${k.hours||0}h</td><td><span class="sb sb-${(k.status||'').toLowerCase().replace(/ /g,'-')}">${k.status}</span></td></tr>`).join('');}).join('')}
+    ${roots.map((r,ri)=>{
+      const rc=PCOLS[ri%PCOLS.length];const kids=cm[r.id]||[];
+      const defRate=parseFloat(p.defaultRate)||0;
+      function rowCells(s,indent){
+        const rate=s.hourRate||defRate;const hp=parseFloat(s.hours)||0;const hr=parseFloat(s.hoursReal)||0;
+        const cp=hp*rate;const cr=hr*rate;const vr=cp-cr;
+        const ps2=prazoStatus(s);
+        const prefix=indent?`<td style="padding-left:18px">${esc(s.num||'')}</td><td style="padding-left:18px">↳ ${esc(s.name)}</td>`:`<td>${esc(s.num||'')}</td><td><strong>${esc(s.name)}</strong></td>`;
+        return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td>${hp}h</td><td>${hr}h</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
+      }
+      return`<tr style="border-left:3px solid ${rc}">${rowCells(r,false)}</tr>`+kids.map(k=>`<tr>${rowCells(k,true)}</tr>`).join('');}).join('')}
     </tbody></table></div>`;
   });
   const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Relatório WMS</title>
