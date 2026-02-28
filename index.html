@@ -51,10 +51,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 .sidebar{width:210px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
 .sb-user{padding:14px 14px 12px;border-bottom:1px solid var(--border)}
 .sb-av{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;font-family:var(--display);margin-bottom:8px;position:relative;cursor:pointer;flex-shrink:0}
-.sb-av-wrap{position:relative;width:64px;height:64px;margin-bottom:10px;cursor:pointer}
+.sb-av-wrap{position:relative;width:64px;height:64px;margin-bottom:6px}
 .sb-av-wrap:hover .sb-av-overlay{opacity:1}
-.sb-av-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:18px}
-.sb-av-input{position:absolute;inset:0;opacity:0;cursor:pointer;border-radius:50%;z-index:2}
+.sb-av-overlay{position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .2s;font-size:18px;pointer-events:none}
+.sb-photo-btn{display:flex;align-items:center;justify-content:center;gap:4px;font-size:10px;color:var(--mid);background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:3px 9px;cursor:pointer;margin-bottom:8px;transition:all .15s;font-family:var(--sans);white-space:nowrap}
+.sb-photo-btn:hover{border-color:var(--accent);color:var(--accent)}
 .sb-name{font-size:12.5px;font-weight:600;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sb-role{font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:20px;display:inline-block;margin-bottom:6px}
 .role-admin{background:rgba(167,139,250,.14);color:var(--purple);border:1px solid rgba(167,139,250,.25)}
@@ -421,11 +422,14 @@ textarea.fc{resize:vertical;min-height:60px}
     <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="sb-user">
-        <div class="sb-av-wrap" title="Clique para trocar a foto">
+        <div class="sb-av-wrap">
           <div class="sb-av" id="sb-av"></div>
           <div class="sb-av-overlay">📷</div>
-          <input type="file" accept="image/*" class="sb-av-input" onchange="handleSidebarAvatar(this)">
         </div>
+        <label class="sb-photo-btn">
+          📷 Trocar foto
+          <input type="file" accept="image/*" style="display:none" onchange="handleSidebarAvatar(this)">
+        </label>
         <div class="sb-name" id="sb-name">—</div>
         <div class="sb-role" id="sb-role">—</div><br>
         <div class="pw-chip pw-ok" id="sb-pw">🟢 Senha válida</div>
