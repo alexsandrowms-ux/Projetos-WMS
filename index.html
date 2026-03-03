@@ -185,6 +185,27 @@ textarea.fc{resize:vertical;min-height:60px}
 .badge-left{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25);font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700}
 .badge-exact{background:rgba(14,165,233,.1);color:var(--accent);border:1px solid rgba(14,165,233,.25);font-size:10px;padding:1px 7px;border-radius:20px;font-weight:700}
 .proj-hours-warn{display:flex;align-items:center;gap:8px;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:var(--amber)}
+/* Evidence & Log */
+.ev-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:6px}
+.ev-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+.ev-info{flex:1;min-width:0}
+.ev-name{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ev-meta{font-size:10px;color:var(--dim);margin-top:2px}
+.ev-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;transition:all .15s;flex-shrink:0}
+.ev-del:hover{color:#ef4444;background:rgba(239,68,68,.1)}
+.log-item{display:flex;gap:10px;padding:10px 12px;border-left:3px solid var(--accent);background:var(--bg3);border-radius:0 6px 6px 0;margin-bottom:6px}
+.log-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:4px}
+.log-body{flex:1;min-width:0}
+.log-text{font-size:12px;color:var(--text);line-height:1.5}
+.log-meta{font-size:10px;color:var(--dim);margin-top:3px}
+.log-del{background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px;flex-shrink:0}
+.log-del:hover{color:#ef4444;background:rgba(239,68,68,.1)}
+.attach-drop{border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all .2s;color:var(--dim);font-size:12px}
+.attach-drop:hover,.attach-drop.drag{border-color:var(--accent);color:var(--accent);background:rgba(14,165,233,.05)}
+.btn-ev{background:rgba(14,165,233,.1);border:1px solid rgba(14,165,233,.25);color:var(--accent);font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;font-family:var(--sans);transition:all .15s;white-space:nowrap}
+.btn-ev:hover{background:rgba(14,165,233,.2)}
+.btn-log{background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.25);color:#a78bfa;font-size:10px;padding:2px 7px;border-radius:4px;cursor:pointer;font-family:var(--sans);transition:all .15s;white-space:nowrap}
+.btn-log:hover{background:rgba(167,139,250,.2)}
 .schev{color:var(--dim);font-size:11px;flex-shrink:0;transition:transform .2s;padding:0 4px}
 .schev.open{transform:rotate(180deg)}
 .add-sub-btn{display:flex;align-items:center;gap:8px;padding:6px 13px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--dim);font-size:12px;transition:all .15s;margin-top:3px}
@@ -962,6 +983,48 @@ textarea.fc{resize:vertical;min-height:60px}
   </div>
 </div>
 
+<!-- MODAL: Evidências -->
+<div class="overlay" id="modal-ev">
+  <div class="modal" style="max-width:560px">
+    <div class="mhead"><span id="ev-modal-title">📎 Evidências</span><button class="mclose" onclick="closeModal('modal-ev')">✕</button></div>
+    <div class="mbody">
+      <div class="attach-drop" id="ev-drop" onclick="document.getElementById('ev-file-input').click()">
+        <div style="font-size:28px;margin-bottom:6px">📎</div>
+        <div>Clique para selecionar ou arraste arquivos aqui</div>
+        <div style="font-size:11px;margin-top:4px;color:var(--dim)">Imagens, PDFs, documentos — máx. 5MB por arquivo</div>
+        <input type="file" id="ev-file-input" multiple accept="image/*,.pdf,.doc,.docx,.xlsx,.txt" style="display:none" onchange="handleEvFiles(this.files)">
+      </div>
+      <div style="margin-top:12px;max-height:320px;overflow-y:auto" id="ev-list"></div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ev')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Registros de Atividade -->
+<div class="overlay" id="modal-log">
+  <div class="modal" style="max-width:560px">
+    <div class="mhead"><span id="log-modal-title">📝 Registros de Atividade</span><button class="mclose" onclick="closeModal('modal-log')">✕</button></div>
+    <div class="mbody">
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;color:var(--mid);display:block;margin-bottom:5px">Nova anotação / atividade realizada</label>
+        <textarea id="log-input" class="fc" rows="3" placeholder="Descreva o que foi feito, observações, próximos passos..." style="resize:vertical"></textarea>
+        <div style="display:flex;justify-content:flex-end;margin-top:6px">
+          <button class="btn btn-primary btn-xs" onclick="saveLog()">+ Registrar</button>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);padding-top:12px">
+        <div style="font-size:11px;color:var(--dim);margin-bottom:8px;font-weight:600">HISTÓRICO</div>
+        <div id="log-list" style="max-height:320px;overflow-y:auto"></div>
+      </div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('modal-log')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1637,6 +1700,8 @@ function renderStages(){
             <span class="schev open" id="chev_${root.id}">▼</span>
           </div>
           <div class="sroot-acts">
+            <button class="btn-ev" onclick="openEvModal('${root.id}')">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
+            <button class="btn-log" onclick="openLogModal('${root.id}')">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
             <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${root.id}')">✏️</button>
             <button class="btn btn-success btn-xs" onclick="openStageModal(true,null,'${root.id}')">+ Sub</button>
             <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${root.id}')">🗑</button>
@@ -1680,6 +1745,8 @@ function renderStages(){
             </div>
           </div>
           <div class="ssrow-acts">
+            <button class="btn-ev" onclick="openEvModal('${k.id}')">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
+            <button class="btn-log" onclick="openLogModal('${k.id}')">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
             <button class="btn-move" onclick="moveSubStage('${k.id}','up')" title="Mover para cima" ${ki===0?'disabled':''}>▲</button>
             <button class="btn-move" onclick="moveSubStage('${k.id}','down')" title="Mover para baixo" ${ki===lastKidIdx?'disabled':''}>▼</button>
             <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${k.id}')">✏️</button>
@@ -3049,6 +3116,145 @@ function renderPerfTab(){
       });
     }
   }, 100);
+}
+
+// ════════════════════════════════════
+// EVIDENCE & ACTIVITY LOG
+// ════════════════════════════════════
+let _evStageId=null, _logStageId=null;
+
+function getStage(sid){
+  const proj=getP(S.cur);
+  return (proj?.stages||[]).find(s=>s.id===sid);
+}
+
+function saveStageField(sid,field,value){
+  const proj=getP(S.cur);if(!proj)return;
+  const stage=proj.stages.find(s=>s.id===sid);if(!stage)return;
+  stage[field]=value;
+  saveData();
+  renderStages();
+}
+
+// ── EVIDENCE ──
+function openEvModal(sid){
+  _evStageId=sid;
+  const stage=getStage(sid);
+  document.getElementById('ev-modal-title').textContent=`📎 Evidências — ${esc(stage?.name||'')}`;
+  renderEvList();
+  setupDropZone();
+  openModal('modal-ev');
+}
+
+function renderEvList(){
+  const stage=getStage(_evStageId);
+  const evs=stage?.evidence||[];
+  const el=document.getElementById('ev-list');
+  if(!evs.length){el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--dim);font-size:12px">📂 Nenhuma evidência anexada ainda.</div>`;return;}
+  el.innerHTML=evs.map((ev,i)=>{
+    const ext=(ev.name||'').split('.').pop().toLowerCase();
+    const icon={'pdf':'📄','doc':'📝','docx':'📝','xlsx':'📊','xls':'📊','txt':'📋','png':'🖼️','jpg':'🖼️','jpeg':'🖼️','gif':'🖼️','webp':'🖼️'}[ext]||'📎';
+    const isImg=['png','jpg','jpeg','gif','webp'].includes(ext)&&ev.data;
+    return`<div class="ev-item">
+      ${isImg?`<img src="${ev.data}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0;border:1px solid var(--border)">`:`<span class="ev-icon">${icon}</span>`}
+      <div class="ev-info">
+        <div class="ev-name">${esc(ev.name)}</div>
+        <div class="ev-meta">por ${esc(ev.by)} · ${ev.date}${ev.size?' · '+ev.size:''}</div>
+        ${ev.note?`<div style="font-size:11px;color:var(--mid);margin-top:3px;font-style:italic">"${esc(ev.note)}"</div>`:''}
+      </div>
+      ${isImg?`<a href="${ev.data}" download="${esc(ev.name)}" style="color:var(--accent);font-size:12px;text-decoration:none;padding:2px 8px;border:1px solid var(--accent);border-radius:4px;flex-shrink:0">⬇</a>`:''}
+      <button class="ev-del" onclick="deleteEv(${i})" title="Remover">✕</button>
+    </div>`;
+  }).join('');
+}
+
+function deleteEv(idx){
+  const stage=getStage(_evStageId);if(!stage)return;
+  stage.evidence=(stage.evidence||[]).filter((_,i)=>i!==idx);
+  saveStageField(_evStageId,'evidence',stage.evidence);
+  renderEvList();
+}
+
+function handleEvFiles(files){
+  const stage=getStage(_evStageId);if(!stage)return;
+  if(!stage.evidence)stage.evidence=[];
+  const now=new Date();
+  const dateStr=now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  Array.from(files).forEach(file=>{
+    if(file.size>5*1024*1024){toast(`Arquivo "${file.name}" excede 5MB — ignorado`,'warn');return;}
+    const ext=file.name.split('.').pop().toLowerCase();
+    const isImg=['png','jpg','jpeg','gif','webp'].includes(ext);
+    const sizeStr=file.size>1024*1024?(file.size/1024/1024).toFixed(1)+'MB':(file.size/1024).toFixed(0)+'KB';
+    const entry={id:uid(),name:file.name,by:CU?.name||'—',date:dateStr,size:sizeStr,data:null};
+    if(isImg){
+      const reader=new FileReader();
+      reader.onload=e=>{entry.data=e.target.result;stage.evidence.push(entry);saveStageField(_evStageId,'evidence',stage.evidence);renderEvList();};
+      reader.readAsDataURL(file);
+    } else {
+      stage.evidence.push(entry);
+      saveStageField(_evStageId,'evidence',stage.evidence);
+      renderEvList();
+    }
+  });
+  document.getElementById('ev-file-input').value='';
+}
+
+function setupDropZone(){
+  const drop=document.getElementById('ev-drop');
+  if(!drop)return;
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('drag');};
+  drop.ondragleave=()=>drop.classList.remove('drag');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('drag');handleEvFiles(e.dataTransfer.files);};
+}
+
+// ── ACTIVITY LOG ──
+function openLogModal(sid){
+  _logStageId=sid;
+  const stage=getStage(sid);
+  document.getElementById('log-modal-title').textContent=`📝 Registros — ${esc(stage?.name||'')}`;
+  document.getElementById('log-input').value='';
+  renderLogList();
+  openModal('modal-log');
+}
+
+function renderLogList(){
+  const stage=getStage(_logStageId);
+  const logs=(stage?.activityLog||[]).slice().reverse();
+  const el=document.getElementById('log-list');
+  if(!logs.length){el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--dim);font-size:12px">📋 Nenhum registro ainda.</div>`;return;}
+  el.innerHTML=logs.map((lg,i)=>`
+    <div class="log-item">
+      <div class="log-body">
+        <div class="log-text">${esc(lg.text).replace(/\n/g,'<br>')}</div>
+        <div class="log-meta">👤 ${esc(lg.by)} · 🕐 ${lg.date}</div>
+      </div>
+      <button class="log-del" onclick="deleteLog('${lg.id}')" title="Remover">✕</button>
+    </div>`).join('');
+}
+
+function saveLog(){
+  const text=document.getElementById('log-input').value.trim();
+  if(!text){toast('Informe o texto do registro','err');return;}
+  const stage=getStage(_logStageId);if(!stage)return;
+  if(!stage.activityLog)stage.activityLog=[];
+  const now=new Date();
+  stage.activityLog.push({
+    id:uid(),
+    text,
+    by:CU?.name||'—',
+    date:now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+  });
+  saveStageField(_logStageId,'activityLog',stage.activityLog);
+  document.getElementById('log-input').value='';
+  renderLogList();
+  toast('Registro salvo','ok');
+}
+
+function deleteLog(lid){
+  const stage=getStage(_logStageId);if(!stage)return;
+  stage.activityLog=(stage.activityLog||[]).filter(l=>l.id!==lid);
+  saveStageField(_logStageId,'activityLog',stage.activityLog);
+  renderLogList();
 }
 
 function switchTab(el,tid){
