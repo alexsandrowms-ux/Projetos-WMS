@@ -538,8 +538,7 @@ textarea.fc{resize:vertical;min-height:60px}
         <div class="sb-item on" id="snav-dash" onclick="showPage('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
         <div class="sb-item" id="snav-proj" onclick="showPage('projects')"><span class="sb-icon">📁</span>Projetos</div>
         <div class="sb-sep"></div>
-        <div class="sb-item" id="snav-rfp" style="display:none" onclick="showPage('rfp')"><span class="sb-icon">📋</span>Análise RFP</div>
-        <div class="sb-item" id="snav-users" style="display:none" onclick="showPage('users')"><span class="sb-icon">👥</span>Usuários</div>
+<div class="sb-item" id="snav-users" style="display:none" onclick="showPage('users')"><span class="sb-icon">👥</span>Usuários</div>
       </div>
       <div class="sb-bottom">
         <div class="sb-item" onclick="openMyKey()"><span class="sb-icon">🔑</span>Minha Chave</div>
@@ -602,6 +601,7 @@ textarea.fc{resize:vertical;min-height:60px}
           <div class="dtab" id="dtab-gantt"  onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
           <div class="dtab" id="dtab-cost"   onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
           <div class="dtab" id="dtab-perf"   onclick="switchTab(this,'tab-perf');renderPerfTab()">📈 Análise de Performance</div>
+          <div class="dtab" id="dtab-rfp"    onclick="switchTab(this,'tab-rfp');renderRFPTab()" style="color:var(--accent)">📋 RFP</div>
         </div>
         <div id="tab-stages">
           <div id="stages-list"></div>
@@ -614,6 +614,9 @@ textarea.fc{resize:vertical;min-height:60px}
         </div>
         <div id="tab-cost" style="display:none">
           <div id="cost-content"></div>
+        </div>
+        <div id="tab-rfp" style="display:none">
+          <div id="rfp-tab-content"></div>
         </div>
         <div id="tab-gantt" style="display:none">
           <div class="card" style="padding:11px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -1713,7 +1716,7 @@ function renderCards(id,list){
       </div>
       <div class="proj-card-actions">
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();showPage('detail','${p.id}')">👁 Abrir</button>
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();S.cur='${p.id}';showPage('rfp');openRFP('${p.id}')" style="color:var(--accent)">📋 RFP</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openProjectRFP('${p.id}')" style="color:var(--accent)">📋 RFP</button>
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openProjModal(false,'${p.id}')">✏️ Editar</button>
         <button class="btn btn-purple btn-xs" onclick="event.stopPropagation();S.cur='${p.id}';openExport(true)">📤 Exportar</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteProject('${p.id}')">🗑 Excluir</button>
@@ -1765,6 +1768,7 @@ function renderDetail(){
   document.getElementById('tab-gantt').style.display='none';
   if(document.getElementById('tab-cost')) document.getElementById('tab-cost').style.display='none';
   if(document.getElementById('tab-perf')) document.getElementById('tab-perf').style.display='none';
+  if(document.getElementById('tab-rfp')) document.getElementById('tab-rfp').style.display='none';
 }
 
 // ════════════════════════════════════
@@ -3671,16 +3675,18 @@ function rfpUpdateReq(modId,idx,field,val){const proj=getP(S.cur);if(!proj?.rfp)
 function saveRFP(){const proj=getP(S.cur);if(!proj?.rfp)return;saveS();toast('✅ RFP salva com sucesso!','ok');renderRFPEditor();}
 
 function openRFPInfo(){
-  const proj=getP(S.cur);if(!proj?.rfp)return;
+  const proj=getP(S.cur);
+  if(!proj)return;
+  if(!proj.rfp)proj.rfp=createEmptyRFP();
   const rfp=proj.rfp;
   const stateOpts=ESTADOS_BR.map(e=>`<option value="${e}" ${rfp.estado===e?'selected':''}>${e}</option>`).join('');
-  const cityOpts=(CIDADES_BR[rfp.estado]||[]).map(c=>`<option value="${c}" ${rfp.cidade===c?'selected':''}>${c}</option>`).join('');
   document.getElementById('rfi-responsavel').value=rfp.responsavel||'';
   document.getElementById('rfi-unidade').value=rfp.unidadeSuporte||'';
   document.getElementById('rfi-data').value=rfp.dataLevantamento||'';
   const estSel=document.getElementById('rfi-estado');
   estSel.innerHTML='<option value="">Selecione o estado...</option>'+stateOpts;
   estSel.value=rfp.estado||'';
+  document.getElementById('rfi-cidade-custom').value='';
   rfpLoadCidades(rfp.cidade);
   openModal('modal-rfp-info');
 }
@@ -3695,26 +3701,180 @@ function rfpLoadCidades(selectedCity){
 }
 
 function saveRFPInfo(){
-  const proj=getP(S.cur);if(!proj?.rfp)return;
+  const proj=getP(S.cur);
+  if(!proj)return;
+  if(!proj.rfp)proj.rfp=createEmptyRFP();
   proj.rfp.responsavel=document.getElementById('rfi-responsavel').value.trim();
   proj.rfp.unidadeSuporte=document.getElementById('rfi-unidade').value.trim();
   proj.rfp.dataLevantamento=document.getElementById('rfi-data').value;
   proj.rfp.estado=document.getElementById('rfi-estado').value;
-  const cidade=document.getElementById('rfi-cidade-custom')?.value?.trim()||document.getElementById('rfi-cidade')?.value||'';
-  proj.rfp.cidade=cidade;
-  saveS();closeModal('modal-rfp-info');
+  const cidadeCustom=document.getElementById('rfi-cidade-custom')?.value?.trim();
+  const cidadeSelect=document.getElementById('rfi-cidade')?.value||'';
+  proj.rfp.cidade=cidadeCustom||cidadeSelect;
+  saveS();
+  closeModal('modal-rfp-info');
   toast('✅ Dados do levantamento salvos!','ok');
-  renderRFPEditor();
+  // Refresh whichever RFP view is active
+  if(document.getElementById('tab-rfp')?.style.display!=='none'){
+    _rfpMod='dashboard';
+    renderRFPTab();
+  } else if(document.getElementById('page-rfp')?.classList.contains('on')){
+    renderRFPEditor();
+  }
+}
+
+
+function openProjectRFP(pid){
+  showPage('detail', pid);
+  // Switch to RFP tab after detail renders
+  setTimeout(()=>{
+    const tab=document.getElementById('dtab-rfp');
+    if(tab) switchTab(tab,'tab-rfp');
+  }, 50);
+}
+
+
+function renderRFPTab(){
+  const proj=getP(S.cur);if(!proj)return;
+  if(!proj.rfp)proj.rfp=createEmptyRFP();
+  const el=document.getElementById('rfp-tab-content');if(!el)return;
+  const rfp=proj.rfp;
+  _rfpMod='dashboard';
+
+  const nav=RFP_MODULES.map(m=>{
+    const pct=m.id==='dashboard'?null:rfpModProgress(rfp,m.id);
+    return`<div class="rfp-nav-item ${_rfpMod===m.id?'on':''}" onclick="_rfpTabMod('${m.id}')">
+      <span>${m.icon}</span><span>${m.name}</span>
+      ${pct!==null?`<span class="rfp-nav-pct">${pct}%</span>`:''}
+    </div>`;}).join('');
+
+  el.innerHTML=`<div class="rfp-layout" style="height:calc(100vh - 120px)">
+    <div class="rfp-sidenav">
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:11px;font-weight:700;color:var(--text)">${esc(proj.name)}</div>
+        <div style="margin-top:4px">${rfpStatusBadge(rfp)}</div>
+        <div class="rfp-pbar" style="margin-top:6px"><div class="rfp-pbar-fill" style="width:${rfpProgress(rfp)}%"></div></div>
+      </div>
+      <div class="rfp-sidenav-title" style="margin-top:8px">Módulos</div>
+      ${nav}
+    </div>
+    <div class="rfp-main" id="rfp-tab-module"></div>
+  </div>`;
+  _rfpTabRenderModule();
+}
+
+function _rfpTabMod(modId){
+  _rfpMod=modId;
+  // Update nav active state
+  document.querySelectorAll('#rfp-tab-content .rfp-nav-item').forEach(el=>{
+    el.classList.toggle('on', el.getAttribute('onclick')===`_rfpTabMod('${modId}')`);
+  });
+  _rfpTabRenderModule();
+}
+
+function _rfpTabRenderModule(){
+  const proj=getP(S.cur);if(!proj?.rfp)return;
+  const el=document.getElementById('rfp-tab-module');if(!el)return;
+  const rfp=proj.rfp;
+
+  if(_rfpMod==='dashboard'){
+    // Dashboard inside tab
+    const pct=rfpProgress(rfp);
+    let totalReqs=0,altaCount=0,modsDone=0;
+    const modKeys=Object.keys(rfp.dados);
+    modKeys.forEach(k=>{const m=rfp.dados[k];if(m.requirements){totalReqs+=m.requirements.length;altaCount+=m.requirements.filter(r=>r.prioridade==='Alta').length;}if(rfpModProgress(rfp,k)===100)modsDone++;});
+    const modCards=RFP_MODULES.filter(m=>m.id!=='dashboard').map(m=>{const p=rfpModProgress(rfp,m.id);const col=p===100?'var(--green)':p>0?'var(--amber)':'var(--border)';
+      return`<div class="rfp-card" onclick="_rfpTabMod('${m.id}')" style="padding:12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;font-weight:700;color:${col}">${p}%</span></div>
+        <div class="rfp-pbar"><div class="rfp-pbar-fill" style="width:${p}%;background:${col}"></div></div>
+      </div>`;}).join('');
+    el.innerHTML=`<div class="rfp-header">
+      <div style="flex:1"><div class="rfp-module-title">📊 Dashboard RFP</div><div class="rfp-module-sub">Levantamento de requisitos WMS</div></div>
+      <button class="btn btn-primary btn-xs" onclick="openRFPInfo()">✏️ Dados do Levantamento</button></div>
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Responsável</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.responsavel||'—')}</div></div>
+      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Localidade</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.cidade?esc(rfp.cidade)+(rfp.estado?'/'+rfp.estado:''):'—'}</div></div>
+      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Unidade de Suporte</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.unidadeSuporte||'—')}</div></div>
+      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Data</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.dataLevantamento?new Date(rfp.dataLevantamento+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div></div>
+    </div>
+    <div class="rfp-dash-grid">
+      <div class="rfp-dash-card"><div class="rfp-dash-num">${pct}%</div><div class="rfp-dash-lbl">Progresso Geral</div><div class="rfp-pbar" style="margin-top:8px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
+      <div class="rfp-dash-card"><div class="rfp-dash-num">${modsDone}</div><div class="rfp-dash-lbl">Módulos Concluídos</div><div style="font-size:11px;color:var(--dim);margin-top:4px">de ${modKeys.length}</div></div>
+      <div class="rfp-dash-card"><div class="rfp-dash-num">${totalReqs}</div><div class="rfp-dash-lbl">Requisitos Mapeados</div></div>
+      <div class="rfp-dash-card"><div class="rfp-dash-num rfp-prio-alta">${altaCount}</div><div class="rfp-dash-lbl">Prioridade Alta</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${modCards}</div>`;
+    return;
+  }
+
+  const modDef=RFP_MODULES.find(m=>m.id===_rfpMod);
+  const modData=rfp.dados[_rfpMod];
+  if(!modData){el.innerHTML='<p style="color:var(--dim)">Módulo não encontrado.</p>';return;}
+  const pct=rfpModProgress(rfp,_rfpMod);
+
+  let html2=`<div class="rfp-header">
+    <div style="flex:1"><div class="rfp-module-title">${modDef?.icon||''} ${modData.name}</div>
+    <div class="rfp-module-sub">${pct}% preenchido</div>
+    <div class="rfp-pbar" style="width:200px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
+    <button class="btn btn-primary btn-xs" onclick="saveRFPTab()">💾 Salvar</button></div>`;
+
+  if(modData.fields){
+    html2+=`<div class="rfp-field-row">`;
+    modData.fields.forEach((f,fi)=>{
+      const isLong=['layoutAtual','gargalos','oportunidades'].some(k=>f.id.toLowerCase().includes(k.toLowerCase()))||f.label.length>35;
+      html2+=`<div class="rfp-field" ${isLong?'style="grid-column:span 2"':''}>
+        <label>${f.label}</label>
+        ${isLong?`<textarea rows="2" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" style="resize:vertical">${esc(f.value)}</textarea>`:`<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Preencher...">`}
+      </div>`;
+    });
+    html2+=`</div>`;
+  }
+
+  if(modData.requirements){
+    html2+=`<div style="overflow-x:auto"><table class="rfp-req-table">
+      <thead><tr><th style="min-width:200px">Requisito</th><th style="width:90px">Faz?</th><th style="min-width:120px">Como executa</th><th style="min-width:120px">Como controla</th><th style="width:100px">Prioridade</th><th style="min-width:120px">Observação</th></tr></thead><tbody>`;
+    modData.requirements.forEach((r,ri)=>{
+      const pClass=r.prioridade==='Alta'?'rfp-prio-alta':r.prioridade==='Média'?'rfp-prio-media':r.prioridade==='Baixa'?'rfp-prio-baixa':'';
+      html2+=`<tr>
+        <td class="rfp-req-text">${esc(r.text)}</td>
+        <td><select onchange="rfpUpdateReq('${_rfpMod}',${ri},'faz',this.value)"><option value="" ${!r.faz?'selected':''}>—</option><option value="Sim" ${r.faz==='Sim'?'selected':''}>✅ Sim</option><option value="Não" ${r.faz==='Não'?'selected':''}>❌ Não</option><option value="Parcial" ${r.faz==='Parcial'?'selected':''}>⚠️ Parcial</option></select></td>
+        <td><input type="text" value="${esc(r.execucao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'execucao',this.value)" placeholder="Como..."></td>
+        <td><input type="text" value="${esc(r.controle)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'controle',this.value)" placeholder="Como..."></td>
+        <td><select class="${pClass}" onchange="rfpUpdateReq('${_rfpMod}',${ri},'prioridade',this.value)"><option value="" ${!r.prioridade?'selected':''}>—</option><option value="Alta" ${r.prioridade==='Alta'?'selected':''}>🔴 Alta</option><option value="Média" ${r.prioridade==='Média'?'selected':''}>🟡 Média</option><option value="Baixa" ${r.prioridade==='Baixa'?'selected':''}>🟢 Baixa</option></select></td>
+        <td><input type="text" value="${esc(r.observacao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'observacao',this.value)" placeholder="Obs..."></td>
+      </tr>`;
+    });
+    html2+=`</tbody></table></div>`;
+  }
+  el.innerHTML=html2;
+}
+
+function saveRFPTab(){
+  const proj=getP(S.cur);if(!proj?.rfp)return;
+  saveS();
+  toast('✅ RFP salva com sucesso!','ok');
+  // Refresh nav badges
+  const navItems=document.querySelectorAll('#rfp-tab-content .rfp-nav-item');
+  navItems.forEach(ni=>{
+    const onclick=ni.getAttribute('onclick')||'';
+    const m=onclick.match(/_rfpTabMod\('([^']+)'\)/);
+    if(m&&m[1]!=='dashboard'){
+      const pct=rfpModProgress(proj.rfp,m[1]);
+      const badge=ni.querySelector('.rfp-nav-pct');
+      if(badge)badge.textContent=pct+'%';
+    }
+  });
 }
 
 
 function switchTab(el,tid){
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  ['tab-stages','tab-gantt','tab-cost','tab-perf'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display=id===tid?'block':'none';});
+  ['tab-stages','tab-gantt','tab-cost','tab-perf','tab-rfp'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display=id===tid?'block':'none';});
   if(tid==='tab-gantt')renderGantt();
   if(tid==='tab-cost')renderCostTab();
   if(tid==='tab-perf')renderPerfTab();
+  if(tid==='tab-rfp')renderRFPTab();
 }
 
 // Drag & drop
