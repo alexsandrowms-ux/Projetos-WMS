@@ -248,6 +248,7 @@ textarea.fc{resize:vertical;min-height:60px}
 @keyframes sUp{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
 .modal-lg{max-width:640px}.modal-xl{max-width:800px}.modal-sm{max-width:400px}
 .mhdr{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1}
+.mhead{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--bg2);z-index:1}
 .mtitle{font-family:var(--display);font-size:16px;font-weight:700}
 .mclose{background:none;border:none;color:var(--mid);font-size:22px;cursor:pointer;padding:2px 7px;border-radius:4px;line-height:1}
 .mclose:hover{background:var(--bg3);color:var(--text)}
@@ -597,11 +598,11 @@ textarea.fc{resize:vertical;min-height:60px}
         <div id="det-hours-warn"></div>
         <div class="hours-grid" id="det-hours"></div>
         <div class="tabs">
-          <div class="dtab on" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
+          <div class="dtab on" id="dtab-rfp"    onclick="switchTab(this,'tab-rfp');renderRFPTab()" style="color:var(--accent)">📋 RFP</div>
+          <div class="dtab" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
           <div class="dtab" id="dtab-gantt"  onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
           <div class="dtab" id="dtab-cost"   onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
           <div class="dtab" id="dtab-perf"   onclick="switchTab(this,'tab-perf');renderPerfTab()">📈 Análise de Performance</div>
-          <div class="dtab" id="dtab-rfp"    onclick="switchTab(this,'tab-rfp');renderRFPTab()" style="color:var(--accent)">📋 RFP</div>
         </div>
         <div id="tab-stages">
           <div id="stages-list"></div>
@@ -1754,12 +1755,13 @@ function renderDetail(){
   renderStages();
   // reset tab
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
-  document.getElementById('dtab-stages').classList.add('on');
-  document.getElementById('tab-stages').style.display='block';
+  document.getElementById('dtab-rfp').classList.add('on');
+  document.getElementById('tab-rfp').style.display='block';
+  renderRFPTab();
+  document.getElementById('tab-stages').style.display='none';
   document.getElementById('tab-gantt').style.display='none';
   if(document.getElementById('tab-cost')) document.getElementById('tab-cost').style.display='none';
   if(document.getElementById('tab-perf')) document.getElementById('tab-perf').style.display='none';
-  if(document.getElementById('tab-rfp')) document.getElementById('tab-rfp').style.display='none';
 }
 
 // ════════════════════════════════════
@@ -3667,17 +3669,22 @@ function saveRFP(){const proj=getP(S.cur);if(!proj?.rfp)return;saveS();toast('�
 
 function openRFPInfo(){
   const proj=getP(S.cur);
-  if(!proj)return;
+  if(!proj){toast('Selecione um projeto primeiro','err');return;}
   if(!proj.rfp)proj.rfp=createEmptyRFP();
   const rfp=proj.rfp;
   const stateOpts=ESTADOS_BR.map(e=>`<option value="${e}" ${rfp.estado===e?'selected':''}>${e}</option>`).join('');
-  document.getElementById('rfi-responsavel').value=rfp.responsavel||'';
-  document.getElementById('rfi-unidade').value=rfp.unidadeSuporte||'';
-  document.getElementById('rfi-data').value=rfp.dataLevantamento||'';
-  const estSel=document.getElementById('rfi-estado');
-  estSel.innerHTML='<option value="">Selecione o estado...</option>'+stateOpts;
-  estSel.value=rfp.estado||'';
-  document.getElementById('rfi-cidade-custom').value='';
+  const r=document.getElementById('rfi-responsavel');
+  const u=document.getElementById('rfi-unidade');
+  const d=document.getElementById('rfi-data');
+  const est=document.getElementById('rfi-estado');
+  const cc=document.getElementById('rfi-cidade-custom');
+  if(!r||!est){toast('Modal não encontrada','err');console.error('RFP modal elements missing');return;}
+  r.value=rfp.responsavel||'';
+  u.value=rfp.unidadeSuporte||'';
+  d.value=rfp.dataLevantamento||'';
+  est.innerHTML='<option value="">Selecione o estado...</option>'+stateOpts;
+  est.value=rfp.estado||'';
+  if(cc)cc.value='';
   rfpLoadCidades(rfp.cidade);
   openModal('modal-rfp-info');
 }
