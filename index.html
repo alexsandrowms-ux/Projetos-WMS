@@ -703,6 +703,10 @@ textarea.fc{resize:vertical;min-height:60px}
         <div class="fg"><label>🏁 Término Planejado *</label><input class="fc" type="date" id="fs-dateend"></div>
       </div>
       <div class="frow">
+        <div class="fg"><label>🕐 Horário Início</label><input class="fc" type="time" id="fs-timestart" placeholder="Ex: 08:00"></div>
+        <div class="fg"><label>🕔 Horário Término</label><input class="fc" type="time" id="fs-timeend" placeholder="Ex: 17:00"></div
+      </div>
+      <div class="frow">
         <div class="fg"><label>✅ Término Real</label><input class="fc" type="date" id="fs-datereal" placeholder="Preencher ao concluir"></div>
         <div class="fg"><label>Status</label>
           <select class="fc" id="fs-status">
@@ -1739,6 +1743,7 @@ function renderStages(){
               <div class="ssi"><span class="ssi-l">Responsável</span><span class="ssi-v">${esc(k.executor||'—')}</span></div>
               <div class="ssi"><span class="ssi-l">Início</span><span class="ssi-v">${fDS(k.date)||'—'}</span></div>
               <div class="ssi"><span class="ssi-l">Término</span><span class="ssi-v">${fDS(k.dateEnd)||'—'}</span></div>
+            ${(k.timeStart||k.timeEnd)?`<div class="ssi"><span class="ssi-l">Horário</span><span class="ssi-v" style="color:var(--accent)">${k.timeStart||'—'} → ${k.timeEnd||'—'}</span></div>`:''}
               <div class="ssi"><span class="ssi-l">H. Plan.</span><span class="ssi-v" style="color:var(--amber)">${k.hours||0}h</span></div>
               <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal||'—'}</span></div>
               ${k.dateReal?`<div class="ssi"><span class="ssi-l">Conclusão</span><span class="ssi-v" style="color:var(--green)">${fDS(k.dateReal)}</span></div>`:''}
@@ -2083,7 +2088,8 @@ function renderGantt(){
   const today=new Date();today.setHours(0,0,0,0);
   const roots=stages.filter(s=>!s.parentId);
   const cm={};stages.filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
-  let rows=[];roots.forEach((r,ri)=>{rows.push({...r,isRoot:true,col:PCOLS[ri%PCOLS.length]});(cm[r.id]||[]).forEach(k=>rows.push({...k,isRoot:false,col:PCOLS[ri%PCOLS.length]}));});
+  // Gantt: apenas sub-etapas, agrupadas por etapa raiz
+  let rows=[];roots.forEach((r,ri)=>{const col=PCOLS[ri%PCOLS.length];(cm[r.id]||[]).forEach(k=>rows.push({...k,isRoot:false,col,rootName:(r.num?r.num+' ':'')+r.name}));});
 
   // ── Monta cabeçalho de dias com agrupamento por mês ──
   // Linha 1: meses
@@ -2123,6 +2129,7 @@ function renderGantt(){
       </tr>
     </thead><tbody>`;
 
+  let _lastRoot=null;
   rows.forEach(r=>{
     const rdStart=r.date    ? new Date(r.date+'T00:00:00')    : null;
     const rdEnd  =r.dateEnd ? new Date(r.dateEnd+'T00:00:00') : rdStart;
@@ -2147,7 +2154,7 @@ function renderGantt(){
       const br=isFirst&&isLast?'4px':isFirst?'4px 0 0 4px':isLast?'0 4px 4px 0':'0';
 
       return`<td class="gcell" style="${bgToday}padding:2px 1px">
-        <div onclick="ganttEditStage('${r.id}')" style="cursor:pointer;background:${r.col};border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="✏️ ${esc(r.name)} | ${fD(r.date)||'—'} → ${fD(r.dateEnd)||'—'} | ${ps.label}${isRealDay?' | ✅ Conclusão real':''}">
+        <div onclick="ganttEditStage('${r.id}')" style="cursor:pointer;background:${r.col};border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="✏️ ${esc(r.name)}\n📅 Início: ${fD(r.date)||'—'}${r.timeStart?' às '+r.timeStart:''}\n🏁 Término: ${fD(r.dateEnd)||'—'}${r.timeEnd?' às '+r.timeEnd:''}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}">
           ${isFirst?`<span style="font-size:9px;padding-left:3px;line-height:16px;white-space:nowrap;overflow:hidden;display:block">${SE[r.status]||''}</span>`:''}
           ${isRealDay?`<div style="position:absolute;inset:0;border-radius:inherit;border:2px solid #22c55e"></div>`:''}
         </div>
@@ -2162,7 +2169,14 @@ function renderGantt(){
       ?`<td style="font-size:10px;color:var(--green);text-align:center;white-space:nowrap">✅ ${fDS(r.dateReal)}</td>`
       :`<td style="font-size:10px;color:var(--dim);text-align:center">—</td>`;
 
-    h+=`<tr class="${r.isRoot?'groot':''}" id="grow_${r.id}">
+    if(r.rootName!==_lastRoot){
+      _lastRoot=r.rootName;
+      h+=`<tr style="background:rgba(255,255,255,.04)">
+        <td colspan="${5+days.length}" style="font-size:10px;font-weight:700;color:var(--accent);padding:6px 10px;border-top:1px solid var(--border);letter-spacing:.04em">
+          📦 ${esc(r.rootName)}
+        </td></tr>`;
+    }
+    h+=`<tr id="grow_${r.id}">
       <td class="gname gname-cell" title="${esc(r.name)}" onclick="ganttEditStage('${r.id}')" style="cursor:pointer">${r.isRoot?'':' └ '}${esc(r.num)||''} ${esc(r.name)}</td>
       <td style="font-size:10px;color:var(--mid)">${esc(r.executor||'—')}</td>
       <td style="font-size:10px;color:var(--mid);text-align:center">${r.hours||0}h</td>
@@ -2260,6 +2274,8 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   document.getElementById('fs-date').value=stage?.date||'';
   document.getElementById('fs-dateend').value=stage?.dateEnd||'';
   document.getElementById('fs-datereal').value=stage?.dateReal||'';
+  document.getElementById('fs-timestart').value=stage?.timeStart||'';
+  document.getElementById('fs-timeend').value=stage?.timeEnd||'';
   if(document.getElementById('fs-rate')) document.getElementById('fs-rate').value=stage?.hourRate||'';
   // Horas Realizadas: root = auto (soma das sub-etapas), sub = manual
   const proj2=getP(S.cur);
@@ -2322,6 +2338,8 @@ function saveStage(){
     executor:document.getElementById('fs-executor').value.trim(),
     date:document.getElementById('fs-date').value,
     dateEnd:document.getElementById('fs-dateend').value,
+    timeStart:document.getElementById('fs-timestart')?.value||'',
+    timeEnd:document.getElementById('fs-timeend')?.value||'',
     dateReal:document.getElementById('fs-datereal').value,
     hours:document.getElementById('fs-hours').value,
     hoursReal: (document.getElementById('fs-parent')?.value||_defParent) ? (document.getElementById('fs-hoursreal')?.value||'') : '', // root = auto from kids
