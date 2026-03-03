@@ -2137,16 +2137,17 @@ function renderGantt(){
 
       if(!rdStart) return`<td class="gcell" style="${bgWknd}${bgToday}"></td>`;
 
-      const inBar=rdStart&&rdEnd ? (d>=rdStart&&d<=rdEnd) : (rdStart&&d.getTime()===rdStart.getTime());
+      const dT=d.getTime(),rsT=rdStart?rdStart.getTime():null,reT=rdEnd?rdEnd.getTime():null;
+      const inBar=rsT&&reT ? (dT>=rsT&&dT<=reT) : (rsT&&dT===rsT);
       if(!inBar) return`<td class="gcell" style="${bgWknd}${bgToday}"></td>`;
 
-      const isFirst=d.getTime()===rdStart.getTime();
-      const isLast =rdEnd&&d.getTime()===rdEnd.getTime();
-      const isRealDay=rdReal&&d.getTime()===rdReal.getTime();
+      const isFirst=dT===rsT;
+      const isLast=reT&&dT===reT;
+      const isRealDay=rdReal&&dT===rdReal.getTime();
       const br=isFirst&&isLast?'4px':isFirst?'4px 0 0 4px':isLast?'0 4px 4px 0':'0';
 
       return`<td class="gcell" style="${bgToday}padding:2px 1px">
-        <div style="background:${r.col};border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="${esc(r.name)} | ${fD(r.date)||'—'} → ${fD(r.dateEnd)||'—'} | ${ps.label}${isRealDay?' | ✅ Conclusão real':''}">
+        <div onclick="ganttEditStage('${r.id}')" style="cursor:pointer;background:${r.col};border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="✏️ ${esc(r.name)} | ${fD(r.date)||'—'} → ${fD(r.dateEnd)||'—'} | ${ps.label}${isRealDay?' | ✅ Conclusão real':''}">
           ${isFirst?`<span style="font-size:9px;padding-left:3px;line-height:16px;white-space:nowrap;overflow:hidden;display:block">${SE[r.status]||''}</span>`:''}
           ${isRealDay?`<div style="position:absolute;inset:0;border-radius:inherit;border:2px solid #22c55e"></div>`:''}
         </div>
@@ -2162,7 +2163,7 @@ function renderGantt(){
       :`<td style="font-size:10px;color:var(--dim);text-align:center">—</td>`;
 
     h+=`<tr class="${r.isRoot?'groot':''}" id="grow_${r.id}">
-      <td class="gname gname-cell" title="${esc(r.name)}">${r.isRoot?'':' └ '}${esc(r.num)||''} ${esc(r.name)}</td>
+      <td class="gname gname-cell" title="${esc(r.name)}" onclick="ganttEditStage('${r.id}')" style="cursor:pointer">${r.isRoot?'':' └ '}${esc(r.num)||''} ${esc(r.name)}</td>
       <td style="font-size:10px;color:var(--mid)">${esc(r.executor||'—')}</td>
       <td style="font-size:10px;color:var(--mid);text-align:center">${r.hours||0}h</td>
       <td style="text-align:center;padding:2px 4px"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap">${actBtns}</div></td>
