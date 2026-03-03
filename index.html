@@ -320,6 +320,51 @@ textarea.fc{resize:vertical;min-height:60px}
   .sroot-stats{gap:10px;padding-left:14px}
   .sidebar{width:180px}
 }
+
+/* ══════════════════════════════════
+   RFP
+══════════════════════════════════ */
+.rfp-layout{display:flex;gap:0;height:calc(100vh - 60px);overflow:hidden}
+.rfp-sidenav{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0}
+.rfp-sidenav-title{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:700;padding:8px 14px 4px}
+.rfp-nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--mid);cursor:pointer;border-left:3px solid transparent;transition:all .15s}
+.rfp-nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.rfp-nav-item.on{background:rgba(14,165,233,.1);color:var(--accent);border-left-color:var(--accent);font-weight:600}
+.rfp-nav-item .rfp-nav-pct{margin-left:auto;font-size:9px;padding:1px 5px;border-radius:8px;font-weight:700;background:var(--bg3)}
+.rfp-nav-item.on .rfp-nav-pct{background:rgba(14,165,233,.2);color:var(--accent)}
+.rfp-main{flex:1;overflow-y:auto;padding:20px 24px}
+.rfp-module-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px;font-family:var(--display)}
+.rfp-module-sub{font-size:12px;color:var(--dim);margin-bottom:18px}
+.rfp-field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px}
+.rfp-field{display:flex;flex-direction:column;gap:4px}
+.rfp-field label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);font-weight:600}
+.rfp-field input,.rfp-field textarea,.rfp-field select{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:12px;font-family:var(--sans);transition:border .15s;width:100%}
+.rfp-field input:focus,.rfp-field textarea:focus,.rfp-field select:focus{outline:none;border-color:var(--accent)}
+.rfp-req-table{width:100%;border-collapse:collapse;font-size:11px}
+.rfp-req-table th{background:var(--bg3);padding:8px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:700;border-bottom:2px solid var(--border);white-space:nowrap}
+.rfp-req-table td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
+.rfp-req-table tr:hover td{background:rgba(255,255,255,.02)}
+.rfp-req-table input,.rfp-req-table select{background:var(--bg4);border:1px solid transparent;color:var(--text);border-radius:4px;padding:4px 7px;font-size:11px;font-family:var(--sans);width:100%;transition:border .15s}
+.rfp-req-table input:focus,.rfp-req-table select:focus{outline:none;border-color:var(--accent);background:var(--bg3)}
+.rfp-req-text{font-size:11px;color:var(--text);line-height:1.4;min-width:200px}
+.rfp-pbar{height:5px;background:var(--bg4);border-radius:3px;overflow:hidden;margin-top:6px}
+.rfp-pbar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .4s}
+.rfp-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:16px;cursor:pointer;transition:all .15s}
+.rfp-card:hover{border-color:var(--border2);box-shadow:0 2px 12px rgba(0,0,0,.2)}
+.rfp-card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px}
+.rfp-card-meta{font-size:11px;color:var(--dim)}
+.rfp-status-badge{font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;display:inline-flex;align-items:center;gap:4px}
+.rfp-status-na{background:rgba(100,116,139,.15);color:var(--dim)}
+.rfp-status-em{background:rgba(14,165,233,.15);color:var(--accent)}
+.rfp-status-ok{background:rgba(34,197,94,.15);color:var(--green)}
+.rfp-header{display:flex;align-items:center;gap:10px;margin-bottom:20px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.rfp-dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.rfp-dash-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:center}
+.rfp-dash-num{font-size:26px;font-weight:800;font-family:var(--display);color:var(--accent)}
+.rfp-dash-lbl{font-size:10px;color:var(--dim);margin-top:2px;text-transform:uppercase;letter-spacing:.05em}
+.rfp-prio-alta{color:#ef4444;font-weight:700}
+.rfp-prio-media{color:var(--amber);font-weight:700}
+.rfp-prio-baixa{color:var(--green);font-weight:600}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.4.3/echarts.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>
@@ -493,6 +538,7 @@ textarea.fc{resize:vertical;min-height:60px}
         <div class="sb-item on" id="snav-dash" onclick="showPage('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
         <div class="sb-item" id="snav-proj" onclick="showPage('projects')"><span class="sb-icon">📁</span>Projetos</div>
         <div class="sb-sep"></div>
+        <div class="sb-item" id="snav-rfp" style="display:none" onclick="showPage('rfp')"><span class="sb-icon">📋</span>Análise RFP</div>
         <div class="sb-item" id="snav-users" style="display:none" onclick="showPage('users')"><span class="sb-icon">👥</span>Usuários</div>
       </div>
       <div class="sb-bottom">
@@ -628,6 +674,9 @@ textarea.fc{resize:vertical;min-height:60px}
         </div>
         <div class="users-grid" id="users-grid"></div>
       </div>
+
+      <!-- RFP PAGE -->
+      <div class="page" id="page-rfp"></div>
 
     </div><!-- main-content -->
   </div><!-- app-body -->
@@ -1033,6 +1082,44 @@ textarea.fc{resize:vertical;min-height:60px}
 
 <div class="toast" id="toast"></div>
 
+
+<!-- ══ MODAL: RFP INFO ══ -->
+<div class="overlay" id="modal-rfp-info">
+  <div class="modal" style="max-width:520px">
+    <div class="mhead"><span>📋 Dados do Levantamento</span><button class="mclose" onclick="closeModal('modal-rfp-info')">✕</button></div>
+    <div class="mbody">
+      <div class="frow">
+        <div class="fg"><label>👤 Responsável pelo Levantamento</label><input class="fc" type="text" id="rfi-responsavel" placeholder="Nome do responsável"></div>
+        <div class="fg"><label>🏢 Unidade de Suporte</label><input class="fc" type="text" id="rfi-unidade" placeholder="Ex: AXL Uberlândia"></div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>📅 Data do Levantamento</label><input class="fc" type="date" id="rfi-data"></div>
+      </div>
+      <div class="frow">
+        <div class="fg">
+          <label>🗺️ Estado</label>
+          <select class="fc" id="rfi-estado" onchange="rfpLoadCidades('')">
+            <option value="">Selecione o estado...</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>📍 Cidade</label>
+          <select class="fc" id="rfi-cidade">
+            <option value="">Selecione a cidade...</option>
+          </select>
+        </div>
+      </div>
+      <div class="frow">
+        <div class="fg"><label>✏️ Ou digite a cidade manualmente</label><input class="fc" type="text" id="rfi-cidade-custom" placeholder="Nome da cidade (opcional)"></div>
+      </div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('modal-rfp-info')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRFPInfo()">💾 Salvar Dados</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════
 // CONSTANTS & STATE
@@ -1129,7 +1216,7 @@ async function fsPatch(docName,obj){
 }
 
 function refreshCurrentView(){
-  const pages=['dashboard','projects','detail','users'];
+  const pages=['dashboard','projects','detail','users','rfp'];
   const active=pages.find(p=>document.getElementById('page-'+p)?.classList.contains('on'));
   if(!active)return;
   if(active==='dashboard')renderDash();
@@ -1479,6 +1566,7 @@ function enterApp(){
   document.getElementById('app-shell').style.display='flex';
   updateSidebar();
   document.getElementById('snav-users').style.display=CU.role==='admin'?'flex':'none';
+  document.getElementById('snav-rfp').style.display=CU.role==='admin'?'flex':'none';
   showPage('dashboard');
 }
 
@@ -1563,6 +1651,11 @@ function showPage(page,pid=null){
     document.getElementById('page-users').classList.add('on');
     document.getElementById('snav-users').classList.add('on');
     renderUsersPage();
+  } else if(page==='rfp'){
+    if(CU?.role!=='admin'){toast('Acesso restrito a administradores','err');return;}
+    document.getElementById('page-rfp').classList.add('on');
+    document.getElementById('snav-rfp').classList.add('on');
+    showPage_rfp();
   }
 }
 
@@ -1620,6 +1713,7 @@ function renderCards(id,list){
       </div>
       <div class="proj-card-actions">
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();showPage('detail','${p.id}')">👁 Abrir</button>
+        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();S.cur='${p.id}';showPage('rfp');openRFP('${p.id}')" style="color:var(--accent)">📋 RFP</button>
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openProjModal(false,'${p.id}')">✏️ Editar</button>
         <button class="btn btn-purple btn-xs" onclick="event.stopPropagation();S.cur='${p.id}';openExport(true)">📤 Exportar</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteProject('${p.id}')">🗑 Excluir</button>
@@ -3414,6 +3508,205 @@ function resetGanttPeriod(){
   renderGantt();
   toast('📅 Período ajustado para o projeto completo','ok');
 }
+
+// RFP_JS_PLACEHOLDER
+
+// RFP_JS_PLACEHOLDER
+
+
+// ════════════════════════════════════
+// RFP — ANÁLISE DE REQUISITOS
+// ════════════════════════════════════
+const ESTADOS_BR=['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
+const CIDADES_BR={'SP':['São Paulo','Campinas','Santos','São José dos Campos','Ribeirão Preto','Sorocaba','Jundiaí','Bauru'],'RJ':['Rio de Janeiro','Niterói','Duque de Caxias','Nova Iguaçu','Petrópolis','Volta Redonda'],'MG':['Belo Horizonte','Uberlândia','Contagem','Juiz de Fora','Betim','Uberaba','Ipatinga'],'ES':['Vitória','Serra','Vila Velha','Cariacica','Cachoeiro de Itapemirim'],'PR':['Curitiba','Londrina','Maringá','Ponta Grossa','Cascavel','Paranaguá'],'SC':['Florianópolis','Joinville','Blumenau','Criciúma','Chapecó','Itajaí'],'RS':['Porto Alegre','Caxias do Sul','Pelotas','Canoas','Santa Maria','Novo Hamburgo'],'BA':['Salvador','Feira de Santana','Vitória da Conquista','Camaçari','Itabuna'],'CE':['Fortaleza','Caucaia','Juazeiro do Norte','Sobral','Crato'],'PE':['Recife','Caruaru','Petrolina','Olinda','Paulista'],'GO':['Goiânia','Aparecida de Goiânia','Anápolis','Rio Verde'],'DF':['Brasília','Taguatinga','Ceilândia','Samambaia'],'AM':['Manaus','Parintins','Itacoatiara'],'PA':['Belém','Ananindeua','Santarém','Marabá'],'MT':['Cuiabá','Várzea Grande','Rondonópolis','Sinop'],'MS':['Campo Grande','Dourados','Três Lagoas','Corumbá'],'MA':['São Luís','Imperatriz','Timon','Caxias'],'PI':['Teresina','Parnaíba','Picos'],'RN':['Natal','Mossoró','Parnamirim'],'PB':['João Pessoa','Campina Grande','Patos'],'AL':['Maceió','Arapiraca','Rio Largo'],'SE':['Aracaju','Nossa Senhora do Socorro','Lagarto'],'AC':['Rio Branco','Cruzeiro do Sul'],'AP':['Macapá','Santana'],'RO':['Porto Velho','Ji-Paraná','Ariquemes'],'RR':['Boa Vista','Rorainópolis'],'TO':['Palmas','Araguaína','Gurupi']};
+
+function createEmptyRFP(){
+  return {responsavel:'',unidadeSuporte:'',estado:'',cidade:'',dataLevantamento:new Date().toISOString().split('T')[0],dados:{
+    infoGerais:{name:'Informações Gerais',icon:'📂',fields:[{id:'tipoOperacao',label:'Tipo de operação',value:''},{id:'tipoProduto',label:'Tipo de produto',value:''},{id:'qtdeSKUs',label:'Qtde de SKUs ativos',value:''},{id:'sazonalidade',label:'Sazonalidade?',value:''},{id:'turnos',label:'Turnos de operação',value:''},{id:'volumeDiario',label:'Volume médio diário',value:''}]},
+    infraestrutura:{name:'Infraestrutura',icon:'🗂️',fields:[{id:'areaTotalConstruida',label:'Área total construída (m²)',value:''},{id:'areaUtilArmazenagem',label:'Área útil para armazenagem (m²)',value:''},{id:'peDireito',label:'Pé-direito útil (m)',value:''},{id:'numeroDocas',label:'Número de docas',value:''},{id:'tipoEstrutura',label:'Tipo de estrutura',value:''},{id:'equipamentos',label:'Tipos de equipamentos',value:''},{id:'redeWifi',label:'Rede Wifi no CD?',value:''}]},
+    produtosGiro:{name:'Produtos e Giro',icon:'📊',fields:[{id:'classificacaoGiro',label:'Classificação de giro (ABC)',value:''},{id:'produtosValidade',label:'Produtos com validade?',value:''},{id:'produtosLote',label:'Produtos com lote?',value:''},{id:'unidadePicking',label:'Unidade de picking diferente do pulmão?',value:''},{id:'diasExpedicao',label:'Dias para Expedição',value:''},{id:'shelfLife',label:'Shelf Life mínimo',value:''},{id:'misturaValidade',label:'Mistura Data de Validade por Endereço?',value:''},{id:'misturaLote',label:'Mistura Lote por endereço?',value:''},{id:'produtosCompativeis',label:'Produtos Compatíveis/Incompatíveis',value:''},{id:'recuperacaoAvaria',label:'Recuperação de Avaria',value:''}]},
+    layout:{name:'Layout / Estrutura Física',icon:'🧠',fields:[{id:'layoutAtual',label:'Descrição do layout atual',value:''},{id:'gargalosRecebimento',label:'Gargalos - Recebimento',value:''},{id:'gargalosPulmao',label:'Gargalos - Pulmão',value:''},{id:'gargalosPicking',label:'Gargalos - Picking',value:''},{id:'gargalosExpedicao',label:'Gargalos - Expedição',value:''},{id:'oportunidadesRecebimento',label:'Oportunidades - Recebimento',value:''},{id:'oportunidadesPulmao',label:'Oportunidades - Pulmão',value:''},{id:'oportunidadesPicking',label:'Oportunidades - Picking',value:''},{id:'oportunidadesExpedicao',label:'Oportunidades - Expedição',value:''},{id:'eliminacaoCruzamento',label:'Eliminação de cruzamento de fluxos?',value:''},{id:'pickingProximoExpedicao',label:'Zona de picking próxima da expedição?',value:''},{id:'segurancaFluxo',label:'Segurança (fluxo de pedestres separado)?',value:''},{id:'expansaoFutura',label:'Flexibilidade para expansão futura?',value:''}]},
+    recebimento:{name:'Recebimento',icon:'🚛',requirements:[{id:'r1',text:'Sistema de agendamento de cargas',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r2',text:'Controle do tempo do veículo na planta',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r3',text:'Captura e validação de lotes e validades',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r4',text:'Inspeção visual / Uso de fotos',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r5',text:'Área de pré-armazenagem separada da doca',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r6',text:'Conferência cega',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r7',text:'Controle de docas',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r8',text:'Tratativas de divergência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r9',text:'Uso de coletor de dados',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r10',text:'Conferência com base na NFe',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r11',text:'KPI: Tempo médio de conferência por nota',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r12',text:'KPI: % de divergência por tipo',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r13',text:'KPI: Tempo médio de veículo na doca',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r14',text:'KPI: Acuracidade de recebimento (NF vs Físico)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
+    armazenagem:{name:'Armazenagem',icon:'📦',requirements:[{id:'a1',text:'Estratégia de endereçamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a2',text:'Etiquetagem de paletes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a3',text:'Sistema de endereçamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a4',text:'Validação de endereço (Capacidade M3, Peso)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a5',text:'Zonas definidas por curva/tipo de produto',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a6',text:'Endereços adequados por tipo de embalagem',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a7',text:'Critérios de Armazenagem (FIFO / FEFO / LIFO)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a8',text:'Endereço multifuncional ou exclusivo?',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a9',text:'Endereço aceita vários produtos ou apenas um SKU?',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a10',text:'Regras de Proximidade do Picking',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a12',text:'KPI: % de ocupação por zona',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a13',text:'KPI: % de utilização de endereços',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a14',text:'KPI: Tempo médio de armazenagem por palete',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
+    gestaoEstoque:{name:'Gestão de Estoque',icon:'📊',requirements:[{id:'ge1',text:'Inventário rotativo',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge2',text:'Inventário - Contagem cega',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge3',text:'Política de FIFO/FEFO',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge4',text:'Controle por Série',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge5',text:'Consultas de Estoque por Endereço',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge6',text:'Controle de Avaria/Perdas/Divergências',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge8',text:'Acuracidade do estoque (físico vs sistema)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge9',text:'Estoque ajustado somente por sistema',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge10',text:'KPI: Acuracidade de estoque (%)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge11',text:'KPI: Estoque com validade vencida',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge12',text:'KPI: Giro de estoque',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge13',text:'KPI: % de estoque avariado',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
+    separacao:{name:'Separação / Picking',icon:'🎯',requirements:[{id:'s1',text:'Estratégia de separação/Picking definida',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s2',text:'Separação por Transportadora/Região/Cidade',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s3',text:'Equipamento usado para separação',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s4',text:'Estratégia (discrete, batch, zona, wave)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s5',text:'Reabastecimento automático',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s6',text:'Produtos A nas posições mais acessíveis',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s7',text:'Separação por zona com consolidação posterior',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s8',text:'Um pedido por vez ou múltiplos',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s9',text:'Separador escaneia produto/quantidade/endereço',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s10',text:'Separação já forma volumes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s12',text:'KPI: Pedidos separados por hora',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s13',text:'KPI: % de acuracidade da separação',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s14',text:'KPI: Tempo médio por tarefa de picking',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
+    conferencia:{name:'Conferência',icon:'✅',requirements:[{id:'c1',text:'Conferente valida pelo pedido ou pelo scan',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c2',text:'Conferência em estação dedicada',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c3',text:'Recontagem por divergência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c4',text:'Escaneamento de produto, endereço e volume',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c5',text:'Conferência por item ou por volume fechado',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c6',text:'Dividir ou consolidar pedidos na conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c7',text:'KPI: % de acuracidade da conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c8',text:'KPI: Tempo médio por conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c9',text:'KPI: % de divergência na conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
+    packing:{name:'Packing / Embalagem',icon:'📦',requirements:[{id:'p1',text:'Montagem dos volumes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p2',text:'Critérios de formação dos volumes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p3',text:'Padronização de embalagem',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p4',text:'Peso máximo por caixa',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p5',text:'Separação por tipo de produto',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p6',text:'Embalagem diferenciada por cliente',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p7',text:'Volume amarrado ao número do pedido',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p9',text:'Etiqueta com código rastreável',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p10',text:'Formação no final da conferência ou durante picking',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
+    expedicao:{name:'Expedição',icon:'🚚',requirements:[{id:'e1',text:'Controle de docas de saída',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e2',text:'Pré-embarque / staging',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e3',text:'Check-list de carregamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e4',text:'Romaneio e rastreio',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e5',text:'Ordem de carga respeita a rota de entrega',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e6',text:'Carregador lê o volume antes de embarcar',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e7',text:'Controle de tempo no CD',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e8',text:'Staging por transportadora ou rota',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e9',text:'KPI: % de pedidos expedidos no prazo',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e10',text:'KPI: Tempo médio de carregamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e11',text:'KPI: Tempo médio de veículo na doca',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]}
+  }};
+}
+
+const RFP_MODULES=[{id:'dashboard',name:'Dashboard',icon:'📊'},{id:'infoGerais',name:'Informações Gerais',icon:'📂'},{id:'infraestrutura',name:'Infraestrutura',icon:'🗂️'},{id:'produtosGiro',name:'Produtos e Giro',icon:'📦'},{id:'layout',name:'Layout / Estrutura',icon:'🧠'},{id:'recebimento',name:'Recebimento',icon:'🚛'},{id:'armazenagem',name:'Armazenagem',icon:'📦'},{id:'gestaoEstoque',name:'Gestão de Estoque',icon:'📊'},{id:'separacao',name:'Separação / Picking',icon:'🎯'},{id:'conferencia',name:'Conferência',icon:'✅'},{id:'packing',name:'Packing',icon:'📦'},{id:'expedicao',name:'Expedição',icon:'🚚'}];
+let _rfpMod='dashboard';
+
+function rfpProgress(rfp){if(!rfp?.dados)return 0;let t=0,f=0;Object.values(rfp.dados).forEach(m=>{if(m.requirements)m.requirements.forEach(r=>{t+=4;if(r.faz)f++;if(r.execucao)f++;if(r.controle)f++;if(r.prioridade)f++;});else if(m.fields)m.fields.forEach(fi=>{t++;if(fi.value)f++;});});return t>0?Math.round(f/t*100):0;}
+function rfpModProgress(rfp,modId){const m=rfp?.dados?.[modId];if(!m)return 0;let t=0,f=0;if(m.requirements)m.requirements.forEach(r=>{t+=4;if(r.faz)f++;if(r.execucao)f++;if(r.controle)f++;if(r.prioridade)f++;});else if(m.fields)m.fields.forEach(fi=>{t++;if(fi.value)f++;});return t>0?Math.round(f/t*100):0;}
+function rfpStatusBadge(rfp){const pct=rfpProgress(rfp);if(pct===0)return'<span class="rfp-status-badge rfp-status-na">⚪ Não Iniciada</span>';if(pct<100)return`<span class="rfp-status-badge rfp-status-em">🔵 Em Andamento ${pct}%</span>`;return'<span class="rfp-status-badge rfp-status-ok">✅ Concluída</span>';}
+
+function showPage_rfp(){_rfpMod='dashboard';renderRFPList();}
+
+function renderRFPList(){
+  const el=document.getElementById('page-rfp');if(!el)return;
+  const projs=S.projects;
+  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div><h1 style="font-family:var(--display);font-size:19px;font-weight:800">📋 Análise RFP</h1>
+    <p style="font-size:12px;color:var(--mid);margin-top:2px">Levantamento de requisitos WMS por projeto</p></div></div>
+  ${!projs.length?'<div class="card" style="padding:40px;text-align:center;color:var(--dim)"><div style="font-size:32px;margin-bottom:10px">📋</div><div>Nenhum projeto cadastrado ainda.</div></div>':''}
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+    ${projs.map(p=>{const rfp=p.rfp||null;const pct=rfp?rfpProgress(rfp):0;
+    return`<div class="rfp-card" onclick="openRFP('${p.id}')">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
+        <div class="rfp-card-title">${esc(p.name)}</div>${rfpStatusBadge(rfp)}</div>
+      <div class="rfp-card-meta" style="margin-bottom:8px">${rfp?.cidade?`📍 ${esc(rfp.cidade)}${rfp.estado?', '+rfp.estado:''}  `:''}${rfp?.responsavel?`👤 ${esc(rfp.responsavel)}`:''}${!rfp?.responsavel&&!rfp?.cidade?'Clique para iniciar o levantamento':''}</div>
+      ${pct>0?`<div class="rfp-pbar"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div><div style="font-size:10px;color:var(--dim);margin-top:4px">${pct}% preenchido</div>`:''}
+    </div>`;}).join('')}
+  </div>`;
+}
+
+function openRFP(pid){
+  const proj=getP(pid);if(!proj)return;
+  if(!proj.rfp)proj.rfp=createEmptyRFP();
+  S.cur=pid;_rfpMod='dashboard';renderRFPEditor();
+}
+
+function renderRFPEditor(){
+  const proj=getP(S.cur);if(!proj||!proj.rfp)return;
+  const el=document.getElementById('page-rfp');if(!el)return;
+  const rfp=proj.rfp;
+  const nav=RFP_MODULES.map(m=>{const pct=m.id==='dashboard'?null:rfpModProgress(rfp,m.id);
+    return`<div class="rfp-nav-item ${_rfpMod===m.id?'on':''}" onclick="setRFPMod('${m.id}')"><span>${m.icon}</span><span>${m.name}</span>${pct!==null?`<span class="rfp-nav-pct">${pct}%</span>`:''}</div>`;}).join('');
+  el.innerHTML=`<div class="rfp-layout">
+    <div class="rfp-sidenav">
+      <div style="padding:12px 14px 8px;border-bottom:1px solid var(--border)">
+        <button class="btn btn-ghost btn-xs" onclick="renderRFPList()" style="width:100%;justify-content:flex-start">← Todos os Projetos</button>
+      </div>
+      <div style="padding:10px 14px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(proj.name)}</div>
+        <div style="margin-top:4px">${rfpStatusBadge(rfp)}</div>
+        <div class="rfp-pbar" style="margin-top:6px"><div class="rfp-pbar-fill" style="width:${rfpProgress(rfp)}%"></div></div>
+      </div>
+      <div class="rfp-sidenav-title" style="margin-top:8px">Módulos</div>
+      ${nav}
+    </div>
+    <div class="rfp-main" id="rfp-main-content"></div>
+  </div>`;
+  renderRFPModule();
+}
+
+function setRFPMod(modId){_rfpMod=modId;renderRFPEditor();}
+
+function renderRFPModule(){
+  const proj=getP(S.cur);if(!proj||!proj.rfp)return;
+  const el=document.getElementById('rfp-main-content');if(!el)return;
+  const rfp=proj.rfp;
+  if(_rfpMod==='dashboard'){renderRFPDashboard(el,proj,rfp);return;}
+  const modDef=RFP_MODULES.find(m=>m.id===_rfpMod);
+  const modData=rfp.dados[_rfpMod];
+  if(!modData){el.innerHTML='<p style="color:var(--dim)">Módulo não encontrado.</p>';return;}
+  const pct=rfpModProgress(rfp,_rfpMod);
+  let html=`<div class="rfp-header">
+    <div style="flex:1"><div class="rfp-module-title">${modDef?.icon||''} ${modData.name}</div>
+    <div class="rfp-module-sub">${pct}% preenchido</div>
+    <div class="rfp-pbar" style="width:200px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
+    <button class="btn btn-primary btn-xs" onclick="saveRFP()">💾 Salvar</button></div>`;
+  if(modData.fields){
+    html+=`<div class="rfp-field-row">`;
+    modData.fields.forEach((f,fi)=>{
+      const isLong=f.label.length>35||['layoutAtual','gargalos','oportunidades'].some(k=>f.id.toLowerCase().includes(k.toLowerCase()));
+      html+=`<div class="rfp-field" ${isLong?'style="grid-column:span 2"':''}>
+        <label>${f.label}</label>
+        ${isLong?`<textarea rows="2" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" style="resize:vertical">${esc(f.value)}</textarea>`:`<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Preencher...">`}
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+  if(modData.requirements){
+    html+=`<div style="overflow-x:auto"><table class="rfp-req-table">
+      <thead><tr><th style="min-width:200px">Requisito</th><th style="width:90px">Faz?</th><th style="min-width:120px">Como executa</th><th style="min-width:120px">Como controla</th><th style="width:100px">Prioridade</th><th style="min-width:120px">Observação</th></tr></thead><tbody>`;
+    modData.requirements.forEach((r,ri)=>{
+      const pClass=r.prioridade==='Alta'?'rfp-prio-alta':r.prioridade==='Média'?'rfp-prio-media':r.prioridade==='Baixa'?'rfp-prio-baixa':'';
+      html+=`<tr><td class="rfp-req-text">${esc(r.text)}</td>
+        <td><select onchange="rfpUpdateReq('${_rfpMod}',${ri},'faz',this.value)"><option value="" ${!r.faz?'selected':''}>—</option><option value="Sim" ${r.faz==='Sim'?'selected':''}>✅ Sim</option><option value="Não" ${r.faz==='Não'?'selected':''}>❌ Não</option><option value="Parcial" ${r.faz==='Parcial'?'selected':''}>⚠️ Parcial</option></select></td>
+        <td><input type="text" value="${esc(r.execucao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'execucao',this.value)" placeholder="Como..."></td>
+        <td><input type="text" value="${esc(r.controle)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'controle',this.value)" placeholder="Como..."></td>
+        <td><select class="${pClass}" onchange="rfpUpdateReq('${_rfpMod}',${ri},'prioridade',this.value)"><option value="" ${!r.prioridade?'selected':''}>—</option><option value="Alta" ${r.prioridade==='Alta'?'selected':''}>🔴 Alta</option><option value="Média" ${r.prioridade==='Média'?'selected':''}>🟡 Média</option><option value="Baixa" ${r.prioridade==='Baixa'?'selected':''}>🟢 Baixa</option></select></td>
+        <td><input type="text" value="${esc(r.observacao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'observacao',this.value)" placeholder="Obs..."></td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div>`;
+  }
+  el.innerHTML=html;
+}
+
+function renderRFPDashboard(el,proj,rfp){
+  const pct=rfpProgress(rfp);
+  let totalReqs=0,altaCount=0,modsDone=0;
+  const modKeys=Object.keys(rfp.dados);
+  modKeys.forEach(k=>{const m=rfp.dados[k];if(m.requirements){totalReqs+=m.requirements.length;altaCount+=m.requirements.filter(r=>r.prioridade==='Alta').length;}if(rfpModProgress(rfp,k)===100)modsDone++;});
+  const modCards=RFP_MODULES.filter(m=>m.id!=='dashboard').map(m=>{const p=rfpModProgress(rfp,m.id);const col=p===100?'var(--green)':p>0?'var(--amber)':'var(--border)';
+    return`<div class="rfp-card" onclick="setRFPMod('${m.id}')" style="padding:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;font-weight:700;color:${col}">${p}%</span></div>
+      <div class="rfp-pbar"><div class="rfp-pbar-fill" style="width:${p}%;background:${col}"></div></div>
+    </div>`;}).join('');
+  el.innerHTML=`<div class="rfp-header">
+    <div style="flex:1"><div class="rfp-module-title">📊 Dashboard — ${esc(proj.name)}</div><div class="rfp-module-sub">Visão geral do levantamento RFP</div></div>
+    <button class="btn btn-primary btn-xs" onclick="openRFPInfo()">✏️ Dados do Levantamento</button></div>
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Responsável</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.responsavel||'—')}</div></div>
+    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Localidade</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.cidade?esc(rfp.cidade)+(rfp.estado?'/'+rfp.estado:''):'—'}</div></div>
+    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Unidade de Suporte</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.unidadeSuporte||'—')}</div></div>
+    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Data</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.dataLevantamento?new Date(rfp.dataLevantamento+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div></div>
+  </div>
+  <div class="rfp-dash-grid">
+    <div class="rfp-dash-card"><div class="rfp-dash-num">${pct}%</div><div class="rfp-dash-lbl">Progresso Geral</div><div class="rfp-pbar" style="margin-top:8px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
+    <div class="rfp-dash-card"><div class="rfp-dash-num">${modsDone}</div><div class="rfp-dash-lbl">Módulos Concluídos</div><div style="font-size:11px;color:var(--dim);margin-top:4px">de ${modKeys.length} módulos</div></div>
+    <div class="rfp-dash-card"><div class="rfp-dash-num">${totalReqs}</div><div class="rfp-dash-lbl">Requisitos Mapeados</div></div>
+    <div class="rfp-dash-card"><div class="rfp-dash-num rfp-prio-alta">${altaCount}</div><div class="rfp-dash-lbl">Prioridade Alta</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${modCards}</div>`;
+}
+
+function rfpUpdateField(modId,idx,val){const proj=getP(S.cur);if(!proj?.rfp)return;proj.rfp.dados[modId].fields[idx].value=val;}
+function rfpUpdateReq(modId,idx,field,val){const proj=getP(S.cur);if(!proj?.rfp)return;proj.rfp.dados[modId].requirements[idx][field]=val;}
+function saveRFP(){const proj=getP(S.cur);if(!proj?.rfp)return;saveS();toast('✅ RFP salva com sucesso!','ok');renderRFPEditor();}
+
+function openRFPInfo(){
+  const proj=getP(S.cur);if(!proj?.rfp)return;
+  const rfp=proj.rfp;
+  const stateOpts=ESTADOS_BR.map(e=>`<option value="${e}" ${rfp.estado===e?'selected':''}>${e}</option>`).join('');
+  const cityOpts=(CIDADES_BR[rfp.estado]||[]).map(c=>`<option value="${c}" ${rfp.cidade===c?'selected':''}>${c}</option>`).join('');
+  document.getElementById('rfi-responsavel').value=rfp.responsavel||'';
+  document.getElementById('rfi-unidade').value=rfp.unidadeSuporte||'';
+  document.getElementById('rfi-data').value=rfp.dataLevantamento||'';
+  const estSel=document.getElementById('rfi-estado');
+  estSel.innerHTML='<option value="">Selecione o estado...</option>'+stateOpts;
+  estSel.value=rfp.estado||'';
+  rfpLoadCidades(rfp.cidade);
+  openModal('modal-rfp-info');
+}
+
+function rfpLoadCidades(selectedCity){
+  const est=document.getElementById('rfi-estado')?.value||'';
+  const cidades=CIDADES_BR[est]||[];
+  const citSel=document.getElementById('rfi-cidade');if(!citSel)return;
+  citSel.innerHTML='<option value="">Selecione a cidade...</option>'+cidades.map(c=>`<option value="${c}" ${c===selectedCity?'selected':''}>${c}</option>`).join('');
+  if(selectedCity&&!cidades.includes(selectedCity)) citSel.innerHTML+=`<option value="${selectedCity}" selected>${selectedCity}</option>`;
+  citSel.value=selectedCity||'';
+}
+
+function saveRFPInfo(){
+  const proj=getP(S.cur);if(!proj?.rfp)return;
+  proj.rfp.responsavel=document.getElementById('rfi-responsavel').value.trim();
+  proj.rfp.unidadeSuporte=document.getElementById('rfi-unidade').value.trim();
+  proj.rfp.dataLevantamento=document.getElementById('rfi-data').value;
+  proj.rfp.estado=document.getElementById('rfi-estado').value;
+  const cidade=document.getElementById('rfi-cidade-custom')?.value?.trim()||document.getElementById('rfi-cidade')?.value||'';
+  proj.rfp.cidade=cidade;
+  saveS();closeModal('modal-rfp-info');
+  toast('✅ Dados do levantamento salvos!','ok');
+  renderRFPEditor();
+}
+
 
 function switchTab(el,tid){
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
