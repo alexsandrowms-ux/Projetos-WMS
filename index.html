@@ -572,11 +572,13 @@ textarea.fc{resize:vertical;min-height:60px}
         <div id="tab-gantt" style="display:none">
           <div class="card" style="padding:11px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <label style="font-size:12px;color:var(--mid);display:flex;align-items:center;gap:7px">
-              Semanas: <input type="number" id="gweeks" value="10" min="4" max="24" class="fc" style="width:60px" onchange="renderGantt()">
+              📅 De: <input type="date" id="gstart" class="fc" style="width:148px" onchange="renderGantt()">
             </label>
             <label style="font-size:12px;color:var(--mid);display:flex;align-items:center;gap:7px">
-              A partir de: <input type="date" id="gstart" class="fc" style="width:140px" onchange="renderGantt()">
+              📅 Até: <input type="date" id="gend" class="fc" style="width:148px" onchange="renderGantt()">
             </label>
+            <button class="btn btn-ghost btn-xs" onclick="resetGanttPeriod()" title="Ver período completo do projeto" style="font-size:11px">🔄 Período do Projeto</button>
+            <span id="gantt-period-info" style="font-size:11px;color:var(--dim)"></span>
           </div>
           <div style="margin-bottom:8px">
             <button class="gantt-add-btn" onclick="openStageModal()"><span style="font-size:15px;color:var(--accent)">+</span> Adicionar Etapa</button>
@@ -2055,12 +2057,25 @@ function renderGantt(){
     el.innerHTML=`<div class="empty" style="padding:24px"><span class="empty-icon" style="font-size:28px">📊</span><div class="empty-text">Nenhuma etapa adicionada ainda.</div></div>`;
     return;
   }
-  const nw=+(document.getElementById('gweeks')?.value||10);
-  const si=document.getElementById('gstart');
-  let sd;
-  if(si?.value){sd=new Date(si.value+'T00:00:00');}
-  else{const ds=stages.filter(s=>s.date).map(s=>new Date(s.date+'T00:00:00'));sd=ds.length?new Date(Math.min(...ds)):new Date();const dy=sd.getDay();sd.setDate(sd.getDate()-(dy===0?6:dy-1));if(si)si.value=sd.toISOString().split('T')[0];}
+  // ── Período: usa inputs De/Até ou calcula automaticamente ──
+  const siEl=document.getElementById('gstart');
+  const eiEl=document.getElementById('gend');
+  const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.filter(s=>s.dateEnd).map(s=>s.dateEnd)].filter(Boolean).sort();
+  const autoStart=allDates[0]||new Date().toISOString().split('T')[0];
+  const autoEnd  =allDates[allDates.length-1]||autoStart;
+  if(!siEl?.value){if(siEl)siEl.value=autoStart;}
+  if(!eiEl?.value){if(eiEl)eiEl.value=autoEnd;}
+  const sd=new Date(siEl.value+'T00:00:00');
+  const ed=new Date(eiEl.value+'T00:00:00');
+  // Ensure end >= start
+  if(ed<sd){eiEl.value=siEl.value;ed.setTime(sd.getTime());}
+  // Build weeks spanning the whole period
+  const totalDays=Math.ceil((ed-sd)/(1000*60*60*24))+7;
+  const nw=Math.max(1,Math.ceil(totalDays/7));
   const wks=Array.from({length:nw},(_,i)=>{const s=new Date(sd);s.setDate(s.getDate()+i*7);const e=new Date(s);e.setDate(e.getDate()+6);return{s,e,lb:`${String(s.getDate()).padStart(2,'0')}/${String(s.getMonth()+1).padStart(2,'0')}`};});
+  // Info label
+  const infoEl=document.getElementById('gantt-period-info');
+  if(infoEl)infoEl.textContent=`${nw} semana(s) · ${stages.length} atividade(s)`;
   const roots=stages.filter(s=>!s.parentId);
   const cm={};stages.filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
   let rows=[];roots.forEach((r,ri)=>{rows.push({...r,isRoot:true,col:PCOLS[ri%PCOLS.length]});(cm[r.id]||[]).forEach(k=>rows.push({...k,isRoot:false,col:PCOLS[ri%PCOLS.length]}));});
@@ -3331,6 +3346,18 @@ function deleteLog(lid){
   stage.activityLog=(stage.activityLog||[]).filter(l=>l.id!==lid);
   saveStageField(_logStageId,'activityLog',stage.activityLog);
   renderLogList();
+}
+
+function resetGanttPeriod(){
+  const proj=getP(S.cur);if(!proj)return;
+  const stages=proj.stages||[];
+  const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.filter(s=>s.dateEnd).map(s=>s.dateEnd)].filter(Boolean).sort();
+  const si=document.getElementById('gstart');
+  const ei=document.getElementById('gend');
+  if(si)si.value=allDates[0]||proj.startDate||'';
+  if(ei)ei.value=allDates[allDates.length-1]||proj.endDate||'';
+  renderGantt();
+  toast('📅 Período ajustado para o projeto completo','ok');
 }
 
 function switchTab(el,tid){
