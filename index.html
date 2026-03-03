@@ -1700,8 +1700,8 @@ function renderStages(){
             <span class="schev open" id="chev_${root.id}">▼</span>
           </div>
           <div class="sroot-acts">
-            <button class="btn-ev" onclick="openEvModal('${root.id}')">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
-            <button class="btn-log" onclick="openLogModal('${root.id}')">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
+            <button class="btn-ev" data-evbtn="${root.id}" onclick="openEvModal('${root.id}')">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${root.id}" onclick="openLogModal('${root.id}')">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
             <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${root.id}')">✏️</button>
             <button class="btn btn-success btn-xs" onclick="openStageModal(true,null,'${root.id}')">+ Sub</button>
             <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${root.id}')">🗑</button>
@@ -1745,8 +1745,8 @@ function renderStages(){
             </div>
           </div>
           <div class="ssrow-acts">
-            <button class="btn-ev" onclick="openEvModal('${k.id}')">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
-            <button class="btn-log" onclick="openLogModal('${k.id}')">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
+            <button class="btn-ev" data-evbtn="${k.id}" onclick="openEvModal('${k.id}')">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${k.id}" onclick="openLogModal('${k.id}')">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
             <button class="btn-move" onclick="moveSubStage('${k.id}','up')" title="Mover para cima" ${ki===0?'disabled':''}>▲</button>
             <button class="btn-move" onclick="moveSubStage('${k.id}','down')" title="Mover para baixo" ${ki===lastKidIdx?'disabled':''}>▼</button>
             <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${k.id}')">✏️</button>
@@ -3132,8 +3132,20 @@ function saveStageField(sid,field,value){
   const proj=getP(S.cur);if(!proj)return;
   const stage=proj.stages.find(s=>s.id===sid);if(!stage)return;
   stage[field]=value;
-  saveData();
-  renderStages();
+  saveS();
+  _updateStageBadges(sid);
+}
+
+function _updateStageBadges(sid){
+  const stage=getStage(sid);if(!stage)return;
+  const evCount=(stage.evidence||[]).length;
+  const logCount=(stage.activityLog||[]).length;
+  document.querySelectorAll('[data-evbtn="'+sid+'"]').forEach(btn=>{
+    btn.innerHTML='📎 Evidências'+(evCount?' <span style="background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px">'+evCount+'</span>':'');
+  });
+  document.querySelectorAll('[data-logbtn="'+sid+'"]').forEach(btn=>{
+    btn.innerHTML='📝 Registros'+(logCount?' <span style="background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px">'+logCount+'</span>':'');
+  });
 }
 
 // ── EVIDENCE ──
