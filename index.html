@@ -2078,7 +2078,12 @@ function renderGantt(){
   if(infoEl)infoEl.textContent=`${nw} semana(s) · ${stages.length} atividade(s)`;
   const roots=stages.filter(s=>!s.parentId);
   const cm={};stages.filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
+  // Show ALL activities — period just controls visible columns
   let rows=[];roots.forEach((r,ri)=>{rows.push({...r,isRoot:true,col:PCOLS[ri%PCOLS.length]});(cm[r.id]||[]).forEach(k=>rows.push({...k,isRoot:false,col:PCOLS[ri%PCOLS.length]}));});
+
+  // Period boundaries for bar clipping
+  const periodStart = sd;
+  const periodEnd   = new Date(eiEl.value+'T00:00:00');
 
   let h=`<table class="gtbl">
     <thead><tr>
@@ -2091,20 +2096,33 @@ function renderGantt(){
     </tr></thead><tbody>`;
 
   rows.forEach(r=>{
-    const rd=r.date?new Date(r.date+'T00:00:00'):null;
     const rdStart = r.date    ? new Date(r.date+'T00:00:00')    : null;
     const rdEnd   = r.dateEnd ? new Date(r.dateEnd+'T00:00:00') : rdStart;
     const ps      = prazoStatus(r);
+
+    // Effective bar range clipped to period window
+    const barStart = rdStart ? (rdStart < periodStart ? periodStart : rdStart) : null;
+    const barEnd   = rdEnd   ? (rdEnd   > periodEnd   ? periodEnd   : rdEnd)   : barStart;
+
+    // Activity touches period if its range overlaps [periodStart, periodEnd]
+    const touchesPeriod = rdStart && rdEnd
+      ? (rdEnd >= periodStart && rdStart <= periodEnd)
+      : rdStart ? (rdStart >= periodStart && rdStart <= periodEnd) : false;
+
     const cells=wks.map(w=>{
-      if(!rdStart && !rdEnd) return '<td class="gcell"></td>';
-      const inBar = rdStart && rdEnd
-        ? (w.e >= rdStart && w.s <= rdEnd)
-        : (rdStart && rdStart>=w.s && rdStart<=w.e);
+      if(!barStart) return '<td class="gcell"></td>';
+      // Bar visible in this week?
+      const inBar = barStart && barEnd
+        ? (w.e >= barStart && w.s <= barEnd)
+        : (barStart >= w.s && barStart <= w.e);
       if(inBar){
-        const isFirst = rdStart && rdStart>=w.s && rdStart<=w.e;
-        const isLast  = rdEnd   && rdEnd>=w.s   && rdEnd<=w.e;
+        const isFirst = barStart >= w.s && barStart <= w.e;
+        const isLast  = barEnd   && barEnd >= w.s && barEnd <= w.e;
         const br = isFirst&&isLast?'4px': isFirst?'4px 0 0 4px': isLast?'0 4px 4px 0':'0';
-        return`<td class="gcell"><div class="gbar" style="background:${r.col};border-radius:${br}" title="${esc(r.name)} | ${ps.label}" ondblclick="ganttEditStage('${r.id}')">${isFirst?SE[r.status]||'':''}</div></td>`;
+        // Dim bar if activity is outside the original planned period (clipped)
+        const clipped = (rdStart && rdStart < periodStart) || (rdEnd && rdEnd > periodEnd);
+        const opacity = clipped ? '0.55' : '1';
+        return`<td class="gcell"><div class="gbar" style="background:${r.col};border-radius:${br};opacity:${opacity}" title="${esc(r.name)} | ${fD(r.date)||'—'} → ${fD(r.dateEnd)||'—'} | ${ps.label}" ondblclick="ganttEditStage('${r.id}')">${isFirst?SE[r.status]||'':''}</div></td>`;
       }
       return'<td class="gcell"></td>';
     }).join('');
