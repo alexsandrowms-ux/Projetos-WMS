@@ -3170,9 +3170,16 @@ function renderEvList(){
 
 function deleteEv(idx){
   const stage=getStage(_evStageId);if(!stage)return;
+  const ev=stage.evidence[idx];
+  if(!confirm(`Deseja remover a evidência?
+
+"${ev?.name||'arquivo'}"
+
+Esta ação não pode ser desfeita.`))return;
   stage.evidence=(stage.evidence||[]).filter((_,i)=>i!==idx);
   saveStageField(_evStageId,'evidence',stage.evidence);
   renderEvList();
+  toast('🗑️ Evidência removida','warn');
 }
 
 function handleEvFiles(files){
@@ -3181,19 +3188,20 @@ function handleEvFiles(files){
   const now=new Date();
   const dateStr=now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   Array.from(files).forEach(file=>{
-    if(file.size>5*1024*1024){toast(`Arquivo "${file.name}" excede 5MB — ignorado`,'warn');return;}
+    if(file.size>5*1024*1024){toast(`⚠️ O arquivo "${file.name}" excede 5MB e foi ignorado.`,'warn');return;}
     const ext=file.name.split('.').pop().toLowerCase();
     const isImg=['png','jpg','jpeg','gif','webp'].includes(ext);
     const sizeStr=file.size>1024*1024?(file.size/1024/1024).toFixed(1)+'MB':(file.size/1024).toFixed(0)+'KB';
     const entry={id:uid(),name:file.name,by:CU?.name||'—',date:dateStr,size:sizeStr,data:null};
     if(isImg){
       const reader=new FileReader();
-      reader.onload=e=>{entry.data=e.target.result;stage.evidence.push(entry);saveStageField(_evStageId,'evidence',stage.evidence);renderEvList();};
+      reader.onload=e=>{entry.data=e.target.result;stage.evidence.push(entry);saveStageField(_evStageId,'evidence',stage.evidence);renderEvList();toast('📎 Evidência anexada com sucesso!','ok');};
       reader.readAsDataURL(file);
     } else {
       stage.evidence.push(entry);
       saveStageField(_evStageId,'evidence',stage.evidence);
       renderEvList();
+      toast('📎 Evidência anexada com sucesso!','ok');
     }
   });
   document.getElementById('ev-file-input').value='';
@@ -3221,20 +3229,75 @@ function renderLogList(){
   const stage=getStage(_logStageId);
   const logs=(stage?.activityLog||[]).slice().reverse();
   const el=document.getElementById('log-list');
-  if(!logs.length){el.innerHTML=`<div style="text-align:center;padding:20px;color:var(--dim);font-size:12px">📋 Nenhum registro ainda.</div>`;return;}
-  el.innerHTML=logs.map((lg,i)=>`
-    <div class="log-item">
+  if(!logs.length){
+    el.innerHTML=`<div style="text-align:center;padding:24px 16px;color:var(--dim)">
+      <div style="font-size:28px;margin-bottom:8px">📋</div>
+      <div style="font-size:12px">Nenhum registro ainda.</div>
+      <div style="font-size:11px;margin-top:4px;color:var(--dim)">Use o campo acima para registrar as atividades realizadas.</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML=logs.map(lg=>`
+    <div class="log-item" id="logrow-${lg.id}">
       <div class="log-body">
-        <div class="log-text">${esc(lg.text).replace(/\n/g,'<br>')}</div>
-        <div class="log-meta">👤 ${esc(lg.by)} · 🕐 ${lg.date}</div>
+        <div class="log-text" id="log-text-${lg.id}">${esc(lg.text).replace(/\n/g,'<br>')}</div>
+        <textarea id="log-edit-${lg.id}" class="fc" rows="2" style="display:none;margin-top:6px;font-size:12px;resize:vertical">${esc(lg.text)}</textarea>
+        <div class="log-meta">👤 ${esc(lg.by)} · 🕐 ${lg.date}${lg.edited?` · <span style="color:var(--amber);font-style:italic">editado</span>`:''}</div>
       </div>
-      <button class="log-del" onclick="deleteLog('${lg.id}')" title="Remover">✕</button>
+      <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">
+        <button class="btn-ev" id="log-edit-btn-${lg.id}" onclick="startEditLog('${lg.id}')" title="Editar registro" style="font-size:10px;padding:2px 8px">✏️ Editar</button>
+        <button class="btn-ev" id="log-save-btn-${lg.id}" onclick="saveEditLog('${lg.id}')" title="Salvar edição" style="display:none;font-size:10px;padding:2px 8px;background:rgba(34,197,94,.1);border-color:rgba(34,197,94,.3);color:var(--green)">💾 Salvar</button>
+        <button class="btn-ev" id="log-cancel-btn-${lg.id}" onclick="cancelEditLog('${lg.id}')" title="Cancelar edição" style="display:none;font-size:10px;padding:2px 8px;background:rgba(100,116,139,.1);border-color:rgba(100,116,139,.3);color:var(--dim)">✕ Cancelar</button>
+        <button class="log-del" onclick="confirmDeleteLog('${lg.id}')" title="Excluir registro" style="font-size:10px;padding:2px 8px;border:1px solid rgba(239,68,68,.3);border-radius:4px;color:#f87171;background:rgba(239,68,68,.08)">🗑 Excluir</button>
+      </div>
     </div>`).join('');
+}
+
+function startEditLog(lid){
+  document.getElementById('log-text-'+lid).style.display='none';
+  document.getElementById('log-edit-'+lid).style.display='block';
+  document.getElementById('log-edit-btn-'+lid).style.display='none';
+  document.getElementById('log-save-btn-'+lid).style.display='block';
+  document.getElementById('log-cancel-btn-'+lid).style.display='block';
+  document.getElementById('log-edit-'+lid).focus();
+}
+
+function cancelEditLog(lid){
+  document.getElementById('log-text-'+lid).style.display='block';
+  document.getElementById('log-edit-'+lid).style.display='none';
+  document.getElementById('log-edit-btn-'+lid).style.display='block';
+  document.getElementById('log-save-btn-'+lid).style.display='none';
+  document.getElementById('log-cancel-btn-'+lid).style.display='none';
+}
+
+function saveEditLog(lid){
+  const newText=document.getElementById('log-edit-'+lid).value.trim();
+  if(!newText){toast('O registro não pode ficar vazio','err');return;}
+  const stage=getStage(_logStageId);if(!stage)return;
+  const log=stage.activityLog.find(l=>l.id===lid);if(!log)return;
+  log.text=newText;
+  log.edited=true;
+  saveStageField(_logStageId,'activityLog',stage.activityLog);
+  renderLogList();
+  toast('✅ Registro atualizado com sucesso!','ok');
+}
+
+function confirmDeleteLog(lid){
+  const stage=getStage(_logStageId);if(!stage)return;
+  const log=stage.activityLog.find(l=>l.id===lid);if(!log)return;
+  const preview=log.text.substring(0,50)+(log.text.length>50?'...':'');
+  if(!confirm(`Deseja excluir este registro?
+
+"${preview}"
+
+Esta ação não pode ser desfeita.`))return;
+  deleteLog(lid);
+  toast('🗑️ Registro excluído','warn');
 }
 
 function saveLog(){
   const text=document.getElementById('log-input').value.trim();
-  if(!text){toast('Informe o texto do registro','err');return;}
+  if(!text){toast('⚠️ Digite o que foi realizado antes de registrar','err');document.getElementById('log-input').focus();return;}
   const stage=getStage(_logStageId);if(!stage)return;
   if(!stage.activityLog)stage.activityLog=[];
   const now=new Date();
@@ -3242,12 +3305,13 @@ function saveLog(){
     id:uid(),
     text,
     by:CU?.name||'—',
-    date:now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})
+    date:now.toLocaleDateString('pt-BR')+' '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+    edited:false
   });
   saveStageField(_logStageId,'activityLog',stage.activityLog);
   document.getElementById('log-input').value='';
   renderLogList();
-  toast('Registro salvo','ok');
+  toast('✅ Atividade registrada com sucesso!','ok');
 }
 
 function deleteLog(lid){
