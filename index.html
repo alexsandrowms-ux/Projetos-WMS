@@ -678,9 +678,6 @@ textarea.fc{resize:vertical;min-height:60px}
         <div class="users-grid" id="users-grid"></div>
       </div>
 
-      <!-- RFP PAGE -->
-      <div class="page" id="page-rfp"></div>
-
     </div><!-- main-content -->
   </div><!-- app-body -->
 </div><!-- app-shell -->
@@ -1219,7 +1216,7 @@ async function fsPatch(docName,obj){
 }
 
 function refreshCurrentView(){
-  const pages=['dashboard','projects','detail','users','rfp'];
+  const pages=['dashboard','projects','detail','users'];
   const active=pages.find(p=>document.getElementById('page-'+p)?.classList.contains('on'));
   if(!active)return;
   if(active==='dashboard')renderDash();
@@ -1569,7 +1566,6 @@ function enterApp(){
   document.getElementById('app-shell').style.display='flex';
   updateSidebar();
   document.getElementById('snav-users').style.display=CU.role==='admin'?'flex':'none';
-  document.getElementById('snav-rfp').style.display=CU.role==='admin'?'flex':'none';
   showPage('dashboard');
 }
 
@@ -1654,11 +1650,6 @@ function showPage(page,pid=null){
     document.getElementById('page-users').classList.add('on');
     document.getElementById('snav-users').classList.add('on');
     renderUsersPage();
-  } else if(page==='rfp'){
-    if(CU?.role!=='admin'){toast('Acesso restrito a administradores','err');return;}
-    document.getElementById('page-rfp').classList.add('on');
-    document.getElementById('snav-rfp').classList.add('on');
-    showPage_rfp();
   }
 }
 
