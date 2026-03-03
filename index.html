@@ -2049,7 +2049,7 @@ function kpiCard(code, label, value, color, tip){
 }
 
 // ════════════════════════════════════
-// GANTT
+// GANTT — colunas diárias
 // ════════════════════════════════════
 function renderGantt(){
   const proj=getP(S.cur),stages=proj?.stages||[],el=document.getElementById('gantt-box');
@@ -2057,105 +2057,123 @@ function renderGantt(){
     el.innerHTML=`<div class="empty" style="padding:24px"><span class="empty-icon" style="font-size:28px">📊</span><div class="empty-text">Nenhuma etapa adicionada ainda.</div></div>`;
     return;
   }
-  // ── Período: usa inputs De/Até ou calcula automaticamente ──
+
+  // ── Período ──
   const siEl=document.getElementById('gstart');
   const eiEl=document.getElementById('gend');
   const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.filter(s=>s.dateEnd).map(s=>s.dateEnd)].filter(Boolean).sort();
   const autoStart=allDates[0]||new Date().toISOString().split('T')[0];
   const autoEnd  =allDates[allDates.length-1]||autoStart;
-  if(!siEl?.value){if(siEl)siEl.value=autoStart;}
-  if(!eiEl?.value){if(eiEl)eiEl.value=autoEnd;}
+  if(!siEl?.value)siEl.value=autoStart;
+  if(!eiEl?.value)eiEl.value=autoEnd;
   const sd=new Date(siEl.value+'T00:00:00');
   const ed=new Date(eiEl.value+'T00:00:00');
-  // Ensure end >= start
   if(ed<sd){eiEl.value=siEl.value;ed.setTime(sd.getTime());}
-  // Build weeks spanning the whole period
-  const totalDays=Math.ceil((ed-sd)/(1000*60*60*24))+7;
-  const nw=Math.max(1,Math.ceil(totalDays/7));
-  const wks=Array.from({length:nw},(_,i)=>{const s=new Date(sd);s.setDate(s.getDate()+i*7);const e=new Date(s);e.setDate(e.getDate()+6);return{s,e,lb:`${String(s.getDate()).padStart(2,'0')}/${String(s.getMonth()+1).padStart(2,'0')}`};});
+
+  // ── Gera lista de dias do período ──
+  const days=[];
+  for(let d=new Date(sd);d<=ed;d.setDate(d.getDate()+1)){
+    days.push(new Date(d));
+  }
+
   // Info label
   const infoEl=document.getElementById('gantt-period-info');
-  if(infoEl)infoEl.textContent=`${nw} semana(s) · ${stages.length} atividade(s)`;
+  if(infoEl)infoEl.textContent=`${days.length} dia(s) · ${stages.length} atividade(s)`;
+
+  const today=new Date();today.setHours(0,0,0,0);
   const roots=stages.filter(s=>!s.parentId);
   const cm={};stages.filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
-  // Show ALL activities — period just controls visible columns
   let rows=[];roots.forEach((r,ri)=>{rows.push({...r,isRoot:true,col:PCOLS[ri%PCOLS.length]});(cm[r.id]||[]).forEach(k=>rows.push({...k,isRoot:false,col:PCOLS[ri%PCOLS.length]}));});
 
-  // Period boundaries for bar clipping
-  const periodStart = sd;
-  const periodEnd   = new Date(eiEl.value+'T00:00:00');
+  // ── Monta cabeçalho de dias com agrupamento por mês ──
+  // Linha 1: meses
+  const months=[];
+  days.forEach(d=>{
+    const mk=d.getFullYear()+'-'+(d.getMonth()+1);
+    if(!months.length||months[months.length-1].key!==mk)
+      months.push({key:mk,label:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}),count:1});
+    else months[months.length-1].count++;
+  });
 
-  let h=`<table class="gtbl">
-    <thead><tr>
-      <th style="min-width:170px">Etapa</th>
-      <th style="min-width:90px">Executante</th>
-      <th style="min-width:44px;text-align:center">Horas</th>
-      <th style="min-width:90px;text-align:center">Ações</th>
-      <th style="min-width:90px;text-align:center;font-size:10px">✅ Conclusão Real</th>
-      ${wks.map(w=>`<th class="wk">${w.lb}</th>`).join('')}
-    </tr></thead><tbody>`;
+  // Nomes curtos de dia
+  const DN=['D','S','T','Q','Q','S','S'];
+
+  let h=`<table class="gtbl" style="table-layout:fixed">
+    <colgroup>
+      <col style="width:160px"><col style="width:90px"><col style="width:44px">
+      <col style="width:100px"><col style="width:84px">
+      ${days.map(()=>'<col style="width:26px">').join('')}
+    </colgroup>
+    <thead>
+      <tr>
+        <th rowspan="2" style="min-width:160px">Etapa</th>
+        <th rowspan="2" style="min-width:90px">Executante</th>
+        <th rowspan="2" style="min-width:44px;text-align:center">H.</th>
+        <th rowspan="2" style="min-width:100px;text-align:center">Ações</th>
+        <th rowspan="2" style="min-width:84px;text-align:center;font-size:9px">✅ Conclusão</th>
+        ${months.map(m=>`<th colspan="${m.count}" style="text-align:center;font-size:10px;background:rgba(14,165,233,.12);color:var(--accent);border-bottom:1px solid var(--border)">${m.label}</th>`).join('')}
+      </tr>
+      <tr>
+        ${days.map(d=>{
+          const isToday=d.getTime()===today.getTime();
+          const isSun=d.getDay()===0,isSat=d.getDay()===6;
+          const bg=isToday?'rgba(14,165,233,.25)':isSun||isSat?'rgba(255,255,255,.04)':'';
+          return`<th class="wk" style="font-size:9px;width:26px;padding:2px 1px;text-align:center;${bg?'background:'+bg+';':''}${isToday?'color:var(--accent);font-weight:800;':''}">${String(d.getDate()).padStart(2,'0')}<br><span style="font-size:8px;color:var(--dim)">${DN[d.getDay()]}</span></th>`;
+        }).join('')}
+      </tr>
+    </thead><tbody>`;
 
   rows.forEach(r=>{
-    const rdStart = r.date    ? new Date(r.date+'T00:00:00')    : null;
-    const rdEnd   = r.dateEnd ? new Date(r.dateEnd+'T00:00:00') : rdStart;
-    const ps      = prazoStatus(r);
+    const rdStart=r.date    ? new Date(r.date+'T00:00:00')    : null;
+    const rdEnd  =r.dateEnd ? new Date(r.dateEnd+'T00:00:00') : rdStart;
+    const rdReal =r.dateReal? new Date(r.dateReal+'T00:00:00'): null;
+    const ps=prazoStatus(r);
 
-    // Effective bar range clipped to period window
-    const barStart = rdStart ? (rdStart < periodStart ? periodStart : rdStart) : null;
-    const barEnd   = rdEnd   ? (rdEnd   > periodEnd   ? periodEnd   : rdEnd)   : barStart;
+    const cells=days.map(d=>{
+      const isSun=d.getDay()===0,isSat=d.getDay()===6;
+      const isToday=d.getTime()===today.getTime();
+      const bgWknd=isSun||isSat?'background:rgba(255,255,255,.03);':'';
+      const bgToday=isToday?'background:rgba(14,165,233,.08);':'';
 
-    // Activity touches period if its range overlaps [periodStart, periodEnd]
-    const touchesPeriod = rdStart && rdEnd
-      ? (rdEnd >= periodStart && rdStart <= periodEnd)
-      : rdStart ? (rdStart >= periodStart && rdStart <= periodEnd) : false;
+      if(!rdStart) return`<td class="gcell" style="${bgWknd}${bgToday}"></td>`;
 
-    const cells=wks.map(w=>{
-      if(!barStart) return '<td class="gcell"></td>';
-      // Bar visible in this week?
-      const inBar = barStart && barEnd
-        ? (w.e >= barStart && w.s <= barEnd)
-        : (barStart >= w.s && barStart <= w.e);
-      if(inBar){
-        const isFirst = barStart >= w.s && barStart <= w.e;
-        const isLast  = barEnd   && barEnd >= w.s && barEnd <= w.e;
-        const br = isFirst&&isLast?'4px': isFirst?'4px 0 0 4px': isLast?'0 4px 4px 0':'0';
-        // Dim bar if activity is outside the original planned period (clipped)
-        const clipped = (rdStart && rdStart < periodStart) || (rdEnd && rdEnd > periodEnd);
-        const opacity = clipped ? '0.55' : '1';
-        return`<td class="gcell"><div class="gbar" style="background:${r.col};border-radius:${br};opacity:${opacity}" title="${esc(r.name)} | ${fD(r.date)||'—'} → ${fD(r.dateEnd)||'—'} | ${ps.label}" ondblclick="ganttEditStage('${r.id}')">${isFirst?SE[r.status]||'':''}</div></td>`;
-      }
-      return'<td class="gcell"></td>';
+      const inBar=rdStart&&rdEnd ? (d>=rdStart&&d<=rdEnd) : (rdStart&&d.getTime()===rdStart.getTime());
+      if(!inBar) return`<td class="gcell" style="${bgWknd}${bgToday}"></td>`;
+
+      const isFirst=d.getTime()===rdStart.getTime();
+      const isLast =rdEnd&&d.getTime()===rdEnd.getTime();
+      const isRealDay=rdReal&&d.getTime()===rdReal.getTime();
+      const br=isFirst&&isLast?'4px':isFirst?'4px 0 0 4px':isLast?'0 4px 4px 0':'0';
+
+      return`<td class="gcell" style="${bgToday}padding:2px 1px">
+        <div style="background:${r.col};border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="${esc(r.name)} | ${fD(r.date)||'—'} → ${fD(r.dateEnd)||'—'} | ${ps.label}${isRealDay?' | ✅ Conclusão real':''}">
+          ${isFirst?`<span style="font-size:9px;padding-left:3px;line-height:16px;white-space:nowrap;overflow:hidden;display:block">${SE[r.status]||''}</span>`:''}
+          ${isRealDay?`<div style="position:absolute;inset:0;border-radius:inherit;border:2px solid #22c55e"></div>`:''}
+        </div>
+      </td>`;
     }).join('');
 
-    const actBtns=`
-      <button class="btn btn-ghost btn-xs" title="Editar" onclick="openStageModal(false,'${r.id}')">✏️</button>
-      ${!r.parentId?`<button class="btn btn-success btn-xs" title="Adicionar sub-etapa" onclick="openStageModal(true,null,'${r.id}')">+ Sub</button>`:''}
-      <button class="btn btn-danger btn-xs" title="Excluir" onclick="askDeleteStage('${r.id}')">🗑</button>`;
+    const actBtns=`<button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${r.id}')">✏️</button>
+      ${!r.parentId?`<button class="btn btn-success btn-xs" onclick="openStageModal(true,null,'${r.id}')">+Sub</button>`:''}
+      <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${r.id}')">🗑</button>`;
 
-    const drReal = r.dateReal ? new Date(r.dateReal+'T00:00:00') : null;
-    // Mark actual finish on Gantt: overlay a thin green line on the bar week
-    const cellsWithReal = cells.replace(
-      /(<td class="gcell">(<div class="gbar"[^>]+>)[^<]*<\/div><\/td>)/,
-      (m, full, divTag) => drReal ? full.replace('</div></td>',
-        `<div style="position:absolute;right:0;top:0;bottom:0;width:3px;background:#22c55e;border-radius:0 4px 4px 0" title="Conclusão real: ${fDS(r.dateReal)}"></div></div></td>`) : m
-    );
+    const dateRealCell=r.dateReal
+      ?`<td style="font-size:10px;color:var(--green);text-align:center;white-space:nowrap">✅ ${fDS(r.dateReal)}</td>`
+      :`<td style="font-size:10px;color:var(--dim);text-align:center">—</td>`;
 
-    const dateRealCell = r.dateReal
-      ? `<td style="font-size:11px;color:var(--green);text-align:center;white-space:nowrap">✅ ${fDS(r.dateReal)}</td>`
-      : `<td style="font-size:11px;color:var(--dim);text-align:center">—</td>`;
-
-    h+=`<tr class="${r.isRoot?'groot':''}" id="grow_${r.id}" style="position:relative">
-      <td class="gname gname-cell" title="${esc(r.name)}" ondblclick="ganttEditStage('${r.id}')">${r.isRoot?'':' └ '}${esc(r.num)||''} ${esc(r.name)}</td>
-      <td style="font-size:11px;color:var(--mid)">${esc(r.executor||'—')}</td>
-      <td style="font-size:11px;color:var(--mid);text-align:center">${r.hours||0}h</td>
-      <td style="text-align:center;white-space:nowrap;padding:3px 6px"><div style="display:flex;gap:3px;justify-content:center">${actBtns}</div></td>
+    h+=`<tr class="${r.isRoot?'groot':''}" id="grow_${r.id}">
+      <td class="gname gname-cell" title="${esc(r.name)}">${r.isRoot?'':' └ '}${esc(r.num)||''} ${esc(r.name)}</td>
+      <td style="font-size:10px;color:var(--mid)">${esc(r.executor||'—')}</td>
+      <td style="font-size:10px;color:var(--mid);text-align:center">${r.hours||0}h</td>
+      <td style="text-align:center;padding:2px 4px"><div style="display:flex;gap:2px;justify-content:center;flex-wrap:wrap">${actBtns}</div></td>
       ${dateRealCell}
       ${cells}
     </tr>`;
   });
+
   el.innerHTML=h+'</tbody></table>';
 
-  // Update dynamic color legend
+  // Legenda
   const legendEl=document.getElementById('gantt-legend-colors');
   if(legendEl){
     legendEl.innerHTML=roots.map((r,ri)=>{
