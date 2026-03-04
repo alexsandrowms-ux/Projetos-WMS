@@ -1757,15 +1757,27 @@ function renderDetail(){
     <div class="hcard"><div class="hval" style="color:${c}">${st.pct}%</div><div class="hlbl">Progresso</div></div>
     <div class="hcard"><div class="hval">${(proj.stages||[]).filter(s=>!s.parentId).length}</div><div class="hlbl">Etapas</div></div>`;
   renderStages();
-  // reset tab
-  document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
-  document.getElementById('dtab-rfp').classList.add('on');
-  document.getElementById('tab-rfp').style.display='block';
-  renderRFPTab();
-  document.getElementById('tab-stages').style.display='none';
-  document.getElementById('tab-gantt').style.display='none';
-  if(document.getElementById('tab-cost')) document.getElementById('tab-cost').style.display='none';
-  if(document.getElementById('tab-perf')) document.getElementById('tab-perf').style.display='none';
+  // reset tab — preserve active tab, default to RFP on first open
+  const activeDtab=document.querySelector('.dtab.on');
+  const activeTabId=activeDtab?.getAttribute('onclick')?.match(/tab-[a-z]+/)?.[0];
+  const isDetailVisible=document.getElementById('page-detail')?.classList.contains('on');
+  if(!isDetailVisible||!activeTabId){
+    // First open — default to RFP
+    document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
+    document.getElementById('dtab-rfp').classList.add('on');
+    ['tab-rfp','tab-stages','tab-gantt','tab-cost','tab-perf'].forEach(id=>{
+      const t=document.getElementById(id);if(t)t.style.display='none';
+    });
+    document.getElementById('tab-rfp').style.display='block';
+    renderRFPTab();
+  } else {
+    // Re-render only active tab
+    if(activeTabId==='tab-stages')renderStages();
+    else if(activeTabId==='tab-rfp')renderRFPTab();
+    else if(activeTabId==='tab-gantt')renderGantt();
+    else if(activeTabId==='tab-cost')renderCostTab();
+    else if(activeTabId==='tab-perf')renderPerfTab();
+  }
 }
 
 // ════════════════════════════════════
@@ -4465,6 +4477,7 @@ function switchTab(el,tid){
   if(tid==='tab-gantt')renderGantt();
   if(tid==='tab-cost')renderCostTab();
   if(tid==='tab-perf')renderPerfTab();
+  if(tid==='tab-stages')renderStages();
   if(tid==='tab-rfp')renderRFPTab();
 }
 
