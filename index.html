@@ -243,6 +243,7 @@ textarea.fc{resize:vertical;min-height:60px}
 /* ── MODALS ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.open{display:flex;animation:fIn .15s}
+.overlay-top{z-index:600}
 @keyframes fIn{from{opacity:0}to{opacity:1}}
 .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-height:92vh;overflow-y:auto;animation:sUp .2s}
 @keyframes sUp{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
@@ -325,7 +326,7 @@ textarea.fc{resize:vertical;min-height:60px}
 /* ══════════════════════════════════
    RFP
 ══════════════════════════════════ */
-.rfp-layout{display:flex;gap:0;height:calc(100vh - 60px);overflow:hidden}
+.rfp-layout{display:flex;gap:0;height:calc(100vh - 160px);overflow:hidden}
 .rfp-sidenav{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0}
 .rfp-sidenav-title{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:700;padding:8px 14px 4px}
 .rfp-nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--mid);cursor:pointer;border-left:3px solid transparent;transition:all .15s}
@@ -1128,7 +1129,7 @@ datalist{display:none}
 </div>
 
 <!-- ══ MODAL: PILARES ══ -->
-<div class="overlay" id="modal-pillars" style="z-index:600">
+<div class="overlay overlay-top" id="modal-pillars">
   <div class="modal" style="max-width:500px">
     <div class="mhdr"><div class="mtitle">⚙️ Gerenciar Pilares</div><button class="mclose" onclick="closeModal('modal-pillars')">×</button></div>
     <div class="mbody">
@@ -1155,7 +1156,7 @@ const COLORS  = ['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#f472b6','#ef4444','#0
 const PCOLS   = ['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#f472b6','#ef4444','#06b6d4','#84cc16'];
 const PNAMES_DEFAULT = {'1':'Levantamento de Processo','2':'Configuração','3':'Teste de Validações por Pilar','4':'Estrutura Física','5':'Treinamento'};
 function getPNAMES(){return Object.assign({},PNAMES_DEFAULT,...((S.customPillars||[]).map((p,i)=>({['c'+(i+1)]:p}))));}
-const PNAMES = new Proxy({},{get(_,k){return getPNAMES()[k];}});
+function getPNAME(k){return getPNAMES()[k]||'';}
 const SB      = {'Concluído':'badge-green','Em Andamento':'badge-blue','Planejamento':'badge-amber','Pausado':'badge-gray','Pendente':'badge-gray','Bloqueado':'badge-red'};
 const SE      = {'Pendente':'○','Em Andamento':'◑','Concluído':'●','Bloqueado':'✕'};
 const STORE   = 'axl_wms_v1';
@@ -2452,7 +2453,7 @@ function openStageModal(isNew=true,editId=null,defParent=null){
 function applyPillar(){
   const v=document.getElementById('fs-pillar').value;if(!v)return;
   document.getElementById('fs-num').value=v;
-  document.getElementById('fs-name').value=PNAMES[v]||'';
+  document.getElementById('fs-name').value=getPNAME(v);
   document.getElementById('fs-parent').value='';
 }
 function saveStage(){
@@ -2522,14 +2523,17 @@ const IMP_FIELDS=[
 ];
 
 function openImport(forDetail=false){
-  IMP={step:1,rawData:[],headers:[],colMap:{},forDetail};
-  document.getElementById('imp-file').value='';
-  setImpStep(1);
-  const dz=document.getElementById('drop-zone');
-  dz.style.borderColor='';dz.querySelector('.drop-icon').textContent='📊';
-  dz.querySelector('.drop-lbl').textContent='Arraste sua planilha aqui ou clique para selecionar';
-  openModal('modal-import');
-  if(forDetail&&S.cur){setTimeout(()=>{const sel=document.getElementById('imp-proj-sel');if(sel){for(const o of sel.options){if(o.value===S.cur){o.selected=true;updateNewProjFields();break;}}}},100);}
+  try{
+    IMP={step:1,rawData:[],headers:[],colMap:{},forDetail};
+    document.getElementById('imp-file').value='';
+    setImpStep(1);
+    const dz=document.getElementById('drop-zone');
+    if(!dz){toast('Erro: modal de importação não encontrada','err');return;}
+    dz.style.borderColor='';dz.querySelector('.drop-icon').textContent='📊';
+    dz.querySelector('.drop-lbl').textContent='Arraste sua planilha aqui ou clique para selecionar';
+    openModal('modal-import');
+    if(forDetail&&S.cur){setTimeout(()=>{const sel=document.getElementById('imp-proj-sel');if(sel){for(const o of sel.options){if(o.value===S.cur){o.selected=true;updateNewProjFields();break;}}}},100);}
+  }catch(e){console.error('openImport error:',e);toast('Erro ao importar: '+e.message,'err');}
 }
 
 function setImpStep(n){
@@ -2675,14 +2679,16 @@ function doImport(){
 // EXPORT
 // ════════════════════════════════════
 function openExport(forDetail=false){
-  const sel=document.getElementById('exp-proj-sel');
-  if(!sel){toast('Erro ao abrir exportação','err');return;}
-  sel.innerHTML='<option value="__all__">Todos os projetos</option>'+S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
-  const onDetail=document.getElementById('page-detail')?.classList.contains('on');
-  if((forDetail||onDetail)&&S.cur){
-    for(const o of sel.options){if(o.value===S.cur){o.selected=true;break;}}
-  }
-  openModal('modal-export');
+  try{
+    const sel=document.getElementById('exp-proj-sel');
+    if(!sel){toast('Erro: modal de exportação não encontrada','err');return;}
+    sel.innerHTML='<option value="__all__">Todos os projetos</option>'+S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    const onDetail=document.getElementById('page-detail')?.classList.contains('on');
+    if((forDetail||onDetail)&&S.cur){
+      for(const o of sel.options){if(o.value===S.cur){o.selected=true;break;}}
+    }
+    openModal('modal-export');
+  }catch(e){console.error('openExport error:',e);toast('Erro ao exportar: '+e.message,'err');}
 }
 
 function doExport(fmt){
@@ -3121,10 +3127,10 @@ function copyMyKey(){
 }
 
 function openModal(id){
-  // Close any other open modals first
   document.querySelectorAll('.overlay.open').forEach(o=>{if(o.id!==id)o.classList.remove('open');});
   const el=document.getElementById(id);
-  if(el)el.classList.add('open');
+  if(!el){console.error('openModal: element not found →',id);toast('Erro: modal não encontrada','err');return;}
+  el.classList.add('open');
 }
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
