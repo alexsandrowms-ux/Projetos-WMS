@@ -1197,7 +1197,15 @@ function refreshCurrentView(){
   if(!active)return;
   if(active==='dashboard')renderDash();
   else if(active==='projects')renderProjList();
-  else if(active==='detail')renderDetail();
+  else if(active==='detail'){
+    // Preserva aba ativa ao atualizar via polling
+    const _at=document.querySelector('.dtab.on')?.getAttribute('onclick')?.match(/tab-[a-z]+/)?.[0];
+    if(_at==='tab-gantt')renderGantt();
+    else if(_at==='tab-cost')renderCostTab();
+    else if(_at==='tab-perf')renderPerfTab();
+    else renderStages();
+    _refreshDetailHeader();
+  }
   else if(active==='users')renderUsersPage();
 }
 
@@ -2246,6 +2254,10 @@ function renderGantt(){
     const rdReal =r.dateReal? new Date(r.dateReal+'T00:00:00'): null;
     const ps=prazoStatus(r);
 
+    // Tooltip do bar
+    const _barTooltip=_isResch
+      ?`🔄 REAGENDADO — ${esc(r.name)}\n📅 Início: ${fD(r.date)}${r.timeStart?' às '+r.timeStart:''}\n⚠️ Novo prazo: ${fD((r.dateReschedule||'').split('T')[0])}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}`
+      :`✏️ ${esc(r.name)}\n📅 Início: ${fD(r.date)}${r.timeStart?' às '+r.timeStart:''}\n🏁 Término: ${fD(r.dateEnd)}${r.timeEnd?' às '+r.timeEnd:''}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}`;
     const cells=days.map(d=>{
       const isSun=d.getDay()===0,isSat=d.getDay()===6;
       const isToday=d.getTime()===today.getTime();
@@ -2264,7 +2276,7 @@ function renderGantt(){
       const br=isFirst&&isLast?'4px':isFirst?'4px 0 0 4px':isLast?'0 4px 4px 0':'0';
 
       return`<td class="gcell" style="${bgToday}padding:2px 1px">
-        <div onclick="ganttEditStage('${r.id}')" style="cursor:pointer;background:${r.col};${_isResch?'border:2px solid #f59e0b;':''}border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="✏️ ${esc(r.name)}\n📅 Início: ${fD(r.date)||'—'}${r.timeStart?' às '+r.timeStart:''}\n🏁 Término: ${fD(r.dateEnd)||'—'}${r.timeEnd?' às '+r.timeEnd:''}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}">
+        <div onclick="ganttEditStage('${r.id}')" style="cursor:pointer;background:${_isResch?'#f59e0b':r.col};border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="${_barTooltip}">
           ${isFirst?`<span style="font-size:9px;padding-left:3px;line-height:16px;white-space:nowrap;overflow:hidden;display:block">${SE[r.status]||''}</span>`:''}
           ${isRealDay?`<div style="position:absolute;inset:0;border-radius:inherit;border:2px solid #22c55e"></div>`:''}
         </div>
