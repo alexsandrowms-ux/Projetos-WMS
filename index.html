@@ -585,8 +585,6 @@ datalist{display:none}
       <div class="page" id="page-detail">
         <div style="margin-bottom:12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="showPage('projects')">← Voltar</button>
-          <button class="btn btn-ghost btn-sm" onclick="openImport(true)">📥 Importar Etapas</button>
-          <button class="btn btn-purple btn-sm" onclick="openExport(true)">📤 Exportar</button>
         </div>
         <div class="det-hdr">
           <div style="min-width:0">
@@ -1130,7 +1128,7 @@ datalist{display:none}
 </div>
 
 <!-- ══ MODAL: PILARES ══ -->
-<div class="overlay" id="modal-pillars">
+<div class="overlay" id="modal-pillars" style="z-index:600">
   <div class="modal" style="max-width:500px">
     <div class="mhdr"><div class="mtitle">⚙️ Gerenciar Pilares</div><button class="mclose" onclick="closeModal('modal-pillars')">×</button></div>
     <div class="mbody">
@@ -1144,7 +1142,7 @@ datalist{display:none}
       </div>
     </div>
     <div class="mfooter">
-      <button class="btn btn-ghost" onclick="closeModal('modal-pillars')">Fechar</button>
+      <button class="btn btn-ghost" onclick="closeModal('modal-pillars');openModal('modal-stage')">← Voltar à Etapa</button>
     </div>
   </div>
 </div>
@@ -1740,7 +1738,6 @@ function renderCards(id,list){
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();showPage('detail','${p.id}')">👁 Abrir</button>
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openProjectRFP('${p.id}')" style="color:var(--accent)">📋 RFP</button>
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openProjModal(false,'${p.id}')">✏️ Editar</button>
-        <button class="btn btn-purple btn-xs" onclick="event.stopPropagation();S.cur='${p.id}';openExport(true)">📤 Exportar</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteProject('${p.id}')">🗑 Excluir</button>
       </div>
     </div>`;
@@ -2679,8 +2676,12 @@ function doImport(){
 // ════════════════════════════════════
 function openExport(forDetail=false){
   const sel=document.getElementById('exp-proj-sel');
+  if(!sel){toast('Erro ao abrir exportação','err');return;}
   sel.innerHTML='<option value="__all__">Todos os projetos</option>'+S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
-  if(forDetail&&S.cur){for(const o of sel.options){if(o.value===S.cur){o.selected=true;break;}}}
+  const onDetail=document.getElementById('page-detail')?.classList.contains('on');
+  if((forDetail||onDetail)&&S.cur){
+    for(const o of sel.options){if(o.value===S.cur){o.selected=true;break;}}
+  }
   openModal('modal-export');
 }
 
@@ -4509,7 +4510,6 @@ function generateRFPDiagnostico(){
 // GERENCIADOR DE PILARES
 // ════════════════════════════════════
 function openPillarManager(){
-  closeModal('modal-stage');
   renderPillarManager();
   openModal('modal-pillars');
 }
