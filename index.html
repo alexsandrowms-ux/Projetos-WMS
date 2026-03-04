@@ -760,6 +760,11 @@ datalist{display:none}
       </div>
       <div class="frow">
         <div class="fg"><label>✅ Término Real</label><input class="fc" type="date" id="fs-datereal" placeholder="Preencher ao concluir"></div>
+        <div class="fg" id="fg-reschedule" style="display:none">
+          <label style="color:var(--amber)">🔄 Reagendamento</label>
+          <input class="fc" type="datetime-local" id="fs-datereschedule" title="Substitui o prazo em Gantt e análises">
+          <small style="color:var(--amber);font-size:10px;margin-top:2px;display:block">⚠️ Substitui Término Planejado em todas as análises</small>
+        </div>
         <div class="fg"><label>Status</label>
           <select class="fc" id="fs-status">
             <option>Pendente</option><option>Em Andamento</option><option>Concluído</option><option>Bloqueado</option>
@@ -1796,7 +1801,8 @@ function renderStages(){
             <div class="ss-grid">
               <div class="ssi"><span class="ssi-l">Responsável</span><span class="ssi-v">${esc(k.executor||'—')}</span></div>
               <div class="ssi"><span class="ssi-l">Início</span><span class="ssi-v">${fDS(k.date)||'—'}</span></div>
-              <div class="ssi"><span class="ssi-l">Término</span><span class="ssi-v">${fDS(k.dateEnd)||'—'}</span></div>
+              <div class="ssi"><span class="ssi-l">Término</span><span class="ssi-v" style="${k.dateReschedule?'text-decoration:line-through;opacity:.5':''}">${fDS(k.dateEnd)||'—'}</span></div>
+              ${k.dateReschedule?`<div class="ssi"><span class="ssi-l" style="color:var(--amber)">🔄 Reagend.</span><span class="ssi-v" style="color:var(--amber);font-weight:600">${fDS(k.dateReschedule.split('T')[0])||'—'}</span></div>`:''}
             ${(k.timeStart||k.timeEnd)?`<div class="ssi"><span class="ssi-l">Horário</span><span class="ssi-v" style="color:var(--accent)">${k.timeStart||'—'} → ${k.timeEnd||'—'}</span></div>`:''}
               <div class="ssi"><span class="ssi-l">H. Plan.</span><span class="ssi-v" style="color:var(--amber)">${k.hours||0}h</span></div>
               <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal||'—'}</span></div>
@@ -1886,10 +1892,20 @@ function cpiColor(cpi){
 // ════════════════════════════════════
 // PRAZO STATUS (PMBOK)
 // ════════════════════════════════════
+// Retorna a data de término efetiva: reagendada > planejada
+function effectiveDateEnd(stage){
+  if(stage.dateReschedule){
+    const v=stage.dateReschedule;
+    return v.includes('T')?v.split('T')[0]:v;
+  }
+  return stage.dateEnd||null;
+}
 function prazoStatus(stage){
   const today = new Date(); today.setHours(0,0,0,0);
   const dateStart = stage.date    ? new Date(stage.date+'T00:00:00')    : null;
-  const dateEnd   = stage.dateEnd ? new Date(stage.dateEnd+'T00:00:00') : null;
+  const _effEnd = effectiveDateEnd(stage);
+  const dateEnd   = _effEnd ? new Date(_effEnd+'T00:00:00') : null;
+  const isRescheduled = !!stage.dateReschedule;
 
   // Finalizada — independente do prazo
   if(stage.status === 'Concluído'){
@@ -2120,7 +2136,7 @@ function renderGantt(){
   // ── Período ──
   const siEl=document.getElementById('gstart');
   const eiEl=document.getElementById('gend');
-  const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.filter(s=>s.dateEnd).map(s=>s.dateEnd)].filter(Boolean).sort();
+  const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.map(s=>effectiveDateEnd(s)).filter(Boolean)].filter(Boolean).sort();
   const autoStart=allDates[0]||new Date().toISOString().split('T')[0];
   const autoEnd  =allDates[allDates.length-1]||autoStart;
   if(!siEl?.value)siEl.value=autoStart;
@@ -2186,7 +2202,9 @@ function renderGantt(){
   let _lastRoot=null;
   rows.forEach(r=>{
     const rdStart=r.date    ? new Date(r.date+'T00:00:00')    : null;
-    const rdEnd  =r.dateEnd ? new Date(r.dateEnd+'T00:00:00') : rdStart;
+    const _rEffEnd=effectiveDateEnd(r);
+    const rdEnd  =_rEffEnd ? new Date(_rEffEnd+'T00:00:00') : rdStart;
+    const _isResch=!!r.dateReschedule;
     const rdReal =r.dateReal? new Date(r.dateReal+'T00:00:00'): null;
     const ps=prazoStatus(r);
 
@@ -2208,7 +2226,7 @@ function renderGantt(){
       const br=isFirst&&isLast?'4px':isFirst?'4px 0 0 4px':isLast?'0 4px 4px 0':'0';
 
       return`<td class="gcell" style="${bgToday}padding:2px 1px">
-        <div onclick="ganttEditStage('${r.id}')" style="cursor:pointer;background:${r.col};border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="✏️ ${esc(r.name)}\n📅 Início: ${fD(r.date)||'—'}${r.timeStart?' às '+r.timeStart:''}\n🏁 Término: ${fD(r.dateEnd)||'—'}${r.timeEnd?' às '+r.timeEnd:''}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}">
+        <div onclick="ganttEditStage('${r.id}')" style="cursor:pointer;background:${r.col};${_isResch?'border:2px solid #f59e0b;':''}border-radius:${br};height:16px;position:relative;${isRealDay?'box-shadow:0 0 0 2px #22c55e;':''}" title="✏️ ${esc(r.name)}\n📅 Início: ${fD(r.date)||'—'}${r.timeStart?' às '+r.timeStart:''}\n🏁 Término: ${fD(r.dateEnd)||'—'}${r.timeEnd?' às '+r.timeEnd:''}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}">
           ${isFirst?`<span style="font-size:9px;padding-left:3px;line-height:16px;white-space:nowrap;overflow:hidden;display:block">${SE[r.status]||''}</span>`:''}
           ${isRealDay?`<div style="position:absolute;inset:0;border-radius:inherit;border:2px solid #22c55e"></div>`:''}
         </div>
@@ -2368,6 +2386,12 @@ function openStageModal(isNew=true,editId=null,defParent=null){
       el.style.border = '2px solid var(--accent)';
     };
   });
+  // Reagendamento — apenas sub-etapas
+  const _isSub=!!(stage?.parentId||defParent);
+  const _fgRe=document.getElementById('fg-reschedule');
+  if(_fgRe)_fgRe.style.display=_isSub?'':'none';
+  if(document.getElementById('fs-datereschedule'))
+    document.getElementById('fs-datereschedule').value=stage?.dateReschedule||'';
   openModal('modal-stage');
 }
 function applyPillar(){
