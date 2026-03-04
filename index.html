@@ -340,11 +340,15 @@ textarea.fc{resize:vertical;min-height:60px}
 .rfp-field{display:flex;flex-direction:column;gap:4px}
 .rfp-field label{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);font-weight:600}
 .rfp-field input,.rfp-field textarea,.rfp-field select{background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:7px 10px;font-size:12px;font-family:var(--sans);transition:border .15s;width:100%}
+.rfp-field select option{background:var(--bg3);color:var(--text)}
+.rfp-req-table select option{background:var(--bg3);color:var(--text)}
 .rfp-field input:focus,.rfp-field textarea:focus,.rfp-field select:focus{outline:none;border-color:var(--accent)}
 .rfp-req-table{width:100%;border-collapse:collapse;font-size:11px}
 .rfp-req-table th{background:var(--bg3);padding:8px 10px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim);font-weight:700;border-bottom:2px solid var(--border);white-space:nowrap}
 .rfp-req-table td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:middle}
 .rfp-req-table tr:hover td{background:rgba(255,255,255,.02)}
+.rfp-field input::-webkit-calendar-picker-indicator{opacity:.5;cursor:pointer}
+datalist{display:none}
 .rfp-req-table input,.rfp-req-table select{background:var(--bg4);border:1px solid transparent;color:var(--text);border-radius:4px;padding:4px 7px;font-size:11px;font-family:var(--sans);width:100%;transition:border .15s}
 .rfp-req-table input:focus,.rfp-req-table select:focus{outline:none;border-color:var(--accent);background:var(--bg3)}
 .rfp-req-text{font-size:11px;color:var(--text);line-height:1.4;min-width:200px}
@@ -3624,10 +3628,35 @@ function renderRFPModule(){
       const pClass=r.prioridade==='Alta'?'rfp-prio-alta':r.prioridade==='Média'?'rfp-prio-media':r.prioridade==='Baixa'?'rfp-prio-baixa':'';
       html+=`<tr><td class="rfp-req-text">${esc(r.text)}</td>
         <td><select onchange="rfpUpdateReq('${_rfpMod}',${ri},'faz',this.value)"><option value="" ${!r.faz?'selected':''}>—</option><option value="Sim" ${r.faz==='Sim'?'selected':''}>✅ Sim</option><option value="Não" ${r.faz==='Não'?'selected':''}>❌ Não</option><option value="Parcial" ${r.faz==='Parcial'?'selected':''}>⚠️ Parcial</option></select></td>
-        <td><input type="text" value="${esc(r.execucao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'execucao',this.value)" placeholder="Como..."></td>
-        <td><input type="text" value="${esc(r.controle)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'controle',this.value)" placeholder="Como..."></td>
-        <td><select class="${pClass}" onchange="rfpUpdateReq('${_rfpMod}',${ri},'prioridade',this.value)"><option value="" ${!r.prioridade?'selected':''}>—</option><option value="Alta" ${r.prioridade==='Alta'?'selected':''}>🔴 Alta</option><option value="Média" ${r.prioridade==='Média'?'selected':''}>🟡 Média</option><option value="Baixa" ${r.prioridade==='Baixa'?'selected':''}>🟢 Baixa</option></select></td>
-        <td><input type="text" value="${esc(r.observacao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'observacao',this.value)" placeholder="Obs..."></td>
+        <td>
+          <select onchange="rfpUpdateReq('${_rfpMod}',${ri},'execucao',this.value)">
+            <option value="">— Como executa —</option>
+            ${WMS_REQ_SUGG.execucao.map(s=>`<option value="${s}" ${r.execucao===s?'selected':''}>${s}</option>`).join('')}
+            <option value="${r.execucao&&!WMS_REQ_SUGG.execucao.includes(r.execucao)?r.execucao:''}">
+              ${r.execucao&&!WMS_REQ_SUGG.execucao.includes(r.execucao)?r.execucao:'✏️ Outro'}
+            </option>
+          </select>
+        </td>
+        <td>
+          <select onchange="rfpUpdateReq('${_rfpMod}',${ri},'controle',this.value)">
+            <option value="">— Como controla —</option>
+            ${WMS_REQ_SUGG.controle.map(s=>`<option value="${s}" ${r.controle===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <select class="${pClass}" onchange="rfpUpdateReq('${_rfpMod}',${ri},'prioridade',this.value)">
+            <option value="" ${!r.prioridade?'selected':''}>—</option>
+            <option value="Alta" ${r.prioridade==='Alta'?'selected':''}>🔴 Alta</option>
+            <option value="Média" ${r.prioridade==='Média'?'selected':''}>🟡 Média</option>
+            <option value="Baixa" ${r.prioridade==='Baixa'?'selected':''}>🟢 Baixa</option>
+          </select>
+        </td>
+        <td>
+          <select onchange="rfpUpdateReq('${_rfpMod}',${ri},'observacao',this.value)">
+            <option value="">— Observação —</option>
+            ${WMS_REQ_SUGG.observacao.map(s=>`<option value="${s}" ${r.observacao===s?'selected':''}>${s}</option>`).join('')}
+          </select>
+        </td>
       </tr>`;
     });
     html+=`</tbody></table></div>`;
@@ -3663,30 +3692,80 @@ function renderRFPDashboard(el,proj,rfp){
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${modCards}</div>`;
 }
 
-function rfpUpdateField(modId,idx,val){const proj=getP(S.cur);if(!proj?.rfp)return;proj.rfp.dados[modId].fields[idx].value=val;}
+function rfpUpdateField(modId,idx,val){const proj=getP(S.cur);if(!proj?.rfp)return;if(val==='_outro_')return;proj.rfp.dados[modId].fields[idx].value=val;}
 function rfpUpdateReq(modId,idx,field,val){const proj=getP(S.cur);if(!proj?.rfp)return;proj.rfp.dados[modId].requirements[idx][field]=val;}
 function saveRFP(){const proj=getP(S.cur);if(!proj?.rfp)return;saveS();toast('✅ RFP salva com sucesso!','ok');renderRFPEditor();}
 
-function openRFPInfo(){
-  const proj=getP(S.cur);
+function openRFPInfo(pid){
+  const proj=getP(pid||S.cur);
   if(!proj){toast('Selecione um projeto primeiro','err');return;}
   if(!proj.rfp)proj.rfp=createEmptyRFP();
   const rfp=proj.rfp;
   const stateOpts=ESTADOS_BR.map(e=>`<option value="${e}" ${rfp.estado===e?'selected':''}>${e}</option>`).join('');
-  const r=document.getElementById('rfi-responsavel');
-  const u=document.getElementById('rfi-unidade');
-  const d=document.getElementById('rfi-data');
-  const est=document.getElementById('rfi-estado');
-  const cc=document.getElementById('rfi-cidade-custom');
-  if(!r||!est){toast('Modal não encontrada','err');console.error('RFP modal elements missing');return;}
-  r.value=rfp.responsavel||'';
-  u.value=rfp.unidadeSuporte||'';
-  d.value=rfp.dataLevantamento||'';
-  est.innerHTML='<option value="">Selecione o estado...</option>'+stateOpts;
-  est.value=rfp.estado||'';
-  if(cc)cc.value='';
-  rfpLoadCidades(rfp.cidade);
-  openModal('modal-rfp-info');
+  const cityOpts=(CIDADES_BR[rfp.estado]||[]).map(c=>`<option value="${c}" ${rfp.cidade===c?'selected':''}>${c}</option>`).join('');
+  
+  // Render inline in the module area instead of modal
+  const el=document.getElementById('rfp-tab-module');
+  if(!el){toast('Área não encontrada','err');return;}
+  
+  el.innerHTML=`
+  <div style="max-width:680px">
+    <div class="rfp-header" style="margin-bottom:20px">
+      <div style="flex:1">
+        <div class="rfp-module-title">✏️ Dados do Levantamento</div>
+        <div class="rfp-module-sub">Informações gerais do levantamento RFP</div>
+      </div>
+      <button class="btn btn-ghost btn-xs" onclick="_rfpTabMod('dashboard')">← Voltar</button>
+    </div>
+    
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:16px">
+      <div class="rfp-field-row">
+        <div class="rfp-field">
+          <label>👤 Responsável pelo Levantamento</label>
+          <input class="fc" type="text" id="rfi-responsavel" value="${esc(rfp.responsavel||'')}" placeholder="Nome do responsável">
+        </div>
+        <div class="rfp-field">
+          <label>🏢 Unidade de Suporte</label>
+          <input class="fc" type="text" id="rfi-unidade" value="${esc(rfp.unidadeSuporte||'')}" placeholder="Ex: AXL Uberlândia">
+        </div>
+      </div>
+      <div class="rfp-field-row">
+        <div class="rfp-field">
+          <label>📅 Data do Levantamento</label>
+          <input class="fc" type="date" id="rfi-data" value="${rfp.dataLevantamento||''}">
+        </div>
+        <div class="rfp-field">
+          <label>🗺️ Estado</label>
+          <select class="fc" id="rfi-estado" onchange="rfpLoadCidades('')">
+            <option value="">Selecione o estado...</option>
+            ${stateOpts}
+          </select>
+        </div>
+      </div>
+      <div class="rfp-field-row">
+        <div class="rfp-field">
+          <label>📍 Cidade</label>
+          <select class="fc" id="rfi-cidade">
+            <option value="">Selecione a cidade...</option>
+            ${cityOpts}
+          </select>
+        </div>
+        <div class="rfp-field">
+          <label>✏️ Ou digite a cidade manualmente</label>
+          <input class="fc" type="text" id="rfi-cidade-custom" placeholder="Nome da cidade">
+        </div>
+      </div>
+    </div>
+    
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button class="btn btn-ghost" onclick="_rfpTabMod('dashboard')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveRFPInfo()">💾 Salvar Dados</button>
+    </div>
+  </div>`;
+  
+  // Set estado value after render
+  const estEl=document.getElementById('rfi-estado');
+  if(estEl){estEl.value=rfp.estado||'';rfpLoadCidades(rfp.cidade);}
 }
 
 function rfpLoadCidades(selectedCity){
@@ -3702,23 +3781,17 @@ function saveRFPInfo(){
   const proj=getP(S.cur);
   if(!proj)return;
   if(!proj.rfp)proj.rfp=createEmptyRFP();
-  proj.rfp.responsavel=document.getElementById('rfi-responsavel').value.trim();
-  proj.rfp.unidadeSuporte=document.getElementById('rfi-unidade').value.trim();
-  proj.rfp.dataLevantamento=document.getElementById('rfi-data').value;
-  proj.rfp.estado=document.getElementById('rfi-estado').value;
-  const cidadeCustom=document.getElementById('rfi-cidade-custom')?.value?.trim();
+  proj.rfp.responsavel=(document.getElementById('rfi-responsavel')?.value||'').trim();
+  proj.rfp.unidadeSuporte=(document.getElementById('rfi-unidade')?.value||'').trim();
+  proj.rfp.dataLevantamento=document.getElementById('rfi-data')?.value||'';
+  proj.rfp.estado=document.getElementById('rfi-estado')?.value||'';
+  const cidadeCustom=(document.getElementById('rfi-cidade-custom')?.value||'').trim();
   const cidadeSelect=document.getElementById('rfi-cidade')?.value||'';
   proj.rfp.cidade=cidadeCustom||cidadeSelect;
   saveS();
-  closeModal('modal-rfp-info');
   toast('✅ Dados do levantamento salvos!','ok');
-  // Refresh whichever RFP view is active
-  if(document.getElementById('tab-rfp')?.style.display!=='none'){
-    _rfpMod='dashboard';
-    renderRFPTab();
-  } else if(document.getElementById('page-rfp')?.classList.contains('on')){
-    renderRFPEditor();
-  }
+  _rfpMod='dashboard';
+  renderRFPTab();
 }
 
 
@@ -3788,7 +3861,7 @@ function _rfpTabRenderModule(){
       </div>`;}).join('');
     el.innerHTML=`<div class="rfp-header">
       <div style="flex:1"><div class="rfp-module-title">📊 Dashboard RFP</div><div class="rfp-module-sub">Levantamento de requisitos WMS</div></div>
-      <button class="btn btn-primary btn-xs" onclick="openRFPInfo()">✏️ Dados do Levantamento</button></div>
+      <button class="btn btn-primary btn-xs" onclick="openRFPInfo('${proj.id}')">✏️ Dados do Levantamento</button></div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
       <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Responsável</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.responsavel||'—')}</div></div>
       <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Localidade</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.cidade?esc(rfp.cidade)+(rfp.estado?'/'+rfp.estado:''):'—'}</div></div>
@@ -3820,15 +3893,43 @@ function _rfpTabRenderModule(){
     html2+=`<div class="rfp-field-row">`;
     modData.fields.forEach((f,fi)=>{
       const isLong=['layoutAtual','gargalos','oportunidades'].some(k=>f.id.toLowerCase().includes(k.toLowerCase()))||f.label.length>35;
+      const suggs=WMS_SUGG[f.id]||[];
+      const selOpts=suggs.map(s=>`<option value="${s}" ${f.value===s?'selected':''}>${s}</option>`).join('');
       html2+=`<div class="rfp-field" ${isLong?'style="grid-column:span 2"':''}>
         <label>${f.label}</label>
-        ${isLong?`<textarea rows="2" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" style="resize:vertical">${esc(f.value)}</textarea>`:`<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Preencher...">`}
+        ${suggs.length
+          ? `<select onchange="rfpUpdateField('${_rfpMod}',${fi},this.value)">
+               <option value="">— Selecione —</option>
+               ${selOpts}
+               <option value="_outro_">✏️ Outro (digitar)</option>
+             </select>
+             ${f.value&&!suggs.includes(f.value)?`<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Descreva..." style="margin-top:4px">`:
+               `<input type="text" id="custom-${_rfpMod}-${fi}" value="" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Descreva aqui..." style="margin-top:4px;display:none">`
+             }`
+          : `<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Preencher...">`
+        }
       </div>`;
     });
     html2+=`</div>`;
+    // Show custom input when "Outro" selected - use setTimeout after innerHTML set
+    setTimeout(()=>{
+      document.querySelectorAll('.rfp-field select').forEach(function(sel){
+        // Set initial state for existing custom values
+        var nxt=sel.parentElement.querySelector('input[type=text]');
+        if(nxt){nxt.style.display='none';}
+        sel.addEventListener('change',function(){
+          var n=this.parentElement.querySelector('input[type=text]');
+          if(n){n.style.display=this.value==='_outro_'?'block':'none';if(this.value!=='_outro_')n.value='';}
+        });
+      });
+    },0);
   }
 
   if(modData.requirements){
+    const execOpts=WMS_REQ_SUGG.execucao.map(s=>`<option value="${s}">`).join('');
+    const ctrlOpts=WMS_REQ_SUGG.controle.map(s=>`<option value="${s}">`).join('');
+    const obsOpts=WMS_REQ_SUGG.observacao.map(s=>`<option value="${s}">`).join('');
+    html2+=`<datalist id="dl-exec">${execOpts}</datalist><datalist id="dl-ctrl">${ctrlOpts}</datalist><datalist id="dl-obs">${obsOpts}</datalist>`;
     html2+=`<div style="overflow-x:auto"><table class="rfp-req-table">
       <thead><tr><th style="min-width:200px">Requisito</th><th style="width:90px">Faz?</th><th style="min-width:120px">Como executa</th><th style="min-width:120px">Como controla</th><th style="width:100px">Prioridade</th><th style="min-width:120px">Observação</th></tr></thead><tbody>`;
     modData.requirements.forEach((r,ri)=>{
@@ -3864,6 +3965,62 @@ function saveRFPTab(){
   });
 }
 
+
+
+// ════════════════════════════════════
+// WMS FIELD SUGGESTIONS
+// ════════════════════════════════════
+const WMS_SUGG = {
+  // Info Gerais
+  tipoOperacao:['B2B (Distribuição)','B2C (E-commerce)','B2B + B2C (Híbrido)','Transferência entre CDs','Operação Farmacêutica','Operação Frigorificada','Operação de Peças e Autopeças','Operação de Alimentos Secos','Operação de Bebidas','Atacado / Distribuição'],
+  tipoProduto:['Carga seca geral','Produtos alimentícios embalados','Bebidas','Peças e autopeças','Produtos farmacêuticos','Eletroeletrônicos','Vestuário e calçados','Cosméticos e higiene','Produtos químicos','Produtos frigorificados','Material de construção'],
+  qtdeSKUs:['Até 500 SKUs','501 a 1.000 SKUs','1.001 a 5.000 SKUs','5.001 a 10.000 SKUs','10.001 a 30.000 SKUs','Acima de 30.000 SKUs'],
+  sazonalidade:['Sem sazonalidade relevante','Sazonalidade moderada (±20%)','Alta sazonalidade (±50%)','Sazonalidade por datas comemorativas','Sazonalidade climática','Picos em fim de ano'],
+  turnos:['1 turno (8h)','2 turnos (16h)','3 turnos (24h - ininterrupto)','Turno estendido (10h)','Turno variável conforme demanda'],
+  volumeDiario:['Até 100 pedidos/dia','101 a 500 pedidos/dia','501 a 1.000 pedidos/dia','1.001 a 5.000 pedidos/dia','Acima de 5.000 pedidos/dia','Até 50 paletes/dia','51 a 200 paletes/dia','Acima de 200 paletes/dia'],
+  // Infraestrutura
+  areaTotalConstruida:['Até 500 m²','501 a 2.000 m²','2.001 a 5.000 m²','5.001 a 10.000 m²','10.001 a 30.000 m²','Acima de 30.000 m²'],
+  areaUtilArmazenagem:['Até 300 m²','301 a 1.500 m²','1.501 a 4.000 m²','4.001 a 8.000 m²','Acima de 8.000 m²'],
+  peDireito:['Até 6m','6m a 8m','8m a 10m','10m a 12m','Acima de 12m'],
+  numeroDocas:['1 doca','2 a 4 docas','5 a 10 docas','11 a 20 docas','Acima de 20 docas','Docas compartilhadas entrada/saída','Docas exclusivas por função'],
+  tipoEstrutura:['Porta-paletes convencional','Drive-in / Drive-through','Push-back','Flow rack','Mezanino com flow rack','Cantilever','Blocado no chão','Misto (porta-paletes + blocado)','Shuttle','Autoportante'],
+  equipamentos:['Empilhadeira contrapesada','Empilhadeira retrátil','Transpaleteira elétrica','Transpaleteira manual','Reach truck','Order picker','Conveyor belt','AGV','Drone de inventário','Coletor de dados RF'],
+  redeWifi:['Sim, cobertura total do CD','Sim, cobertura parcial','Não possui — necessário implantar','Em processo de instalação','Rede cabeada disponível'],
+  // Produtos e Giro
+  classificacaoGiro:['Classificação ABC por volume de pedidos','Classificação ABC por faturamento','Classificação ABC por giro de estoque','Sem classificação formal','Classificação manual / empírica'],
+  produtosValidade:['Sim — controle obrigatório FEFO','Sim — controle FIFO','Não — sem validade','Parcialmente (mix de produtos)'],
+  produtosLote:['Sim — rastreabilidade por lote obrigatória','Sim — lote informativo','Não — sem controle de lote','Parcialmente (alguns itens)'],
+  unidadePicking:['Sim — unidade de picking diferente (ex: caixa vs unitário)','Não — mesma unidade no pulmão e picking','Múltiplas unidades (pallet, caixa, unidade)'],
+  diasExpedicao:['Expedição diária','2 a 3 dias por semana','Dias específicos por rota/transportadora','Conforme demanda do cliente','Expedição em janelas fixas (manhã/tarde)'],
+  shelfLife:['Mínimo 30% de vida útil restante','Mínimo 50% de vida útil restante','Mínimo 70% de vida útil restante','Shelf life específico por produto','Sem restrição de shelf life'],
+  misturaValidade:['Não permite mistura','Permite mistura com mesmo lote','Permite mistura com qualquer validade','Regra específica por cliente'],
+  misturaLote:['Não permite mistura de lotes','Permite mistura no mesmo endereço','Depende do produto','Sem controle de lote por endereço'],
+  produtosCompativeis:['Sem restrições de compatibilidade','Produtos químicos separados dos alimentícios','Separação por temperatura','Produtos perigosos em área isolada','Separação por tipo (seco/frio/congelado)'],
+  recuperacaoAvaria:['Devolução ao fornecedor','Área de quarentena com processo definido','Destruição com nota de baixa','Reembalagem e reaproveitamento','Sem processo formal definido'],
+  // Layout
+  layoutAtual:['Layout funcional por processo (recebimento→armazenagem→picking→expedição)','Layout misto sem fluxo definido','Layout em U (recebimento e expedição no mesmo lado)','Layout em I (recebimento e expedição opostos)','Layout em L','Sem layout formal definido'],
+  gargalosRecebimento:['Fila de veículos aguardando docas','Conferência manual lenta','Falta de área de pré-armazenagem','Ausência de sistema de agendamento','Divergências frequentes com NF','Falta de mão de obra'],
+  gargalosPulmao:['Endereçamento manual ineficiente','Falta de espaço vertical','Corredores estreitos','Equipamentos insuficientes','Mistura de produtos sem separação','Falta de sinalização de endereços'],
+  gargalosPicking:['Distância excessiva entre endereços','Falta de reabastecimento automatizado','Erros frequentes de separação','Ausência de rota otimizada','Falta de coletor de dados','Baixa acuracidade de estoque'],
+  gargalosExpedicao:['Atrasos no carregamento','Falta de staging area organizada','Divergência entre pedido e volume','Ausência de check-list de carga','Documentação manual lenta','Filas de veículos na saída'],
+  oportunidadesRecebimento:['Implantação de agendamento eletrônico','Conferência com coletor de dados','Integração com NF-e','Área dedicada de conferência','KPI de tempo por nota'],
+  oportunidadesPulmao:['Implantação de endereçamento inteligente','Verticalização do espaço','Classificação ABC para alocação','Sinalização visual de endereços','Sistema de inventário rotativo'],
+  oportunidadesPicking:['Rota otimizada de separação','Implantação de picking por zona','Reabastecimento automático','Pick-to-light / voice picking','Controle de produtividade por operador'],
+  oportunidadesExpedicao:['Staging area por rota/transportadora','Checklist de carregamento digital','Romaneio automático','KPI de tempo de carregamento','Integração com transportadora'],
+  eliminacaoCruzamento:['Sim — fluxo de veículos e pedestres separados','Parcialmente — algumas áreas segregadas','Não — sem segregação atual','Em implantação'],
+  pickingProximoExpedicao:['Sim — zona de picking adjacente à expedição','Parcialmente','Não — picking distante da expedição','Depende do tipo de produto'],
+  segurancaFluxo:['Sim — corredores exclusivos para pedestres','Parcialmente implementado','Não — sem separação atual','Em projeto de melhorias'],
+  expansaoFutura:['Sim — estrutura preparada para expansão','Parcialmente — possibilidade de vertical','Não — limitação física do imóvel','Imóvel com opção de ampliação'],
+};
+
+// Faz/Execução/Controle suggestions for requirements
+const WMS_REQ_SUGG = {
+  faz:['Sim — processo formalizado','Sim — parcialmente implementado','Não — necessidade mapeada','Não se aplica','Em implantação'],
+  execucao:['Manual / Planilha','Sistema ERP atual','WMS atual','Coletor de dados RF','Papel / Formulário físico','Processo não documentado','Via transportadora','Sistema próprio'],
+  controle:['KPI monitorado diariamente','KPI monitorado semanalmente','Controle manual / planilha','Sem controle formal','Auditoria periódica','Supervisor responsável','Sistema automatizado'],
+  prioridade:['Alta','Média','Baixa'],
+  observacao:['Processo crítico para operação','Gap identificado — necessita WMS','Boa prática já executada','Necessita treinamento de equipe','Depende de integração com ERP','Necessita investimento em infraestrutura','Quick win — fácil implementação']
+};
 
 function switchTab(el,tid){
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
