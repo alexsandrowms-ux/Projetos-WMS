@@ -623,10 +623,10 @@ datalist{display:none}
         <div id="tab-gantt" style="display:none">
           <div class="card" style="padding:11px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <label style="font-size:12px;color:var(--mid);display:flex;align-items:center;gap:7px">
-              📅 De: <input type="date" id="gstart" class="fc" style="width:148px" onchange="renderGantt()">
+              📅 De: <input type="date" id="gstart" onchange="saveGanttPeriod()" class="fc" style="width:148px" onchange="renderGantt()">
             </label>
             <label style="font-size:12px;color:var(--mid);display:flex;align-items:center;gap:7px">
-              📅 Até: <input type="date" id="gend" class="fc" style="width:148px" onchange="renderGantt()">
+              📅 Até: <input type="date" id="gend" onchange="saveGanttPeriod()" class="fc" style="width:148px" onchange="renderGantt()">
             </label>
             <button class="btn btn-ghost btn-xs" onclick="resetGanttPeriod()" title="Ver período completo do projeto" style="font-size:11px">🔄 Período do Projeto</button>
             <span id="gantt-period-info" style="font-size:11px;color:var(--dim)"></span>
@@ -2144,10 +2144,12 @@ function renderGantt(){
   const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.map(s=>effectiveDateEnd(s)).filter(Boolean)].filter(Boolean).sort();
   const autoStart=allDates[0]||new Date().toISOString().split('T')[0];
   const autoEnd  =allDates[allDates.length-1]||autoStart;
+  // Restaura período salvo ou usa 1º dia do mês atual como padrão
+  const _saved=loadGanttPeriod();
   const _now=new Date();
   const _firstDay=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
-  if(!siEl?.value)siEl.value=autoStart||_firstDay;
-  if(!eiEl?.value)eiEl.value=autoEnd||autoStart||_firstDay;
+  if(_saved?.s){siEl.value=_saved.s;if(_saved.e)eiEl.value=_saved.e;}
+  else{if(!siEl?.value)siEl.value=autoStart||_firstDay;if(!eiEl?.value)eiEl.value=autoEnd||_firstDay;}
   const sd=new Date(siEl.value+'T00:00:00');
   const ed=new Date(eiEl.value+'T00:00:00');
   if(ed<sd){eiEl.value=siEl.value;ed.setTime(sd.getTime());}
@@ -3547,6 +3549,15 @@ function deleteLog(lid){
   renderLogList();
 }
 
+function saveGanttPeriod(){
+  const s=document.getElementById('gstart')?.value;
+  const e=document.getElementById('gend')?.value;
+  if(S.cur&&s)try{localStorage.setItem('gantt_'+S.cur,JSON.stringify({s,e}));}catch(ex){}
+}
+function loadGanttPeriod(){
+  if(!S.cur)return null;
+  try{const v=localStorage.getItem('gantt_'+S.cur);return v?JSON.parse(v):null;}catch(ex){return null;}
+}
 function resetGanttPeriod(){
   const proj=getP(S.cur);if(!proj)return;
   const stages=proj.stages||[];
