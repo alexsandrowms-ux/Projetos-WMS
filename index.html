@@ -602,7 +602,7 @@ datalist{display:none}
         <div id="det-hours-warn"></div>
         <div class="hours-grid" id="det-hours"></div>
         <div class="tabs">
-          <div class="dtab on" id="dtab-rfp"    onclick="switchTab(this,'tab-rfp');renderRFPTab()" style="color:var(--accent)">📋 RFP</div>
+          <div class="dtab" id="dtab-rfp"    onclick="switchTab(this,'tab-rfp');renderRFPTab()" style="color:var(--accent)">📋 RFP</div>
           <div class="dtab" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
           <div class="dtab" id="dtab-gantt"  onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
           <div class="dtab" id="dtab-cost"   onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
@@ -1762,18 +1762,17 @@ function renderDetail(){
   const activeTabId=activeDtab?.getAttribute('onclick')?.match(/tab-[a-z]+/)?.[0];
   const isDetailVisible=document.getElementById('page-detail')?.classList.contains('on');
   if(!isDetailVisible||!activeTabId){
-    // First open — default to RFP
+    // First open — default to Etapas FAP
     document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
-    document.getElementById('dtab-rfp').classList.add('on');
+    document.getElementById('dtab-stages').classList.add('on');
     ['tab-rfp','tab-stages','tab-gantt','tab-cost','tab-perf'].forEach(id=>{
       const t=document.getElementById(id);if(t)t.style.display='none';
     });
-    document.getElementById('tab-rfp').style.display='block';
-    renderRFPTab();
+    document.getElementById('tab-stages').style.display='block';
   } else {
     // Re-render only active tab
     if(activeTabId==='tab-stages')renderStages();
-    else if(activeTabId==='tab-rfp')renderRFPTab();
+    else if(activeTabId==='tab-rfp'){try{renderRFPTab();}catch(e){console.error('RFP re-render error:',e);}}
     else if(activeTabId==='tab-gantt')renderGantt();
     else if(activeTabId==='tab-cost')renderCostTab();
     else if(activeTabId==='tab-perf')renderPerfTab();
@@ -4478,7 +4477,7 @@ function switchTab(el,tid){
   if(tid==='tab-cost')renderCostTab();
   if(tid==='tab-perf')renderPerfTab();
   if(tid==='tab-stages')renderStages();
-  if(tid==='tab-rfp')renderRFPTab();
+  if(tid==='tab-rfp'){try{renderRFPTab();}catch(e){console.error('RFP tab error:',e);}}
 }
 
 // Drag & drop
