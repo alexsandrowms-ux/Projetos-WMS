@@ -728,7 +728,11 @@ datalist{display:none}
     <div class="mhdr"><div class="mtitle" id="ms-title">Nova Etapa</div><button class="mclose" onclick="closeModal('modal-stage')">×</button></div>
     <div class="mbody">
       <div class="frow">
-        <div class="fg"><label>Pilar Padrão (atalho)</label>
+        <div class="fg">
+          <label style="display:flex;align-items:center;justify-content:space-between">
+            Pilar Padrão (atalho)
+            <button type="button" class="btn btn-ghost" style="font-size:10px;padding:2px 8px;height:auto" onclick="openPillarManager()">⚙️ Gerenciar</button>
+          </label>
           <select class="fc" id="fs-pillar" onchange="applyPillar()">
             <option value="">— Preencher manualmente —</option>
             <option value="1">1 · Levantamento de Processo</option>
@@ -1125,13 +1129,35 @@ datalist{display:none}
   </div>
 </div>
 
+<!-- ══ MODAL: PILARES ══ -->
+<div class="overlay" id="modal-pillars">
+  <div class="modal" style="max-width:500px">
+    <div class="mhdr"><div class="mtitle">⚙️ Gerenciar Pilares</div><button class="mclose" onclick="closeModal('modal-pillars')">×</button></div>
+    <div class="mbody">
+      <div style="font-size:12px;color:var(--dim);margin-bottom:14px">Pilares padrão do sistema (fixos) + seus pilares personalizados.</div>
+      <div id="pillar-default-list" style="margin-bottom:16px"></div>
+      <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Pilares Personalizados</div>
+      <div id="pillar-custom-list" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <input class="fc" type="text" id="new-pillar-input" placeholder="Nome do novo pilar..." style="flex:1">
+        <button class="btn btn-primary btn-sm" onclick="addCustomPillar()">+ Adicionar</button>
+      </div>
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('modal-pillars')">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ════════════════════════════════════
 // CONSTANTS & STATE
 // ════════════════════════════════════
 const COLORS  = ['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#f472b6','#ef4444','#06b6d4','#84cc16','#fb923c'];
 const PCOLS   = ['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#f472b6','#ef4444','#06b6d4','#84cc16'];
-const PNAMES  = {'1':'Levantamento de Processo','2':'Configuração','3':'Teste de Validações por Pilar','4':'Estrutura Física','5':'Treinamento'};
+const PNAMES_DEFAULT = {'1':'Levantamento de Processo','2':'Configuração','3':'Teste de Validações por Pilar','4':'Estrutura Física','5':'Treinamento'};
+function getPNAMES(){return Object.assign({},PNAMES_DEFAULT,...((S.customPillars||[]).map((p,i)=>({['c'+(i+1)]:p}))));}
+const PNAMES = new Proxy({},{get(_,k){return getPNAMES()[k];}});
 const SB      = {'Concluído':'badge-green','Em Andamento':'badge-blue','Planejamento':'badge-amber','Pausado':'badge-gray','Pendente':'badge-gray','Bloqueado':'badge-red'};
 const SE      = {'Pendente':'○','Em Andamento':'◑','Concluído':'●','Bloqueado':'✕'};
 const STORE   = 'axl_wms_v1';
@@ -2373,7 +2399,12 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   _eStageId=isNew?null:editId; _defParent=defParent;
   const proj=getP(S.cur),stage=editId?proj?.stages?.find(s=>s.id===editId):null;
   document.getElementById('ms-title').textContent=stage?'Editar Etapa':(defParent?'Nova Sub-etapa':'Nova Etapa');
-  document.getElementById('fs-pillar').value='';
+  // Rebuild pillar dropdown with custom pillars
+  const pillarSel=document.getElementById('fs-pillar');
+  const pm=getPNAMES();
+  pillarSel.innerHTML='<option value="">— Preencher manualmente —</option>'+
+    Object.entries(pm).map(([k,v])=>`<option value="${k}">${k} · ${v}</option>`).join('');
+  pillarSel.value='';
   document.getElementById('fs-num').value=stage?.num||'';
   document.getElementById('fs-name').value=stage?.name||'';
   document.getElementById('fs-executor').value=stage?.executor||'';
@@ -3088,7 +3119,12 @@ function copyMyKey(){
     .catch(()=>{const el=document.getElementById('mykey-val');el.select();document.execCommand('copy');toast('Chave copiada ✓');});
 }
 
-function openModal(id){document.getElementById(id).classList.add('open');}
+function openModal(id){
+  // Close any other open modals first
+  document.querySelectorAll('.overlay.open').forEach(o=>{if(o.id!==id)o.classList.remove('open');});
+  const el=document.getElementById(id);
+  if(el)el.classList.add('open');
+}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
@@ -4466,6 +4502,73 @@ function generateRFPDiagnostico(){
   } else {
     toast('Permita pop-ups para gerar o relatório','err');
   }
+}
+
+
+// ════════════════════════════════════
+// GERENCIADOR DE PILARES
+// ════════════════════════════════════
+function openPillarManager(){
+  closeModal('modal-stage');
+  renderPillarManager();
+  openModal('modal-pillars');
+}
+
+function renderPillarManager(){
+  // Default pillars (read-only)
+  const defEl = document.getElementById('pillar-default-list');
+  if(defEl){
+    defEl.innerHTML = '<div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px">Pilares Padrão (fixos)</div>' +
+      Object.entries(PNAMES_DEFAULT).map(([k,v])=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:700;color:var(--accent);min-width:20px">${k}</span>
+          <span style="font-size:12px;color:var(--text);flex:1">${v}</span>
+          <span style="font-size:10px;color:var(--dim)">fixo</span>
+        </div>`).join('');
+  }
+  // Custom pillars
+  const cusEl = document.getElementById('pillar-custom-list');
+  if(cusEl){
+    const custom = S.customPillars||[];
+    if(!custom.length){
+      cusEl.innerHTML = '<div style="font-size:12px;color:var(--dim);padding:8px 0">Nenhum pilar personalizado ainda.</div>';
+    } else {
+      cusEl.innerHTML = custom.map((p,i)=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--bg3);border-radius:6px;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:700;color:var(--amber);min-width:24px">c${i+1}</span>
+          <input type="text" value="${esc(p)}" style="flex:1;background:transparent;border:none;color:var(--text);font-size:12px;outline:none"
+            onchange="updateCustomPillar(${i},this.value)">
+          <button class="btn btn-ghost" style="font-size:11px;padding:2px 8px;color:var(--red)" onclick="deleteCustomPillar(${i})">🗑</button>
+        </div>`).join('');
+    }
+  }
+  if(document.getElementById('new-pillar-input'))
+    document.getElementById('new-pillar-input').value='';
+}
+
+function addCustomPillar(){
+  const inp = document.getElementById('new-pillar-input');
+  const val = inp?.value?.trim();
+  if(!val){toast('Digite o nome do pilar','err');return;}
+  if(!S.customPillars) S.customPillars=[];
+  S.customPillars.push(val);
+  saveS();
+  toast('✅ Pilar adicionado!','ok');
+  renderPillarManager();
+}
+
+function updateCustomPillar(idx, val){
+  if(!S.customPillars) return;
+  S.customPillars[idx] = val.trim();
+  saveS();
+}
+
+function deleteCustomPillar(idx){
+  if(!S.customPillars) return;
+  S.customPillars.splice(idx,1);
+  saveS();
+  toast('Pilar removido','ok');
+  renderPillarManager();
 }
 
 
