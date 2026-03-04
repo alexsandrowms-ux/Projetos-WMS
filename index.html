@@ -3060,6 +3060,20 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
+function switchTab(el,tid){
+  document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  ['tab-stages','tab-gantt','tab-cost','tab-perf'].forEach(id=>{
+    const t=document.getElementById(id);
+    if(t)t.style.display=id===tid?'block':'none';
+  });
+  if(tid==='tab-gantt')renderGantt();
+  else if(tid==='tab-cost')renderCostTab();
+  else if(tid==='tab-perf')renderPerfTab();
+  else if(tid==='tab-stages')renderStages();
+}
+
+
 // ════════════════════════════════════
 // PERFORMANCE TAB — CHARTS (ECharts 3D)
 // ════════════════════════════════════
