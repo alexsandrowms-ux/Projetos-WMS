@@ -2144,8 +2144,10 @@ function renderGantt(){
   const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.map(s=>effectiveDateEnd(s)).filter(Boolean)].filter(Boolean).sort();
   const autoStart=allDates[0]||new Date().toISOString().split('T')[0];
   const autoEnd  =allDates[allDates.length-1]||autoStart;
-  if(!siEl?.value)siEl.value=autoStart;
-  if(!eiEl?.value)eiEl.value=autoEnd;
+  const _now=new Date();
+  const _firstDay=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
+  if(!siEl?.value)siEl.value=autoStart||_firstDay;
+  if(!eiEl?.value)eiEl.value=autoEnd||autoStart||_firstDay;
   const sd=new Date(siEl.value+'T00:00:00');
   const ed=new Date(eiEl.value+'T00:00:00');
   if(ed<sd){eiEl.value=siEl.value;ed.setTime(sd.getTime());}
