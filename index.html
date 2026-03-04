@@ -1757,15 +1757,15 @@ function renderDetail(){
     <div class="hcard"><div class="hval" style="color:${c}">${st.pct}%</div><div class="hlbl">Progresso</div></div>
     <div class="hcard"><div class="hval">${(proj.stages||[]).filter(s=>!s.parentId).length}</div><div class="hlbl">Etapas</div></div>`;
   renderStages();
-  // reset tab
+  // reset tab — default to Etapas FAP
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
-  document.getElementById('dtab-rfp').classList.add('on');
-  document.getElementById('tab-rfp').style.display='block';
-  renderRFPTab();
-  document.getElementById('tab-stages').style.display='none';
-  document.getElementById('tab-gantt').style.display='none';
-  if(document.getElementById('tab-cost')) document.getElementById('tab-cost').style.display='none';
-  if(document.getElementById('tab-perf')) document.getElementById('tab-perf').style.display='none';
+  const firstDtab = document.getElementById('dtab-stages');
+  if(firstDtab) firstDtab.classList.add('on');
+  ['tab-stages','tab-gantt','tab-cost','tab-perf','tab-rfp'].forEach(id=>{
+    const t=document.getElementById(id); if(t)t.style.display='none';
+  });
+  document.getElementById('tab-stages').style.display='block';
+  renderStages();
 }
 
 // ════════════════════════════════════
@@ -2449,7 +2449,7 @@ function saveStage(){
   // Re-render whichever tab is active
   const ganttVisible=document.getElementById('tab-gantt')?.style.display!=='none';
   if(ganttVisible)renderGantt();
-  renderDetail();
+  try{renderDetail();}catch(e){renderStages();}
   _eStageId=null;_defParent=null;
 }
 function askDeleteStage(stageId){
@@ -4029,7 +4029,7 @@ function switchTab(el,tid){
   if(tid==='tab-gantt')renderGantt();
   if(tid==='tab-cost')renderCostTab();
   if(tid==='tab-perf')renderPerfTab();
-  if(tid==='tab-rfp')renderRFPTab();
+  if(tid==='tab-rfp'){try{renderRFPTab();}catch(e){console.warn('RFP tab:',e);}}
 }
 
 // Drag & drop
