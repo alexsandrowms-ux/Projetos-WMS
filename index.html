@@ -1801,11 +1801,11 @@ function renderStages(){
             <span class="schev open" id="chev_${root.id}">▼</span>
           </div>
           <div class="sroot-acts">
-            <button class="btn-ev" data-evbtn="${root.id}" onclick="event.stopPropagation();openEvModal('${root.id}')">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
-            <button class="btn-log" data-logbtn="${root.id}" onclick="event.stopPropagation();openLogModal('${root.id}')">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
-            <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openStageModal(false,'${root.id}')">✏️</button>
-            <button class="btn btn-success btn-xs" onclick="event.stopPropagation();openStageModal(true,null,'${root.id}')">+ Sub</button>
-            <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteStage('${root.id}')">🗑</button>
+            <button class="btn-ev" data-evbtn="${root.id}" data-action="ev" data-id="${root.id}">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${root.id}" data-action="log" data-id="${root.id}">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
+            <button class="btn btn-ghost btn-xs" data-action="edit" data-id="${root.id}">✏️</button>
+            <button class="btn btn-success btn-xs" data-action="sub" data-id="${root.id}">+ Sub</button>
+            <button class="btn btn-danger btn-xs" data-action="del" data-id="${root.id}">🗑</button>
           </div>
         </div>
         <div class="sr-row2">
@@ -1847,12 +1847,12 @@ function renderStages(){
             </div>
           </div>
           <div class="ssrow-acts">
-            <button class="btn-ev" data-evbtn="${k.id}" onclick="event.stopPropagation();openEvModal('${k.id}')">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
-            <button class="btn-log" data-logbtn="${k.id}" onclick="event.stopPropagation();openLogModal('${k.id}')">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
-            <button class="btn-move" onclick="moveSubStage('${k.id}','up')" title="Mover para cima" ${ki===0?'disabled':''}>▲</button>
-            <button class="btn-move" onclick="moveSubStage('${k.id}','down')" title="Mover para baixo" ${ki===lastKidIdx?'disabled':''}>▼</button>
-            <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openStageModal(false,'${k.id}')">✏️</button>
-            <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteStage('${k.id}')">🗑</button>
+            <button class="btn-ev" data-evbtn="${k.id}" data-action="ev" data-id="${k.id}">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${k.id}" data-action="log" data-id="${k.id}">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
+            <button class="btn-move" data-action="up" data-id="${k.id}" title="Mover para cima" ${ki===0?'disabled':''}>▲</button>
+            <button class="btn-move" data-action="down" data-id="${k.id}" title="Mover para baixo" ${ki===lastKidIdx?'disabled':''}>▼</button>
+            <button class="btn btn-ghost btn-xs" data-action="edit" data-id="${k.id}">✏️</button>
+            <button class="btn btn-danger btn-xs" data-action="del" data-id="${k.id}">🗑</button>
           </div>
         </div>`}).join('')}
         <div class="add-sub-btn" onclick="event.stopPropagation();openStageModal(true,null,'${root.id}')">
@@ -4040,6 +4040,21 @@ document.addEventListener('DOMContentLoaded',()=>{
     dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
     dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
   }
+  // Event delegation for stage action buttons
+  document.addEventListener('click',e=>{
+    const btn=e.target.closest('[data-action]');
+    if(!btn)return;
+    e.stopPropagation();
+    const action=btn.dataset.action, id=btn.dataset.id;
+    if(!action||!id)return;
+    if(action==='ev')   openEvModal(id);
+    else if(action==='log')  openLogModal(id);
+    else if(action==='edit') openStageModal(false,id);
+    else if(action==='sub')  openStageModal(true,null,id);
+    else if(action==='del')  askDeleteStage(id);
+    else if(action==='up')   moveSubStage(id,'up');
+    else if(action==='down') moveSubStage(id,'down');
+  });
 });
 
 // ════════════════════════════════════
