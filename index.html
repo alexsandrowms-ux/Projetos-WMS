@@ -243,6 +243,7 @@ textarea.fc{resize:vertical;min-height:60px}
 /* ── MODALS ── */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);backdrop-filter:blur(4px);z-index:500;display:none;align-items:center;justify-content:center;padding:16px}
 .overlay.open{display:flex;animation:fIn .15s}
+.overlay-top{z-index:600}
 @keyframes fIn{from{opacity:0}to{opacity:1}}
 .modal{background:var(--bg2);border:1px solid var(--border2);border-radius:12px;width:100%;max-height:92vh;overflow-y:auto;animation:sUp .2s}
 @keyframes sUp{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
@@ -325,7 +326,7 @@ textarea.fc{resize:vertical;min-height:60px}
 /* ══════════════════════════════════
    RFP
 ══════════════════════════════════ */
-.rfp-layout{display:flex;gap:0;height:calc(100vh - 60px);overflow:hidden}
+.rfp-layout{display:flex;gap:0;height:calc(100vh - 160px);overflow:hidden}
 .rfp-sidenav{width:220px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;padding:12px 0}
 .rfp-sidenav-title{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-weight:700;padding:8px 14px 4px}
 .rfp-nav-item{display:flex;align-items:center;gap:8px;padding:8px 14px;font-size:12px;color:var(--mid);cursor:pointer;border-left:3px solid transparent;transition:all .15s}
@@ -585,8 +586,6 @@ datalist{display:none}
       <div class="page" id="page-detail">
         <div style="margin-bottom:12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" onclick="showPage('projects')">← Voltar</button>
-          <button class="btn btn-ghost btn-sm" onclick="openImport(true)">📥 Importar Etapas</button>
-          <button class="btn btn-purple btn-sm" onclick="openExport(true)">📤 Exportar</button>
         </div>
         <div class="det-hdr">
           <div style="min-width:0">
@@ -602,7 +601,7 @@ datalist{display:none}
         <div id="det-hours-warn"></div>
         <div class="hours-grid" id="det-hours"></div>
         <div class="tabs">
-          <div class="dtab on" id="dtab-rfp"    onclick="switchTab(this,'tab-rfp');renderRFPTab()" style="color:var(--accent)">📋 RFP</div>
+
           <div class="dtab" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
           <div class="dtab" id="dtab-gantt"  onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
           <div class="dtab" id="dtab-cost"   onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
@@ -620,9 +619,7 @@ datalist{display:none}
         <div id="tab-cost" style="display:none">
           <div id="cost-content"></div>
         </div>
-        <div id="tab-rfp" style="display:none">
-          <div id="rfp-tab-content"></div>
-        </div>
+
         <div id="tab-gantt" style="display:none">
           <div class="card" style="padding:11px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <label style="font-size:12px;color:var(--mid);display:flex;align-items:center;gap:7px">
@@ -728,7 +725,8 @@ datalist{display:none}
     <div class="mhdr"><div class="mtitle" id="ms-title">Nova Etapa</div><button class="mclose" onclick="closeModal('modal-stage')">×</button></div>
     <div class="mbody">
       <div class="frow">
-        <div class="fg"><label>Pilar Padrão (atalho)</label>
+        <div class="fg">
+          <label>Pilar Padrão (atalho)</label>
           <select class="fc" id="fs-pillar" onchange="applyPillar()">
             <option value="">— Preencher manualmente —</option>
             <option value="1">1 · Levantamento de Processo</option>
@@ -736,6 +734,10 @@ datalist{display:none}
             <option value="3">3 · Teste de Validações por Pilar</option>
             <option value="4">4 · Estrutura Física</option>
             <option value="5">5 · Treinamento</option>
+            <option value="6">6 · Infraestrutura</option>
+            <option value="7">7 · Integração</option>
+            <option value="8">8 · Go-Live</option>
+            <option value="9">9 · Suporte Pós-Implantação</option>
           </select>
         </div>
         <div class="fg"><label>Numeração</label><input class="fc" id="fs-num" placeholder="Ex: 1 / 1.1 / 2.3"></div>
@@ -753,12 +755,8 @@ datalist{display:none}
         <div class="fg"><label>💰 Valor/hora (R$) <span style="font-size:10px;color:var(--dim)">(vazio = padrão do projeto)</span></label><input class="fc" type="number" id="fs-rate" placeholder="Ex: 150.00" min="0" step="0.01"></div>
       </div>
       <div class="frow">
-        <div class="fg"><label>📅 Início Planejado</label><input class="fc" type="date" id="fs-date"></div>
-        <div class="fg"><label>🏁 Término Planejado *</label><input class="fc" type="date" id="fs-dateend"></div>
-      </div>
-      <div class="frow">
-        <div class="fg"><label>🕐 Horário Início</label><input class="fc" type="time" id="fs-timestart" placeholder="Ex: 08:00"></div>
-        <div class="fg"><label>🕔 Horário Término</label><input class="fc" type="time" id="fs-timeend" placeholder="Ex: 17:00"></div
+        <div class="fg"><label>📅 Início Planejado</label><input class="fc" type="datetime-local" id="fs-date" onchange="calcModalHours()"></div>
+        <div class="fg"><label>🏁 Término Planejado</label><input class="fc" type="datetime-local" id="fs-dateend" onchange="calcModalHours()"></div>
       </div>
       <div class="frow">
         <div class="fg"><label>✅ Término Real</label><input class="fc" type="date" id="fs-datereal" placeholder="Preencher ao concluir"></div>
@@ -1088,42 +1086,6 @@ datalist{display:none}
 <div class="toast" id="toast"></div>
 
 
-<!-- ══ MODAL: RFP INFO ══ -->
-<div class="overlay" id="modal-rfp-info">
-  <div class="modal" style="max-width:520px">
-    <div class="mhead"><span>📋 Dados do Levantamento</span><button class="mclose" onclick="closeModal('modal-rfp-info')">✕</button></div>
-    <div class="mbody">
-      <div class="frow">
-        <div class="fg"><label>👤 Responsável pelo Levantamento</label><input class="fc" type="text" id="rfi-responsavel" placeholder="Nome do responsável"></div>
-        <div class="fg"><label>🏢 Unidade de Suporte</label><input class="fc" type="text" id="rfi-unidade" placeholder="Ex: AXL Uberlândia"></div>
-      </div>
-      <div class="frow">
-        <div class="fg"><label>📅 Data do Levantamento</label><input class="fc" type="date" id="rfi-data"></div>
-      </div>
-      <div class="frow">
-        <div class="fg">
-          <label>🗺️ Estado</label>
-          <select class="fc" id="rfi-estado" onchange="rfpLoadCidades('')">
-            <option value="">Selecione o estado...</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>📍 Cidade</label>
-          <select class="fc" id="rfi-cidade">
-            <option value="">Selecione a cidade...</option>
-          </select>
-        </div>
-      </div>
-      <div class="frow">
-        <div class="fg"><label>✏️ Ou digite a cidade manualmente</label><input class="fc" type="text" id="rfi-cidade-custom" placeholder="Nome da cidade (opcional)"></div>
-      </div>
-    </div>
-    <div class="mfooter">
-      <button class="btn btn-ghost" onclick="closeModal('modal-rfp-info')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveRFPInfo()">💾 Salvar Dados</button>
-    </div>
-  </div>
-</div>
 
 <script>
 // ════════════════════════════════════
@@ -1131,7 +1093,7 @@ datalist{display:none}
 // ════════════════════════════════════
 const COLORS  = ['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#f472b6','#ef4444','#06b6d4','#84cc16','#fb923c'];
 const PCOLS   = ['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#f472b6','#ef4444','#06b6d4','#84cc16'];
-const PNAMES  = {'1':'Levantamento de Processo','2':'Configuração','3':'Teste de Validações por Pilar','4':'Estrutura Física','5':'Treinamento'};
+const PNAMES  = {'1':'Levantamento de Processo','2':'Configuração','3':'Teste de Validações por Pilar','4':'Estrutura Física','5':'Treinamento','6':'Infraestrutura','7':'Integração','8':'Go-Live','9':'Suporte Pós-Implantação'};
 const SB      = {'Concluído':'badge-green','Em Andamento':'badge-blue','Planejamento':'badge-amber','Pausado':'badge-gray','Pendente':'badge-gray','Bloqueado':'badge-red'};
 const SE      = {'Pendente':'○','Em Andamento':'◑','Concluído':'●','Bloqueado':'✕'};
 const STORE   = 'axl_wms_v1';
@@ -1712,9 +1674,7 @@ function renderCards(id,list){
       </div>
       <div class="proj-card-actions">
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();showPage('detail','${p.id}')">👁 Abrir</button>
-        <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openProjectRFP('${p.id}')" style="color:var(--accent)">📋 RFP</button>
         <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openProjModal(false,'${p.id}')">✏️ Editar</button>
-        <button class="btn btn-purple btn-xs" onclick="event.stopPropagation();S.cur='${p.id}';openExport(true)">📤 Exportar</button>
         <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteProject('${p.id}')">🗑 Excluir</button>
       </div>
     </div>`;
@@ -1757,12 +1717,11 @@ function renderDetail(){
     <div class="hcard"><div class="hval" style="color:${c}">${st.pct}%</div><div class="hlbl">Progresso</div></div>
     <div class="hcard"><div class="hval">${(proj.stages||[]).filter(s=>!s.parentId).length}</div><div class="hlbl">Etapas</div></div>`;
   renderStages();
-  // reset tab — default to Etapas FAP
+  // reset tab
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
-  const firstDtab = document.getElementById('dtab-stages');
-  if(firstDtab) firstDtab.classList.add('on');
-  ['tab-stages','tab-gantt','tab-cost','tab-perf','tab-rfp'].forEach(id=>{
-    const t=document.getElementById(id); if(t)t.style.display='none';
+  document.getElementById('dtab-stages').classList.add('on');
+  ['tab-stages','tab-gantt','tab-cost','tab-perf'].forEach(id=>{
+    const t=document.getElementById(id);if(t)t.style.display='none';
   });
   document.getElementById('tab-stages').style.display='block';
   renderStages();
@@ -1801,11 +1760,11 @@ function renderStages(){
             <span class="schev open" id="chev_${root.id}">▼</span>
           </div>
           <div class="sroot-acts">
-            <button class="btn-ev" data-evbtn="${root.id}" data-action="ev" data-id="${root.id}">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
-            <button class="btn-log" data-logbtn="${root.id}" data-action="log" data-id="${root.id}">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
-            <button class="btn btn-ghost btn-xs" data-action="edit" data-id="${root.id}">✏️</button>
-            <button class="btn btn-success btn-xs" data-action="sub" data-id="${root.id}">+ Sub</button>
-            <button class="btn btn-danger btn-xs" data-action="del" data-id="${root.id}">🗑</button>
+            <button class="btn-ev" data-evbtn="${root.id}" data-action="ev" data-sid="${root.id}">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${root.id}" data-action="log" data-sid="${root.id}">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
+            <button class="btn btn-ghost btn-xs" data-action="edit" data-sid="${root.id}">✏️</button>
+            <button class="btn btn-success btn-xs" data-action="sub" data-sid="${root.id}">+ Sub</button>
+            <button class="btn btn-danger btn-xs" data-action="del" data-sid="${root.id}">🗑</button>
           </div>
         </div>
         <div class="sr-row2">
@@ -1847,15 +1806,15 @@ function renderStages(){
             </div>
           </div>
           <div class="ssrow-acts">
-            <button class="btn-ev" data-evbtn="${k.id}" data-action="ev" data-id="${k.id}">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
-            <button class="btn-log" data-logbtn="${k.id}" data-action="log" data-id="${k.id}">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
-            <button class="btn-move" data-action="up" data-id="${k.id}" title="Mover para cima" ${ki===0?'disabled':''}>▲</button>
-            <button class="btn-move" data-action="down" data-id="${k.id}" title="Mover para baixo" ${ki===lastKidIdx?'disabled':''}>▼</button>
-            <button class="btn btn-ghost btn-xs" data-action="edit" data-id="${k.id}">✏️</button>
-            <button class="btn btn-danger btn-xs" data-action="del" data-id="${k.id}">🗑</button>
+            <button class="btn-ev" data-evbtn="${k.id}" data-action="ev" data-sid="${k.id}">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${k.id}" data-action="log" data-sid="${k.id}">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
+            <button class="btn-move" data-action="up" data-sid="${k.id}" title="Mover para cima" ${ki===0?'disabled':''}>▲</button>
+            <button class="btn-move" data-action="down" data-sid="${k.id}" title="Mover para baixo" ${ki===lastKidIdx?'disabled':''}>▼</button>
+            <button class="btn btn-ghost btn-xs" data-action="edit" data-sid="${k.id}">✏️</button>
+            <button class="btn btn-danger btn-xs" data-action="del" data-sid="${k.id}">🗑</button>
           </div>
         </div>`}).join('')}
-        <div class="add-sub-btn" onclick="event.stopPropagation();openStageModal(true,null,'${root.id}')">
+        <div class="add-sub-btn" onclick="openStageModal(true,null,'${root.id}')">
           <span style="font-size:14px;color:var(--accent)">+</span> Sub-etapa em <strong style="color:var(--accent)">&nbsp;${esc(root.num||root.name)}</strong>
         </div>
       </div>
@@ -2366,11 +2325,12 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   document.getElementById('fs-num').value=stage?.num||'';
   document.getElementById('fs-name').value=stage?.name||'';
   document.getElementById('fs-executor').value=stage?.executor||'';
-  document.getElementById('fs-date').value=stage?.date||'';
-  document.getElementById('fs-dateend').value=stage?.dateEnd||'';
+  // Combine date + time into datetime-local format
+  const dtStart = stage?.date ? (stage.date + (stage.timeStart ? 'T'+stage.timeStart : '')) : '';
+  const dtEnd   = stage?.dateEnd ? (stage.dateEnd + (stage.timeEnd ? 'T'+stage.timeEnd : '')) : '';
+  document.getElementById('fs-date').value = dtStart;
+  document.getElementById('fs-dateend').value = dtEnd;
   document.getElementById('fs-datereal').value=stage?.dateReal||'';
-  document.getElementById('fs-timestart').value=stage?.timeStart||'';
-  document.getElementById('fs-timeend').value=stage?.timeEnd||'';
   if(document.getElementById('fs-rate')) document.getElementById('fs-rate').value=stage?.hourRate||'';
   // Horas Realizadas: root = auto (soma das sub-etapas), sub = manual
   const proj2=getP(S.cur);
@@ -2411,10 +2371,23 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   openModal('modal-stage');
 }
 function applyPillar(){
-  const v=document.getElementById('fs-pillar').value;if(!v)return;
+  const v=document.getElementById('fs-pillar').value;
+  if(!v)return;
   document.getElementById('fs-num').value=v;
   document.getElementById('fs-name').value=PNAMES[v]||'';
-  document.getElementById('fs-parent').value='';
+  document.getElementById('fs-pillar').blur();
+}
+function calcModalHours(){
+  const s=document.getElementById('fs-date')?.value;
+  const e=document.getElementById('fs-dateend')?.value;
+  const hEl=document.getElementById('fs-hours');
+  if(!s||!e||!hEl)return;
+  const diff=(new Date(e)-new Date(s))/3600000;
+  if(diff>0&&diff<1000){
+    hEl.value=Math.round(diff*10)/10;
+    hEl.style.background='rgba(34,197,94,.08)';
+    hEl.title='Calculado automaticamente pelo horário';
+  }
 }
 function saveStage(){
   const name=document.getElementById('fs-name').value.trim();if(!name){toast('Informe o nome da etapa','err');return;}
@@ -2431,10 +2404,10 @@ function saveStage(){
   const d={name,
     num:document.getElementById('fs-num').value.trim(),
     executor:document.getElementById('fs-executor').value.trim(),
-    date:document.getElementById('fs-date').value,
-    dateEnd:document.getElementById('fs-dateend').value,
-    timeStart:document.getElementById('fs-timestart')?.value||'',
-    timeEnd:document.getElementById('fs-timeend')?.value||'',
+    date:(()=>{const v=document.getElementById('fs-date').value;return v?v.split('T')[0]:''})(),
+    dateEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v?v.split('T')[0]:''})(),
+    timeStart:(()=>{const v=document.getElementById('fs-date').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
+    timeEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     dateReal:document.getElementById('fs-datereal').value,
     hours:document.getElementById('fs-hours').value,
     hoursReal: (document.getElementById('fs-parent')?.value||_defParent) ? (document.getElementById('fs-hoursreal')?.value||'') : '', // root = auto from kids
@@ -2449,7 +2422,7 @@ function saveStage(){
   // Re-render whichever tab is active
   const ganttVisible=document.getElementById('tab-gantt')?.style.display!=='none';
   if(ganttVisible)renderGantt();
-  try{renderDetail();}catch(e){renderStages();}
+  renderDetail();
   _eStageId=null;_defParent=null;
 }
 function askDeleteStage(stageId){
@@ -2637,6 +2610,7 @@ function doImport(){
 // ════════════════════════════════════
 function openExport(forDetail=false){
   const sel=document.getElementById('exp-proj-sel');
+  if(!sel)return;
   sel.innerHTML='<option value="__all__">Todos os projetos</option>'+S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
   if(forDetail&&S.cur){for(const o of sel.options){if(o.value===S.cur){o.selected=true;break;}}}
   openModal('modal-export');
@@ -3078,6 +3052,7 @@ function copyMyKey(){
 }
 
 function openModal(id){document.getElementById(id).classList.add('open');}
+
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
 
@@ -3297,6 +3272,15 @@ function saveStageField(sid,field,value){
   const proj=getP(S.cur);if(!proj)return;
   const stage=proj.stages.find(s=>s.id===sid);if(!stage)return;
   stage[field]=value;
+  // Auto-calc planned hours from date+time fields
+  if((field==='date'||field==='dateEnd'||field==='timeStart'||field==='timeEnd')&&stage.parentId){
+    const s=stage.date&&stage.timeStart?new Date(stage.date+'T'+stage.timeStart):null;
+    const e=stage.dateEnd&&stage.timeEnd?new Date(stage.dateEnd+'T'+stage.timeEnd):null;
+    if(s&&e&&e>s){
+      const diff=(e-s)/3600000;
+      if(diff>0&&diff<200)stage.hours=Math.round(diff*10)/10;
+    }
+  }
   saveS();
   _updateStageBadges(sid);
 }
@@ -3516,548 +3500,6 @@ function resetGanttPeriod(){
 
 
 // ════════════════════════════════════
-// RFP — ANÁLISE DE REQUISITOS
-// ════════════════════════════════════
-const ESTADOS_BR=['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'];
-const CIDADES_BR={'SP':['São Paulo','Campinas','Santos','São José dos Campos','Ribeirão Preto','Sorocaba','Jundiaí','Bauru'],'RJ':['Rio de Janeiro','Niterói','Duque de Caxias','Nova Iguaçu','Petrópolis','Volta Redonda'],'MG':['Belo Horizonte','Uberlândia','Contagem','Juiz de Fora','Betim','Uberaba','Ipatinga'],'ES':['Vitória','Serra','Vila Velha','Cariacica','Cachoeiro de Itapemirim'],'PR':['Curitiba','Londrina','Maringá','Ponta Grossa','Cascavel','Paranaguá'],'SC':['Florianópolis','Joinville','Blumenau','Criciúma','Chapecó','Itajaí'],'RS':['Porto Alegre','Caxias do Sul','Pelotas','Canoas','Santa Maria','Novo Hamburgo'],'BA':['Salvador','Feira de Santana','Vitória da Conquista','Camaçari','Itabuna'],'CE':['Fortaleza','Caucaia','Juazeiro do Norte','Sobral','Crato'],'PE':['Recife','Caruaru','Petrolina','Olinda','Paulista'],'GO':['Goiânia','Aparecida de Goiânia','Anápolis','Rio Verde'],'DF':['Brasília','Taguatinga','Ceilândia','Samambaia'],'AM':['Manaus','Parintins','Itacoatiara'],'PA':['Belém','Ananindeua','Santarém','Marabá'],'MT':['Cuiabá','Várzea Grande','Rondonópolis','Sinop'],'MS':['Campo Grande','Dourados','Três Lagoas','Corumbá'],'MA':['São Luís','Imperatriz','Timon','Caxias'],'PI':['Teresina','Parnaíba','Picos'],'RN':['Natal','Mossoró','Parnamirim'],'PB':['João Pessoa','Campina Grande','Patos'],'AL':['Maceió','Arapiraca','Rio Largo'],'SE':['Aracaju','Nossa Senhora do Socorro','Lagarto'],'AC':['Rio Branco','Cruzeiro do Sul'],'AP':['Macapá','Santana'],'RO':['Porto Velho','Ji-Paraná','Ariquemes'],'RR':['Boa Vista','Rorainópolis'],'TO':['Palmas','Araguaína','Gurupi']};
-
-function createEmptyRFP(){
-  return {responsavel:'',unidadeSuporte:'',estado:'',cidade:'',dataLevantamento:new Date().toISOString().split('T')[0],dados:{
-    infoGerais:{name:'Informações Gerais',icon:'📂',fields:[{id:'tipoOperacao',label:'Tipo de operação',value:''},{id:'tipoProduto',label:'Tipo de produto',value:''},{id:'qtdeSKUs',label:'Qtde de SKUs ativos',value:''},{id:'sazonalidade',label:'Sazonalidade?',value:''},{id:'turnos',label:'Turnos de operação',value:''},{id:'volumeDiario',label:'Volume médio diário',value:''}]},
-    infraestrutura:{name:'Infraestrutura',icon:'🗂️',fields:[{id:'areaTotalConstruida',label:'Área total construída (m²)',value:''},{id:'areaUtilArmazenagem',label:'Área útil para armazenagem (m²)',value:''},{id:'peDireito',label:'Pé-direito útil (m)',value:''},{id:'numeroDocas',label:'Número de docas',value:''},{id:'tipoEstrutura',label:'Tipo de estrutura',value:''},{id:'equipamentos',label:'Tipos de equipamentos',value:''},{id:'redeWifi',label:'Rede Wifi no CD?',value:''}]},
-    produtosGiro:{name:'Produtos e Giro',icon:'📊',fields:[{id:'classificacaoGiro',label:'Classificação de giro (ABC)',value:''},{id:'produtosValidade',label:'Produtos com validade?',value:''},{id:'produtosLote',label:'Produtos com lote?',value:''},{id:'unidadePicking',label:'Unidade de picking diferente do pulmão?',value:''},{id:'diasExpedicao',label:'Dias para Expedição',value:''},{id:'shelfLife',label:'Shelf Life mínimo',value:''},{id:'misturaValidade',label:'Mistura Data de Validade por Endereço?',value:''},{id:'misturaLote',label:'Mistura Lote por endereço?',value:''},{id:'produtosCompativeis',label:'Produtos Compatíveis/Incompatíveis',value:''},{id:'recuperacaoAvaria',label:'Recuperação de Avaria',value:''}]},
-    layout:{name:'Layout / Estrutura Física',icon:'🧠',fields:[{id:'layoutAtual',label:'Descrição do layout atual',value:''},{id:'gargalosRecebimento',label:'Gargalos - Recebimento',value:''},{id:'gargalosPulmao',label:'Gargalos - Pulmão',value:''},{id:'gargalosPicking',label:'Gargalos - Picking',value:''},{id:'gargalosExpedicao',label:'Gargalos - Expedição',value:''},{id:'oportunidadesRecebimento',label:'Oportunidades - Recebimento',value:''},{id:'oportunidadesPulmao',label:'Oportunidades - Pulmão',value:''},{id:'oportunidadesPicking',label:'Oportunidades - Picking',value:''},{id:'oportunidadesExpedicao',label:'Oportunidades - Expedição',value:''},{id:'eliminacaoCruzamento',label:'Eliminação de cruzamento de fluxos?',value:''},{id:'pickingProximoExpedicao',label:'Zona de picking próxima da expedição?',value:''},{id:'segurancaFluxo',label:'Segurança (fluxo de pedestres separado)?',value:''},{id:'expansaoFutura',label:'Flexibilidade para expansão futura?',value:''}]},
-    recebimento:{name:'Recebimento',icon:'🚛',requirements:[{id:'r1',text:'Sistema de agendamento de cargas',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r2',text:'Controle do tempo do veículo na planta',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r3',text:'Captura e validação de lotes e validades',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r4',text:'Inspeção visual / Uso de fotos',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r5',text:'Área de pré-armazenagem separada da doca',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r6',text:'Conferência cega',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r7',text:'Controle de docas',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r8',text:'Tratativas de divergência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r9',text:'Uso de coletor de dados',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r10',text:'Conferência com base na NFe',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r11',text:'KPI: Tempo médio de conferência por nota',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r12',text:'KPI: % de divergência por tipo',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r13',text:'KPI: Tempo médio de veículo na doca',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'r14',text:'KPI: Acuracidade de recebimento (NF vs Físico)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
-    armazenagem:{name:'Armazenagem',icon:'📦',requirements:[{id:'a1',text:'Estratégia de endereçamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a2',text:'Etiquetagem de paletes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a3',text:'Sistema de endereçamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a4',text:'Validação de endereço (Capacidade M3, Peso)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a5',text:'Zonas definidas por curva/tipo de produto',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a6',text:'Endereços adequados por tipo de embalagem',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a7',text:'Critérios de Armazenagem (FIFO / FEFO / LIFO)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a8',text:'Endereço multifuncional ou exclusivo?',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a9',text:'Endereço aceita vários produtos ou apenas um SKU?',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a10',text:'Regras de Proximidade do Picking',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a12',text:'KPI: % de ocupação por zona',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a13',text:'KPI: % de utilização de endereços',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'a14',text:'KPI: Tempo médio de armazenagem por palete',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
-    gestaoEstoque:{name:'Gestão de Estoque',icon:'📊',requirements:[{id:'ge1',text:'Inventário rotativo',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge2',text:'Inventário - Contagem cega',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge3',text:'Política de FIFO/FEFO',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge4',text:'Controle por Série',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge5',text:'Consultas de Estoque por Endereço',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge6',text:'Controle de Avaria/Perdas/Divergências',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge8',text:'Acuracidade do estoque (físico vs sistema)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge9',text:'Estoque ajustado somente por sistema',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge10',text:'KPI: Acuracidade de estoque (%)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge11',text:'KPI: Estoque com validade vencida',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge12',text:'KPI: Giro de estoque',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'ge13',text:'KPI: % de estoque avariado',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
-    separacao:{name:'Separação / Picking',icon:'🎯',requirements:[{id:'s1',text:'Estratégia de separação/Picking definida',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s2',text:'Separação por Transportadora/Região/Cidade',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s3',text:'Equipamento usado para separação',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s4',text:'Estratégia (discrete, batch, zona, wave)',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s5',text:'Reabastecimento automático',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s6',text:'Produtos A nas posições mais acessíveis',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s7',text:'Separação por zona com consolidação posterior',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s8',text:'Um pedido por vez ou múltiplos',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s9',text:'Separador escaneia produto/quantidade/endereço',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s10',text:'Separação já forma volumes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s12',text:'KPI: Pedidos separados por hora',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s13',text:'KPI: % de acuracidade da separação',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'s14',text:'KPI: Tempo médio por tarefa de picking',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
-    conferencia:{name:'Conferência',icon:'✅',requirements:[{id:'c1',text:'Conferente valida pelo pedido ou pelo scan',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c2',text:'Conferência em estação dedicada',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c3',text:'Recontagem por divergência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c4',text:'Escaneamento de produto, endereço e volume',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c5',text:'Conferência por item ou por volume fechado',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c6',text:'Dividir ou consolidar pedidos na conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c7',text:'KPI: % de acuracidade da conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c8',text:'KPI: Tempo médio por conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'c9',text:'KPI: % de divergência na conferência',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
-    packing:{name:'Packing / Embalagem',icon:'📦',requirements:[{id:'p1',text:'Montagem dos volumes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p2',text:'Critérios de formação dos volumes',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p3',text:'Padronização de embalagem',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p4',text:'Peso máximo por caixa',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p5',text:'Separação por tipo de produto',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p6',text:'Embalagem diferenciada por cliente',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p7',text:'Volume amarrado ao número do pedido',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p9',text:'Etiqueta com código rastreável',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'p10',text:'Formação no final da conferência ou durante picking',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]},
-    expedicao:{name:'Expedição',icon:'🚚',requirements:[{id:'e1',text:'Controle de docas de saída',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e2',text:'Pré-embarque / staging',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e3',text:'Check-list de carregamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e4',text:'Romaneio e rastreio',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e5',text:'Ordem de carga respeita a rota de entrega',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e6',text:'Carregador lê o volume antes de embarcar',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e7',text:'Controle de tempo no CD',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e8',text:'Staging por transportadora ou rota',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e9',text:'KPI: % de pedidos expedidos no prazo',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e10',text:'KPI: Tempo médio de carregamento',faz:'',execucao:'',controle:'',prioridade:'',observacao:''},{id:'e11',text:'KPI: Tempo médio de veículo na doca',faz:'',execucao:'',controle:'',prioridade:'',observacao:''}]}
-  }};
-}
-
-const RFP_MODULES=[{id:'dashboard',name:'Dashboard',icon:'📊'},{id:'infoGerais',name:'Informações Gerais',icon:'📂'},{id:'infraestrutura',name:'Infraestrutura',icon:'🗂️'},{id:'produtosGiro',name:'Produtos e Giro',icon:'📦'},{id:'layout',name:'Layout / Estrutura',icon:'🧠'},{id:'recebimento',name:'Recebimento',icon:'🚛'},{id:'armazenagem',name:'Armazenagem',icon:'📦'},{id:'gestaoEstoque',name:'Gestão de Estoque',icon:'📊'},{id:'separacao',name:'Separação / Picking',icon:'🎯'},{id:'conferencia',name:'Conferência',icon:'✅'},{id:'packing',name:'Packing',icon:'📦'},{id:'expedicao',name:'Expedição',icon:'🚚'}];
-let _rfpMod='dashboard';
-
-function rfpProgress(rfp){if(!rfp?.dados)return 0;let t=0,f=0;Object.values(rfp.dados).forEach(m=>{if(m.requirements)m.requirements.forEach(r=>{t+=4;if(r.faz)f++;if(r.execucao)f++;if(r.controle)f++;if(r.prioridade)f++;});else if(m.fields)m.fields.forEach(fi=>{t++;if(fi.value)f++;});});return t>0?Math.round(f/t*100):0;}
-function rfpModProgress(rfp,modId){const m=rfp?.dados?.[modId];if(!m)return 0;let t=0,f=0;if(m.requirements)m.requirements.forEach(r=>{t+=4;if(r.faz)f++;if(r.execucao)f++;if(r.controle)f++;if(r.prioridade)f++;});else if(m.fields)m.fields.forEach(fi=>{t++;if(fi.value)f++;});return t>0?Math.round(f/t*100):0;}
-function rfpStatusBadge(rfp){const pct=rfpProgress(rfp);if(pct===0)return'<span class="rfp-status-badge rfp-status-na">⚪ Não Iniciada</span>';if(pct<100)return`<span class="rfp-status-badge rfp-status-em">🔵 Em Andamento ${pct}%</span>`;return'<span class="rfp-status-badge rfp-status-ok">✅ Concluída</span>';}
-
-function showPage_rfp(){_rfpMod='dashboard';renderRFPList();}
-
-function renderRFPList(){
-  const el=document.getElementById('page-rfp');if(!el)return;
-  const projs=S.projects;
-  el.innerHTML=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
-    <div><h1 style="font-family:var(--display);font-size:19px;font-weight:800">📋 Análise RFP</h1>
-    <p style="font-size:12px;color:var(--mid);margin-top:2px">Levantamento de requisitos WMS por projeto</p></div></div>
-  ${!projs.length?'<div class="card" style="padding:40px;text-align:center;color:var(--dim)"><div style="font-size:32px;margin-bottom:10px">📋</div><div>Nenhum projeto cadastrado ainda.</div></div>':''}
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
-    ${projs.map(p=>{const rfp=p.rfp||null;const pct=rfp?rfpProgress(rfp):0;
-    return`<div class="rfp-card" onclick="openRFP('${p.id}')">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px">
-        <div class="rfp-card-title">${esc(p.name)}</div>${rfpStatusBadge(rfp)}</div>
-      <div class="rfp-card-meta" style="margin-bottom:8px">${rfp?.cidade?`📍 ${esc(rfp.cidade)}${rfp.estado?', '+rfp.estado:''}  `:''}${rfp?.responsavel?`👤 ${esc(rfp.responsavel)}`:''}${!rfp?.responsavel&&!rfp?.cidade?'Clique para iniciar o levantamento':''}</div>
-      ${pct>0?`<div class="rfp-pbar"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div><div style="font-size:10px;color:var(--dim);margin-top:4px">${pct}% preenchido</div>`:''}
-    </div>`;}).join('')}
-  </div>`;
-}
-
-function openRFP(pid){
-  const proj=getP(pid);if(!proj)return;
-  if(!proj.rfp)proj.rfp=createEmptyRFP();
-  S.cur=pid;_rfpMod='dashboard';renderRFPEditor();
-}
-
-function renderRFPEditor(){
-  const proj=getP(S.cur);if(!proj||!proj.rfp)return;
-  const el=document.getElementById('page-rfp');if(!el)return;
-  const rfp=proj.rfp;
-  const nav=RFP_MODULES.map(m=>{const pct=m.id==='dashboard'?null:rfpModProgress(rfp,m.id);
-    return`<div class="rfp-nav-item ${_rfpMod===m.id?'on':''}" onclick="setRFPMod('${m.id}')"><span>${m.icon}</span><span>${m.name}</span>${pct!==null?`<span class="rfp-nav-pct">${pct}%</span>`:''}</div>`;}).join('');
-  el.innerHTML=`<div class="rfp-layout">
-    <div class="rfp-sidenav">
-      <div style="padding:12px 14px 8px;border-bottom:1px solid var(--border)">
-        <button class="btn btn-ghost btn-xs" onclick="renderRFPList()" style="width:100%;justify-content:flex-start">← Todos os Projetos</button>
-      </div>
-      <div style="padding:10px 14px;border-bottom:1px solid var(--border)">
-        <div style="font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(proj.name)}</div>
-        <div style="margin-top:4px">${rfpStatusBadge(rfp)}</div>
-        <div class="rfp-pbar" style="margin-top:6px"><div class="rfp-pbar-fill" style="width:${rfpProgress(rfp)}%"></div></div>
-      </div>
-      <div class="rfp-sidenav-title" style="margin-top:8px">Módulos</div>
-      ${nav}
-    </div>
-    <div class="rfp-main" id="rfp-main-content"></div>
-  </div>`;
-  renderRFPModule();
-}
-
-function setRFPMod(modId){_rfpMod=modId;renderRFPEditor();}
-
-function renderRFPModule(){
-  const proj=getP(S.cur);if(!proj||!proj.rfp)return;
-  const el=document.getElementById('rfp-main-content');if(!el)return;
-  const rfp=proj.rfp;
-  if(_rfpMod==='dashboard'){renderRFPDashboard(el,proj,rfp);return;}
-  const modDef=RFP_MODULES.find(m=>m.id===_rfpMod);
-  const modData=rfp.dados[_rfpMod];
-  if(!modData){el.innerHTML='<p style="color:var(--dim)">Módulo não encontrado.</p>';return;}
-  const pct=rfpModProgress(rfp,_rfpMod);
-  let html=`<div class="rfp-header">
-    <div style="flex:1"><div class="rfp-module-title">${modDef?.icon||''} ${modData.name}</div>
-    <div class="rfp-module-sub">${pct}% preenchido</div>
-    <div class="rfp-pbar" style="width:200px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
-    <button class="btn btn-primary btn-xs" onclick="saveRFP()">💾 Salvar</button></div>`;
-  if(modData.fields){
-    html+=`<div class="rfp-field-row">`;
-    modData.fields.forEach((f,fi)=>{
-      const isLong=f.label.length>35||['layoutAtual','gargalos','oportunidades'].some(k=>f.id.toLowerCase().includes(k.toLowerCase()));
-      html+=`<div class="rfp-field" ${isLong?'style="grid-column:span 2"':''}>
-        <label>${f.label}</label>
-        ${isLong?`<textarea rows="2" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" style="resize:vertical">${esc(f.value)}</textarea>`:`<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Preencher...">`}
-      </div>`;
-    });
-    html+=`</div>`;
-  }
-  if(modData.requirements){
-    html+=`<div style="overflow-x:auto"><table class="rfp-req-table">
-      <thead><tr><th style="min-width:200px">Requisito</th><th style="width:90px">Faz?</th><th style="min-width:120px">Como executa</th><th style="min-width:120px">Como controla</th><th style="width:100px">Prioridade</th><th style="min-width:120px">Observação</th></tr></thead><tbody>`;
-    modData.requirements.forEach((r,ri)=>{
-      const pClass=r.prioridade==='Alta'?'rfp-prio-alta':r.prioridade==='Média'?'rfp-prio-media':r.prioridade==='Baixa'?'rfp-prio-baixa':'';
-      html+=`<tr><td class="rfp-req-text">${esc(r.text)}</td>
-        <td><select onchange="rfpUpdateReq('${_rfpMod}',${ri},'faz',this.value)"><option value="" ${!r.faz?'selected':''}>—</option><option value="Sim" ${r.faz==='Sim'?'selected':''}>✅ Sim</option><option value="Não" ${r.faz==='Não'?'selected':''}>❌ Não</option><option value="Parcial" ${r.faz==='Parcial'?'selected':''}>⚠️ Parcial</option></select></td>
-        <td>
-          <select onchange="rfpUpdateReq('${_rfpMod}',${ri},'execucao',this.value)">
-            <option value="">— Como executa —</option>
-            ${WMS_REQ_SUGG.execucao.map(s=>`<option value="${s}" ${r.execucao===s?'selected':''}>${s}</option>`).join('')}
-            <option value="${r.execucao&&!WMS_REQ_SUGG.execucao.includes(r.execucao)?r.execucao:''}">
-              ${r.execucao&&!WMS_REQ_SUGG.execucao.includes(r.execucao)?r.execucao:'✏️ Outro'}
-            </option>
-          </select>
-        </td>
-        <td>
-          <select onchange="rfpUpdateReq('${_rfpMod}',${ri},'controle',this.value)">
-            <option value="">— Como controla —</option>
-            ${WMS_REQ_SUGG.controle.map(s=>`<option value="${s}" ${r.controle===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </td>
-        <td>
-          <select class="${pClass}" onchange="rfpUpdateReq('${_rfpMod}',${ri},'prioridade',this.value)">
-            <option value="" ${!r.prioridade?'selected':''}>—</option>
-            <option value="Alta" ${r.prioridade==='Alta'?'selected':''}>🔴 Alta</option>
-            <option value="Média" ${r.prioridade==='Média'?'selected':''}>🟡 Média</option>
-            <option value="Baixa" ${r.prioridade==='Baixa'?'selected':''}>🟢 Baixa</option>
-          </select>
-        </td>
-        <td>
-          <select onchange="rfpUpdateReq('${_rfpMod}',${ri},'observacao',this.value)">
-            <option value="">— Observação —</option>
-            ${WMS_REQ_SUGG.observacao.map(s=>`<option value="${s}" ${r.observacao===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </td>
-      </tr>`;
-    });
-    html+=`</tbody></table></div>`;
-  }
-  el.innerHTML=html;
-}
-
-function renderRFPDashboard(el,proj,rfp){
-  const pct=rfpProgress(rfp);
-  let totalReqs=0,altaCount=0,modsDone=0;
-  const modKeys=Object.keys(rfp.dados);
-  modKeys.forEach(k=>{const m=rfp.dados[k];if(m.requirements){totalReqs+=m.requirements.length;altaCount+=m.requirements.filter(r=>r.prioridade==='Alta').length;}if(rfpModProgress(rfp,k)===100)modsDone++;});
-  const modCards=RFP_MODULES.filter(m=>m.id!=='dashboard').map(m=>{const p=rfpModProgress(rfp,m.id);const col=p===100?'var(--green)':p>0?'var(--amber)':'var(--border)';
-    return`<div class="rfp-card" onclick="setRFPMod('${m.id}')" style="padding:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;font-weight:700;color:${col}">${p}%</span></div>
-      <div class="rfp-pbar"><div class="rfp-pbar-fill" style="width:${p}%;background:${col}"></div></div>
-    </div>`;}).join('');
-  el.innerHTML=`<div class="rfp-header">
-    <div style="flex:1"><div class="rfp-module-title">📊 Dashboard — ${esc(proj.name)}</div><div class="rfp-module-sub">Visão geral do levantamento RFP</div></div>
-    <button class="btn btn-primary btn-xs" onclick="openRFPInfo()">✏️ Dados do Levantamento</button></div>
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Responsável</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.responsavel||'—')}</div></div>
-    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Localidade</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.cidade?esc(rfp.cidade)+(rfp.estado?'/'+rfp.estado:''):'—'}</div></div>
-    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Unidade de Suporte</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.unidadeSuporte||'—')}</div></div>
-    <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Data</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.dataLevantamento?new Date(rfp.dataLevantamento+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div></div>
-  </div>
-  <div class="rfp-dash-grid">
-    <div class="rfp-dash-card"><div class="rfp-dash-num">${pct}%</div><div class="rfp-dash-lbl">Progresso Geral</div><div class="rfp-pbar" style="margin-top:8px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
-    <div class="rfp-dash-card"><div class="rfp-dash-num">${modsDone}</div><div class="rfp-dash-lbl">Módulos Concluídos</div><div style="font-size:11px;color:var(--dim);margin-top:4px">de ${modKeys.length} módulos</div></div>
-    <div class="rfp-dash-card"><div class="rfp-dash-num">${totalReqs}</div><div class="rfp-dash-lbl">Requisitos Mapeados</div></div>
-    <div class="rfp-dash-card"><div class="rfp-dash-num rfp-prio-alta">${altaCount}</div><div class="rfp-dash-lbl">Prioridade Alta</div></div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${modCards}</div>`;
-}
-
-function rfpUpdateField(modId,idx,val){const proj=getP(S.cur);if(!proj?.rfp)return;if(val==='_outro_')return;proj.rfp.dados[modId].fields[idx].value=val;}
-function rfpUpdateReq(modId,idx,field,val){const proj=getP(S.cur);if(!proj?.rfp)return;proj.rfp.dados[modId].requirements[idx][field]=val;}
-function saveRFP(){const proj=getP(S.cur);if(!proj?.rfp)return;saveS();toast('✅ RFP salva com sucesso!','ok');renderRFPEditor();}
-
-function openRFPInfo(pid){
-  const proj=getP(pid||S.cur);
-  if(!proj){toast('Selecione um projeto primeiro','err');return;}
-  if(!proj.rfp)proj.rfp=createEmptyRFP();
-  const rfp=proj.rfp;
-  const stateOpts=ESTADOS_BR.map(e=>`<option value="${e}" ${rfp.estado===e?'selected':''}>${e}</option>`).join('');
-  const cityOpts=(CIDADES_BR[rfp.estado]||[]).map(c=>`<option value="${c}" ${rfp.cidade===c?'selected':''}>${c}</option>`).join('');
-  
-  // Render inline in the module area instead of modal
-  const el=document.getElementById('rfp-tab-module');
-  if(!el){toast('Área não encontrada','err');return;}
-  
-  el.innerHTML=`
-  <div style="max-width:680px">
-    <div class="rfp-header" style="margin-bottom:20px">
-      <div style="flex:1">
-        <div class="rfp-module-title">✏️ Dados do Levantamento</div>
-        <div class="rfp-module-sub">Informações gerais do levantamento RFP</div>
-      </div>
-      <button class="btn btn-ghost btn-xs" onclick="_rfpTabMod('dashboard')">← Voltar</button>
-    </div>
-    
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:16px">
-      <div class="rfp-field-row">
-        <div class="rfp-field">
-          <label>👤 Responsável pelo Levantamento</label>
-          <input class="fc" type="text" id="rfi-responsavel" value="${esc(rfp.responsavel||'')}" placeholder="Nome do responsável">
-        </div>
-        <div class="rfp-field">
-          <label>🏢 Unidade de Suporte</label>
-          <input class="fc" type="text" id="rfi-unidade" value="${esc(rfp.unidadeSuporte||'')}" placeholder="Ex: AXL Uberlândia">
-        </div>
-      </div>
-      <div class="rfp-field-row">
-        <div class="rfp-field">
-          <label>📅 Data do Levantamento</label>
-          <input class="fc" type="date" id="rfi-data" value="${rfp.dataLevantamento||''}">
-        </div>
-        <div class="rfp-field">
-          <label>🗺️ Estado</label>
-          <select class="fc" id="rfi-estado" onchange="rfpLoadCidades('')">
-            <option value="">Selecione o estado...</option>
-            ${stateOpts}
-          </select>
-        </div>
-      </div>
-      <div class="rfp-field-row">
-        <div class="rfp-field">
-          <label>📍 Cidade</label>
-          <select class="fc" id="rfi-cidade">
-            <option value="">Selecione a cidade...</option>
-            ${cityOpts}
-          </select>
-        </div>
-        <div class="rfp-field">
-          <label>✏️ Ou digite a cidade manualmente</label>
-          <input class="fc" type="text" id="rfi-cidade-custom" placeholder="Nome da cidade">
-        </div>
-      </div>
-    </div>
-    
-    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
-      <button class="btn btn-ghost" onclick="_rfpTabMod('dashboard')">Cancelar</button>
-      <button class="btn btn-primary" onclick="saveRFPInfo()">💾 Salvar Dados</button>
-    </div>
-  </div>`;
-  
-  // Set estado value after render
-  const estEl=document.getElementById('rfi-estado');
-  if(estEl){estEl.value=rfp.estado||'';rfpLoadCidades(rfp.cidade);}
-}
-
-function rfpLoadCidades(selectedCity){
-  const est=document.getElementById('rfi-estado')?.value||'';
-  const cidades=CIDADES_BR[est]||[];
-  const citSel=document.getElementById('rfi-cidade');if(!citSel)return;
-  citSel.innerHTML='<option value="">Selecione a cidade...</option>'+cidades.map(c=>`<option value="${c}" ${c===selectedCity?'selected':''}>${c}</option>`).join('');
-  if(selectedCity&&!cidades.includes(selectedCity)) citSel.innerHTML+=`<option value="${selectedCity}" selected>${selectedCity}</option>`;
-  citSel.value=selectedCity||'';
-}
-
-function saveRFPInfo(){
-  const proj=getP(S.cur);
-  if(!proj)return;
-  if(!proj.rfp)proj.rfp=createEmptyRFP();
-  proj.rfp.responsavel=(document.getElementById('rfi-responsavel')?.value||'').trim();
-  proj.rfp.unidadeSuporte=(document.getElementById('rfi-unidade')?.value||'').trim();
-  proj.rfp.dataLevantamento=document.getElementById('rfi-data')?.value||'';
-  proj.rfp.estado=document.getElementById('rfi-estado')?.value||'';
-  const cidadeCustom=(document.getElementById('rfi-cidade-custom')?.value||'').trim();
-  const cidadeSelect=document.getElementById('rfi-cidade')?.value||'';
-  proj.rfp.cidade=cidadeCustom||cidadeSelect;
-  saveS();
-  toast('✅ Dados do levantamento salvos!','ok');
-  _rfpMod='dashboard';
-  renderRFPTab();
-}
-
-
-function openProjectRFP(pid){
-  showPage('detail', pid);
-  // Switch to RFP tab after detail renders
-  setTimeout(()=>{
-    const tab=document.getElementById('dtab-rfp');
-    if(tab) switchTab(tab,'tab-rfp');
-  }, 50);
-}
-
-
-function renderRFPTab(){
-  const proj=getP(S.cur);if(!proj)return;
-  if(!proj.rfp)proj.rfp=createEmptyRFP();
-  const el=document.getElementById('rfp-tab-content');if(!el)return;
-  const rfp=proj.rfp;
-  _rfpMod='dashboard';
-
-  const nav=RFP_MODULES.map(m=>{
-    const pct=m.id==='dashboard'?null:rfpModProgress(rfp,m.id);
-    return`<div class="rfp-nav-item ${_rfpMod===m.id?'on':''}" onclick="_rfpTabMod('${m.id}')">
-      <span>${m.icon}</span><span>${m.name}</span>
-      ${pct!==null?`<span class="rfp-nav-pct">${pct}%</span>`:''}
-    </div>`;}).join('');
-
-  el.innerHTML=`<div class="rfp-layout" style="height:calc(100vh - 120px)">
-    <div class="rfp-sidenav">
-      <div style="padding:10px 14px;border-bottom:1px solid var(--border)">
-        <div style="font-size:11px;font-weight:700;color:var(--text)">${esc(proj.name)}</div>
-        <div style="margin-top:4px">${rfpStatusBadge(rfp)}</div>
-        <div class="rfp-pbar" style="margin-top:6px"><div class="rfp-pbar-fill" style="width:${rfpProgress(rfp)}%"></div></div>
-      </div>
-      <div class="rfp-sidenav-title" style="margin-top:8px">Módulos</div>
-      ${nav}
-    </div>
-    <div class="rfp-main" id="rfp-tab-module"></div>
-  </div>`;
-  _rfpTabRenderModule();
-}
-
-function _rfpTabMod(modId){
-  _rfpMod=modId;
-  // Update nav active state
-  document.querySelectorAll('#rfp-tab-content .rfp-nav-item').forEach(el=>{
-    el.classList.toggle('on', el.getAttribute('onclick')===`_rfpTabMod('${modId}')`);
-  });
-  _rfpTabRenderModule();
-}
-
-function _rfpTabRenderModule(){
-  const proj=getP(S.cur);if(!proj?.rfp)return;
-  const el=document.getElementById('rfp-tab-module');if(!el)return;
-  const rfp=proj.rfp;
-
-  if(_rfpMod==='dashboard'){
-    // Dashboard inside tab
-    const pct=rfpProgress(rfp);
-    let totalReqs=0,altaCount=0,modsDone=0;
-    const modKeys=Object.keys(rfp.dados);
-    modKeys.forEach(k=>{const m=rfp.dados[k];if(m.requirements){totalReqs+=m.requirements.length;altaCount+=m.requirements.filter(r=>r.prioridade==='Alta').length;}if(rfpModProgress(rfp,k)===100)modsDone++;});
-    const modCards=RFP_MODULES.filter(m=>m.id!=='dashboard').map(m=>{const p=rfpModProgress(rfp,m.id);const col=p===100?'var(--green)':p>0?'var(--amber)':'var(--border)';
-      return`<div class="rfp-card" onclick="_rfpTabMod('${m.id}')" style="padding:12px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">${m.icon} ${m.name}</span><span style="font-size:11px;font-weight:700;color:${col}">${p}%</span></div>
-        <div class="rfp-pbar"><div class="rfp-pbar-fill" style="width:${p}%;background:${col}"></div></div>
-      </div>`;}).join('');
-    el.innerHTML=`<div class="rfp-header">
-      <div style="flex:1"><div class="rfp-module-title">📊 Dashboard RFP</div><div class="rfp-module-sub">Levantamento de requisitos WMS</div></div>
-      <button class="btn btn-primary btn-xs" onclick="openRFPInfo('${proj.id}')">✏️ Dados do Levantamento</button></div>
-    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
-      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Responsável</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.responsavel||'—')}</div></div>
-      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Localidade</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.cidade?esc(rfp.cidade)+(rfp.estado?'/'+rfp.estado:''):'—'}</div></div>
-      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Unidade de Suporte</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.unidadeSuporte||'—')}</div></div>
-      <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Data</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.dataLevantamento?new Date(rfp.dataLevantamento+'T12:00:00').toLocaleDateString('pt-BR'):'—'}</div></div>
-    </div>
-    <div class="rfp-dash-grid">
-      <div class="rfp-dash-card"><div class="rfp-dash-num">${pct}%</div><div class="rfp-dash-lbl">Progresso Geral</div><div class="rfp-pbar" style="margin-top:8px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
-      <div class="rfp-dash-card"><div class="rfp-dash-num">${modsDone}</div><div class="rfp-dash-lbl">Módulos Concluídos</div><div style="font-size:11px;color:var(--dim);margin-top:4px">de ${modKeys.length}</div></div>
-      <div class="rfp-dash-card"><div class="rfp-dash-num">${totalReqs}</div><div class="rfp-dash-lbl">Requisitos Mapeados</div></div>
-      <div class="rfp-dash-card"><div class="rfp-dash-num rfp-prio-alta">${altaCount}</div><div class="rfp-dash-lbl">Prioridade Alta</div></div>
-    </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">${modCards}</div>`;
-    return;
-  }
-
-  const modDef=RFP_MODULES.find(m=>m.id===_rfpMod);
-  const modData=rfp.dados[_rfpMod];
-  if(!modData){el.innerHTML='<p style="color:var(--dim)">Módulo não encontrado.</p>';return;}
-  const pct=rfpModProgress(rfp,_rfpMod);
-
-  let html2=`<div class="rfp-header">
-    <div style="flex:1"><div class="rfp-module-title">${modDef?.icon||''} ${modData.name}</div>
-    <div class="rfp-module-sub">${pct}% preenchido</div>
-    <div class="rfp-pbar" style="width:200px"><div class="rfp-pbar-fill" style="width:${pct}%"></div></div></div>
-    <button class="btn btn-primary btn-xs" onclick="saveRFPTab()">💾 Salvar</button></div>`;
-
-  if(modData.fields){
-    html2+=`<div class="rfp-field-row">`;
-    modData.fields.forEach((f,fi)=>{
-      const isLong=['layoutAtual','gargalos','oportunidades'].some(k=>f.id.toLowerCase().includes(k.toLowerCase()))||f.label.length>35;
-      const suggs=WMS_SUGG[f.id]||[];
-      const selOpts=suggs.map(s=>`<option value="${s}" ${f.value===s?'selected':''}>${s}</option>`).join('');
-      html2+=`<div class="rfp-field" ${isLong?'style="grid-column:span 2"':''}>
-        <label>${f.label}</label>
-        ${suggs.length
-          ? `<select onchange="rfpUpdateField('${_rfpMod}',${fi},this.value)">
-               <option value="">— Selecione —</option>
-               ${selOpts}
-               <option value="_outro_">✏️ Outro (digitar)</option>
-             </select>
-             ${f.value&&!suggs.includes(f.value)?`<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Descreva..." style="margin-top:4px">`:
-               `<input type="text" id="custom-${_rfpMod}-${fi}" value="" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Descreva aqui..." style="margin-top:4px;display:none">`
-             }`
-          : `<input type="text" value="${esc(f.value)}" oninput="rfpUpdateField('${_rfpMod}',${fi},this.value)" placeholder="Preencher...">`
-        }
-      </div>`;
-    });
-    html2+=`</div>`;
-    // Show custom input when "Outro" selected - use setTimeout after innerHTML set
-    setTimeout(()=>{
-      document.querySelectorAll('.rfp-field select').forEach(function(sel){
-        // Set initial state for existing custom values
-        var nxt=sel.parentElement.querySelector('input[type=text]');
-        if(nxt){nxt.style.display='none';}
-        sel.addEventListener('change',function(){
-          var n=this.parentElement.querySelector('input[type=text]');
-          if(n){n.style.display=this.value==='_outro_'?'block':'none';if(this.value!=='_outro_')n.value='';}
-        });
-      });
-    },0);
-  }
-
-  if(modData.requirements){
-    const execOpts=WMS_REQ_SUGG.execucao.map(s=>`<option value="${s}">`).join('');
-    const ctrlOpts=WMS_REQ_SUGG.controle.map(s=>`<option value="${s}">`).join('');
-    const obsOpts=WMS_REQ_SUGG.observacao.map(s=>`<option value="${s}">`).join('');
-    html2+=`<datalist id="dl-exec">${execOpts}</datalist><datalist id="dl-ctrl">${ctrlOpts}</datalist><datalist id="dl-obs">${obsOpts}</datalist>`;
-    html2+=`<div style="overflow-x:auto"><table class="rfp-req-table">
-      <thead><tr><th style="min-width:200px">Requisito</th><th style="width:90px">Faz?</th><th style="min-width:120px">Como executa</th><th style="min-width:120px">Como controla</th><th style="width:100px">Prioridade</th><th style="min-width:120px">Observação</th></tr></thead><tbody>`;
-    modData.requirements.forEach((r,ri)=>{
-      const pClass=r.prioridade==='Alta'?'rfp-prio-alta':r.prioridade==='Média'?'rfp-prio-media':r.prioridade==='Baixa'?'rfp-prio-baixa':'';
-      html2+=`<tr>
-        <td class="rfp-req-text">${esc(r.text)}</td>
-        <td><select onchange="rfpUpdateReq('${_rfpMod}',${ri},'faz',this.value)"><option value="" ${!r.faz?'selected':''}>—</option><option value="Sim" ${r.faz==='Sim'?'selected':''}>✅ Sim</option><option value="Não" ${r.faz==='Não'?'selected':''}>❌ Não</option><option value="Parcial" ${r.faz==='Parcial'?'selected':''}>⚠️ Parcial</option></select></td>
-        <td><input type="text" value="${esc(r.execucao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'execucao',this.value)" placeholder="Como..."></td>
-        <td><input type="text" value="${esc(r.controle)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'controle',this.value)" placeholder="Como..."></td>
-        <td><select class="${pClass}" onchange="rfpUpdateReq('${_rfpMod}',${ri},'prioridade',this.value)"><option value="" ${!r.prioridade?'selected':''}>—</option><option value="Alta" ${r.prioridade==='Alta'?'selected':''}>🔴 Alta</option><option value="Média" ${r.prioridade==='Média'?'selected':''}>🟡 Média</option><option value="Baixa" ${r.prioridade==='Baixa'?'selected':''}>🟢 Baixa</option></select></td>
-        <td><input type="text" value="${esc(r.observacao)}" oninput="rfpUpdateReq('${_rfpMod}',${ri},'observacao',this.value)" placeholder="Obs..."></td>
-      </tr>`;
-    });
-    html2+=`</tbody></table></div>`;
-  }
-  el.innerHTML=html2;
-}
-
-function saveRFPTab(){
-  const proj=getP(S.cur);if(!proj?.rfp)return;
-  saveS();
-  toast('✅ RFP salva com sucesso!','ok');
-  // Refresh nav badges
-  const navItems=document.querySelectorAll('#rfp-tab-content .rfp-nav-item');
-  navItems.forEach(ni=>{
-    const onclick=ni.getAttribute('onclick')||'';
-    const m=onclick.match(/_rfpTabMod\('([^']+)'\)/);
-    if(m&&m[1]!=='dashboard'){
-      const pct=rfpModProgress(proj.rfp,m[1]);
-      const badge=ni.querySelector('.rfp-nav-pct');
-      if(badge)badge.textContent=pct+'%';
-    }
-  });
-}
-
-
-
-// ════════════════════════════════════
-// WMS FIELD SUGGESTIONS
-// ════════════════════════════════════
-const WMS_SUGG = {
-  // Info Gerais
-  tipoOperacao:['B2B (Distribuição)','B2C (E-commerce)','B2B + B2C (Híbrido)','Transferência entre CDs','Operação Farmacêutica','Operação Frigorificada','Operação de Peças e Autopeças','Operação de Alimentos Secos','Operação de Bebidas','Atacado / Distribuição'],
-  tipoProduto:['Carga seca geral','Produtos alimentícios embalados','Bebidas','Peças e autopeças','Produtos farmacêuticos','Eletroeletrônicos','Vestuário e calçados','Cosméticos e higiene','Produtos químicos','Produtos frigorificados','Material de construção'],
-  qtdeSKUs:['Até 500 SKUs','501 a 1.000 SKUs','1.001 a 5.000 SKUs','5.001 a 10.000 SKUs','10.001 a 30.000 SKUs','Acima de 30.000 SKUs'],
-  sazonalidade:['Sem sazonalidade relevante','Sazonalidade moderada (±20%)','Alta sazonalidade (±50%)','Sazonalidade por datas comemorativas','Sazonalidade climática','Picos em fim de ano'],
-  turnos:['1 turno (8h)','2 turnos (16h)','3 turnos (24h - ininterrupto)','Turno estendido (10h)','Turno variável conforme demanda'],
-  volumeDiario:['Até 100 pedidos/dia','101 a 500 pedidos/dia','501 a 1.000 pedidos/dia','1.001 a 5.000 pedidos/dia','Acima de 5.000 pedidos/dia','Até 50 paletes/dia','51 a 200 paletes/dia','Acima de 200 paletes/dia'],
-  // Infraestrutura
-  areaTotalConstruida:['Até 500 m²','501 a 2.000 m²','2.001 a 5.000 m²','5.001 a 10.000 m²','10.001 a 30.000 m²','Acima de 30.000 m²'],
-  areaUtilArmazenagem:['Até 300 m²','301 a 1.500 m²','1.501 a 4.000 m²','4.001 a 8.000 m²','Acima de 8.000 m²'],
-  peDireito:['Até 6m','6m a 8m','8m a 10m','10m a 12m','Acima de 12m'],
-  numeroDocas:['1 doca','2 a 4 docas','5 a 10 docas','11 a 20 docas','Acima de 20 docas','Docas compartilhadas entrada/saída','Docas exclusivas por função'],
-  tipoEstrutura:['Porta-paletes convencional','Drive-in / Drive-through','Push-back','Flow rack','Mezanino com flow rack','Cantilever','Blocado no chão','Misto (porta-paletes + blocado)','Shuttle','Autoportante'],
-  equipamentos:['Empilhadeira contrapesada','Empilhadeira retrátil','Transpaleteira elétrica','Transpaleteira manual','Reach truck','Order picker','Conveyor belt','AGV','Drone de inventário','Coletor de dados RF'],
-  redeWifi:['Sim, cobertura total do CD','Sim, cobertura parcial','Não possui — necessário implantar','Em processo de instalação','Rede cabeada disponível'],
-  // Produtos e Giro
-  classificacaoGiro:['Classificação ABC por volume de pedidos','Classificação ABC por faturamento','Classificação ABC por giro de estoque','Sem classificação formal','Classificação manual / empírica'],
-  produtosValidade:['Sim — controle obrigatório FEFO','Sim — controle FIFO','Não — sem validade','Parcialmente (mix de produtos)'],
-  produtosLote:['Sim — rastreabilidade por lote obrigatória','Sim — lote informativo','Não — sem controle de lote','Parcialmente (alguns itens)'],
-  unidadePicking:['Sim — unidade de picking diferente (ex: caixa vs unitário)','Não — mesma unidade no pulmão e picking','Múltiplas unidades (pallet, caixa, unidade)'],
-  diasExpedicao:['Expedição diária','2 a 3 dias por semana','Dias específicos por rota/transportadora','Conforme demanda do cliente','Expedição em janelas fixas (manhã/tarde)'],
-  shelfLife:['Mínimo 30% de vida útil restante','Mínimo 50% de vida útil restante','Mínimo 70% de vida útil restante','Shelf life específico por produto','Sem restrição de shelf life'],
-  misturaValidade:['Não permite mistura','Permite mistura com mesmo lote','Permite mistura com qualquer validade','Regra específica por cliente'],
-  misturaLote:['Não permite mistura de lotes','Permite mistura no mesmo endereço','Depende do produto','Sem controle de lote por endereço'],
-  produtosCompativeis:['Sem restrições de compatibilidade','Produtos químicos separados dos alimentícios','Separação por temperatura','Produtos perigosos em área isolada','Separação por tipo (seco/frio/congelado)'],
-  recuperacaoAvaria:['Devolução ao fornecedor','Área de quarentena com processo definido','Destruição com nota de baixa','Reembalagem e reaproveitamento','Sem processo formal definido'],
-  // Layout
-  layoutAtual:['Layout funcional por processo (recebimento→armazenagem→picking→expedição)','Layout misto sem fluxo definido','Layout em U (recebimento e expedição no mesmo lado)','Layout em I (recebimento e expedição opostos)','Layout em L','Sem layout formal definido'],
-  gargalosRecebimento:['Fila de veículos aguardando docas','Conferência manual lenta','Falta de área de pré-armazenagem','Ausência de sistema de agendamento','Divergências frequentes com NF','Falta de mão de obra'],
-  gargalosPulmao:['Endereçamento manual ineficiente','Falta de espaço vertical','Corredores estreitos','Equipamentos insuficientes','Mistura de produtos sem separação','Falta de sinalização de endereços'],
-  gargalosPicking:['Distância excessiva entre endereços','Falta de reabastecimento automatizado','Erros frequentes de separação','Ausência de rota otimizada','Falta de coletor de dados','Baixa acuracidade de estoque'],
-  gargalosExpedicao:['Atrasos no carregamento','Falta de staging area organizada','Divergência entre pedido e volume','Ausência de check-list de carga','Documentação manual lenta','Filas de veículos na saída'],
-  oportunidadesRecebimento:['Implantação de agendamento eletrônico','Conferência com coletor de dados','Integração com NF-e','Área dedicada de conferência','KPI de tempo por nota'],
-  oportunidadesPulmao:['Implantação de endereçamento inteligente','Verticalização do espaço','Classificação ABC para alocação','Sinalização visual de endereços','Sistema de inventário rotativo'],
-  oportunidadesPicking:['Rota otimizada de separação','Implantação de picking por zona','Reabastecimento automático','Pick-to-light / voice picking','Controle de produtividade por operador'],
-  oportunidadesExpedicao:['Staging area por rota/transportadora','Checklist de carregamento digital','Romaneio automático','KPI de tempo de carregamento','Integração com transportadora'],
-  eliminacaoCruzamento:['Sim — fluxo de veículos e pedestres separados','Parcialmente — algumas áreas segregadas','Não — sem segregação atual','Em implantação'],
-  pickingProximoExpedicao:['Sim — zona de picking adjacente à expedição','Parcialmente','Não — picking distante da expedição','Depende do tipo de produto'],
-  segurancaFluxo:['Sim — corredores exclusivos para pedestres','Parcialmente implementado','Não — sem separação atual','Em projeto de melhorias'],
-  expansaoFutura:['Sim — estrutura preparada para expansão','Parcialmente — possibilidade de vertical','Não — limitação física do imóvel','Imóvel com opção de ampliação'],
-};
-
-// Faz/Execução/Controle suggestions for requirements
-const WMS_REQ_SUGG = {
-  faz:['Sim — processo formalizado','Sim — parcialmente implementado','Não — necessidade mapeada','Não se aplica','Em implantação'],
-  execucao:['Manual / Planilha','Sistema ERP atual','WMS atual','Coletor de dados RF','Papel / Formulário físico','Processo não documentado','Via transportadora','Sistema próprio'],
-  controle:['KPI monitorado diariamente','KPI monitorado semanalmente','Controle manual / planilha','Sem controle formal','Auditoria periódica','Supervisor responsável','Sistema automatizado'],
-  prioridade:['Alta','Média','Baixa'],
-  observacao:['Processo crítico para operação','Gap identificado — necessita WMS','Boa prática já executada','Necessita treinamento de equipe','Depende de integração com ERP','Necessita investimento em infraestrutura','Quick win — fácil implementação']
-};
-
-function switchTab(el,tid){
-  document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
-  el.classList.add('on');
-  ['tab-stages','tab-gantt','tab-cost','tab-perf','tab-rfp'].forEach(id=>{const t=document.getElementById(id);if(t)t.style.display=id===tid?'block':'none';});
-  if(tid==='tab-gantt')renderGantt();
-  if(tid==='tab-cost')renderCostTab();
-  if(tid==='tab-perf')renderPerfTab();
-  if(tid==='tab-rfp'){try{renderRFPTab();}catch(e){console.warn('RFP tab:',e);}}
-}
-
-// Drag & drop
-document.addEventListener('DOMContentLoaded',()=>{
-  const dz=document.getElementById('drop-zone');
-  if(dz){
-    dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag');});
-    dz.addEventListener('dragleave',()=>dz.classList.remove('drag'));
-    dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)handleFile(f);});
-  }
-  // Event delegation for stage action buttons
-  document.addEventListener('click',e=>{
-    const btn=e.target.closest('[data-action]');
-    if(!btn)return;
-    e.stopPropagation();
-    const action=btn.dataset.action, id=btn.dataset.id;
-    if(!action||!id)return;
-    if(action==='ev')   openEvModal(id);
-    else if(action==='log')  openLogModal(id);
-    else if(action==='edit') openStageModal(false,id);
-    else if(action==='sub')  openStageModal(true,null,id);
-    else if(action==='del')  askDeleteStage(id);
-    else if(action==='up')   moveSubStage(id,'up');
-    else if(action==='down') moveSubStage(id,'down');
-  });
-});
-
-// ════════════════════════════════════
 // SEED & INIT
 // ════════════════════════════════════
 function seed(){
@@ -4088,6 +3530,23 @@ async function init(){
   if(loadSession()){enterApp();}
   startPolling(); // atualização em tempo real via polling
 }
+
+// ── Delegação de eventos para botões das etapas ──
+document.addEventListener('click',function(e){
+  var btn=e.target.closest('[data-action][data-sid]');
+  if(!btn)return;
+  e.stopPropagation();
+  var a=btn.getAttribute('data-action'),id=btn.getAttribute('data-sid');
+  if(!a||!id)return;
+  if(a==='ev')openEvModal(id);
+  else if(a==='log')openLogModal(id);
+  else if(a==='edit')openStageModal(false,id);
+  else if(a==='sub')openStageModal(true,null,id);
+  else if(a==='del')askDeleteStage(id);
+  else if(a==='up')moveSubStage(id,'up');
+  else if(a==='down')moveSubStage(id,'down');
+},true); // capture=true garante que captura antes de qualquer bubbling
+
 window.addEventListener('DOMContentLoaded', init);
 </script>
 </body>
