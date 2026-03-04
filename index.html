@@ -1617,7 +1617,14 @@ function showPage(page,pid=null){
     document.getElementById('snav-proj').classList.add('on');
     renderProjList();
   } else if(page==='detail'){
+    const _prevPid=S.cur;
     if(pid)S.cur=pid;
+    // Se mudou de projeto, limpa inputs do Gantt para recarregar período salvo
+    if(pid&&pid!==_prevPid){
+      const _gs=document.getElementById('gstart');
+      const _ge=document.getElementById('gend');
+      if(_gs)_gs.value='';if(_ge)_ge.value='';
+    }
     document.getElementById('page-detail').classList.add('on');
     document.getElementById('snav-proj').classList.add('on');
     renderDetail();
@@ -1693,6 +1700,25 @@ function renderCards(id,list){
 // ════════════════════════════════════
 // DETAIL
 // ════════════════════════════════════
+function _refreshDetailHeader(){
+  const proj=getP(S.cur);if(!proj)return;
+  const st=stats(proj),c=proj.color||'#0ea5e9';
+  const titleEl=document.getElementById('det-title');
+  if(titleEl){titleEl.textContent=proj.name;titleEl.style.color=c;}
+  const subEl=document.getElementById('det-sub');
+  if(subEl)subEl.textContent=`Cliente: ${proj.client||'—'}  ·  Responsável: ${proj.owner||'—'}`;
+  const badgeEl=document.getElementById('det-badges');
+  if(badgeEl)badgeEl.innerHTML=`
+    <span class="badge ${SB[proj.status]||'badge-gray'}">${proj.status}</span>
+    <span class="badge badge-gray">📅 ${fD(proj.startDate)} → ${fD(proj.endDate)}</span>
+    <span class="badge badge-amber">⏱️ ${proj.totalHours||0}h FAP</span>`;
+  const hEl=document.getElementById('det-hours');
+  if(hEl)hEl.innerHTML=`
+    <div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div>
+    <div class="hcard"><div class="hval" style="color:var(--amber)">${st.totalRootBudget}h</div><div class="hlbl">Etapas (orçamento)</div></div>
+    <div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div>
+    <div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>`;
+}
 function renderDetail(){
   const proj=getP(S.cur);if(!proj){showPage('projects');return;}
   const st=stats(proj),c=proj.color||'#0ea5e9';
@@ -2466,15 +2492,25 @@ function saveStage(){
     hourRate:parseFloat(document.getElementById('fs-rate')?.value)||0,
     status:document.getElementById('fs-status').value,
     parentId:document.getElementById('fs-parent').value||null,
-    bgColor:(()=>{const sel=document.querySelector('.stage-color-opt[style*="var(--accent)"]');return sel?sel.dataset.c:'';})()};
+    bgColor:(()=>{const sel=document.querySelector('.stage-color-opt[style*="var(--accent)"]');return sel?sel.dataset.c:'';})(),
+    dateReschedule:(()=>{const v=document.getElementById('fs-datereschedule')?.value;return v||'';})()};
   if(_eStageId){const i=proj.stages.findIndex(s=>s.id===_eStageId);if(i>=0)proj.stages[i]={...proj.stages[i],...d};toast('Etapa atualizada ✓');}
   else{proj.stages.push({id:uid(),...d});toast('Etapa adicionada ✓');}
   autoNumberStages(proj);
   saveS();closeModal('modal-stage');
-  // Re-render whichever tab is active
-  const ganttVisible=document.getElementById('tab-gantt')?.style.display!=='none';
-  if(ganttVisible)renderGantt();
-  renderDetail();
+  // Re-render apenas a aba ativa sem resetar para FAP
+  const _activeTab=document.querySelector('.dtab.on')?.getAttribute('onclick')?.match(/tab-[a-z]+/)?.[0];
+  // Se tem reagendamento, expande período do Gantt se necessário
+  if(d.dateReschedule){
+    const _reDate=d.dateReschedule.split('T')[0];
+    const _gend=document.getElementById('gend');
+    if(_gend&&_reDate>(_gend.value||'')){_gend.value=_reDate;saveGanttPeriod();}
+  }
+  if(_activeTab==='tab-gantt')renderGantt();
+  else if(_activeTab==='tab-cost')renderCostTab();
+  else if(_activeTab==='tab-perf')renderPerfTab();
+  else renderStages();
+  _refreshDetailHeader();
   _eStageId=null;_defParent=null;
 }
 function askDeleteStage(stageId){
