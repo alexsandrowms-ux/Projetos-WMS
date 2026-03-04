@@ -623,10 +623,10 @@ datalist{display:none}
         <div id="tab-gantt" style="display:none">
           <div class="card" style="padding:11px 16px;margin-bottom:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
             <label style="font-size:12px;color:var(--mid);display:flex;align-items:center;gap:7px">
-              📅 De: <input type="date" id="gstart" onchange="saveGanttPeriod()" class="fc" style="width:148px" onchange="renderGantt()">
+              📅 De: <input type="date" id="gstart" class="fc" style="width:148px" onchange="saveGanttPeriod();renderGantt()">
             </label>
             <label style="font-size:12px;color:var(--mid);display:flex;align-items:center;gap:7px">
-              📅 Até: <input type="date" id="gend" onchange="saveGanttPeriod()" class="fc" style="width:148px" onchange="renderGantt()">
+              📅 Até: <input type="date" id="gend" class="fc" style="width:148px" onchange="saveGanttPeriod();renderGantt()">
             </label>
             <button class="btn btn-ghost btn-xs" onclick="resetGanttPeriod()" title="Ver período completo do projeto" style="font-size:11px">🔄 Período do Projeto</button>
             <span id="gantt-period-info" style="font-size:11px;color:var(--dim)"></span>
@@ -2148,8 +2148,11 @@ function renderGantt(){
   const _saved=loadGanttPeriod();
   const _now=new Date();
   const _firstDay=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
-  if(_saved?.s){siEl.value=_saved.s;if(_saved.e)eiEl.value=_saved.e;}
-  else{if(!siEl?.value)siEl.value=autoStart||_firstDay;if(!eiEl?.value)eiEl.value=autoEnd||_firstDay;}
+  if(!siEl?.value && !eiEl?.value){
+    // Inputs vazios: restaura período salvo ou usa 1º dia do mês
+    if(_saved?.s){siEl.value=_saved.s;if(_saved.e)eiEl.value=_saved.e;}
+    else{siEl.value=autoStart||_firstDay;eiEl.value=autoEnd||_firstDay;}
+  }
   const sd=new Date(siEl.value+'T00:00:00');
   const ed=new Date(eiEl.value+'T00:00:00');
   if(ed<sd){eiEl.value=siEl.value;ed.setTime(sd.getTime());}
