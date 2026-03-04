@@ -2611,8 +2611,12 @@ function doImport(){
 function openExport(forDetail=false){
   const sel=document.getElementById('exp-proj-sel');
   if(!sel)return;
-  sel.innerHTML='<option value="__all__">Todos os projetos</option>'+S.projects.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
-  if(forDetail&&S.cur){for(const o of sel.options){if(o.value===S.cur){o.selected=true;break;}}}
+  // Se está no detalhe de um projeto, pré-seleciona ele
+  const onDetail=document.getElementById('page-detail')?.classList.contains('on');
+  const curPid=(forDetail||onDetail)?S.cur:null;
+  sel.innerHTML='<option value="__all__">Todos os projetos</option>'+
+    S.projects.map(p=>`<option value="${p.id}" ${p.id===curPid?'selected':''}>${esc(p.name)}</option>`).join('');
+  if(curPid) sel.value=curPid;
   openModal('modal-export');
 }
 
