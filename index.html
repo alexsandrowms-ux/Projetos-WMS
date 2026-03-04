@@ -3861,7 +3861,8 @@ function _rfpTabRenderModule(){
       </div>`;}).join('');
     el.innerHTML=`<div class="rfp-header">
       <div style="flex:1"><div class="rfp-module-title">📊 Dashboard RFP</div><div class="rfp-module-sub">Levantamento de requisitos WMS</div></div>
-      <button class="btn btn-primary btn-xs" onclick="openRFPInfo('${proj.id}')">✏️ Dados do Levantamento</button></div>
+      <button class="btn btn-ghost btn-xs" onclick="openRFPInfo('${proj.id}')">✏️ Dados do Levantamento</button>
+      <button class="btn btn-primary btn-xs" onclick="generateRFPDiagnostico()" style="background:linear-gradient(135deg,#1F4E78,#4472C4)">📄 Gerar Diagnóstico</button></div>
     <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
       <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Responsável</div><div style="font-size:13px;font-weight:700;margin-top:2px">${esc(rfp.responsavel||'—')}</div></div>
       <div><div style="font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.05em;font-weight:600">Localidade</div><div style="font-size:13px;font-weight:700;margin-top:2px">${rfp.cidade?esc(rfp.cidade)+(rfp.estado?'/'+rfp.estado:''):'—'}</div></div>
@@ -4021,6 +4022,441 @@ const WMS_REQ_SUGG = {
   prioridade:['Alta','Média','Baixa'],
   observacao:['Processo crítico para operação','Gap identificado — necessita WMS','Boa prática já executada','Necessita treinamento de equipe','Depende de integração com ERP','Necessita investimento em infraestrutura','Quick win — fácil implementação']
 };
+
+
+// ════════════════════════════════════
+// DIAGNÓSTICO RFP — GERADOR DE RELATÓRIO
+// ════════════════════════════════════
+function generateRFPDiagnostico(){
+  const proj = getP(S.cur);
+  if(!proj?.rfp){ toast('Preencha a RFP antes de gerar o diagnóstico','err'); return; }
+  const rfp = proj.rfp;
+  const now = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const pctGeral = rfpProgress(rfp);
+
+  // ── Calcular métricas por módulo ──
+  const modReqs = ['recebimento','armazenagem','gestaoEstoque','separacao','conferencia','packing','expedicao'];
+  const modFields = ['infoGerais','infraestrutura','produtosGiro','layout'];
+  const allMods = [...modReqs,...modFields];
+
+  let totalAlta=0, totalMedia=0, totalBaixa=0;
+  let simCount=0, naoCount=0, parcialCount=0, totalFaz=0;
+
+  modReqs.forEach(k=>{
+    const m = rfp.dados[k]; if(!m?.requirements) return;
+    m.requirements.forEach(r=>{
+      if(r.prioridade==='Alta') totalAlta++;
+      if(r.prioridade==='Média') totalMedia++;
+      if(r.prioridade==='Baixa') totalBaixa++;
+      if(r.faz){ totalFaz++;
+        if(r.faz==='Sim') simCount++;
+        if(r.faz==='Não') naoCount++;
+        if(r.faz==='Parcial') parcialCount++;
+      }
+    });
+  });
+
+  const aderencia = totalFaz>0 ? Math.round(((simCount + parcialCount*0.5)/totalFaz)*100) : 0;
+
+  // ── Gerar HTML dos módulos ──
+  function fazIcon(v){ return v==='Sim'?'<span class="tag-sim">✔ Sim</span>':v==='Não'?'<span class="tag-nao">✘ Não</span>':v==='Parcial'?'<span class="tag-parcial">◑ Parcial</span>':'<span class="tag-nd">— N/D</span>'; }
+  function prioTag(v){ return v==='Alta'?'<span class="prio-alta">● Alta</span>':v==='Média'?'<span class="prio-media">● Média</span>':v==='Baixa'?'<span class="prio-baixa">● Baixa</span>':''; }
+  function scoreColor(pct){ return pct>=80?'#22c55e':pct>=50?'#f59e0b':'#ef4444'; }
+  function scoreLabel(pct){ return pct>=80?'Aderente':pct>=50?'Aderência Parcial':'Crítico'; }
+
+  function buildModSection(modId){
+    const m = rfp.dados[modId]; if(!m) return '';
+    const modDef = RFP_MODULES.find(x=>x.id===modId);
+    const pct = rfpModProgress(rfp, modId);
+    const col = scoreColor(pct);
+    const lbl = scoreLabel(pct);
+
+    // Fields module
+    if(m.fields){
+      const rows = m.fields.map(f=>`
+        <tr>
+          <td class="req-text">${f.label}</td>
+          <td colspan="4" style="color:#e2e8f0">${f.value||'<em style="color:#64748b">Não preenchido</em>'}</td>
+        </tr>`).join('');
+      return `
+      <div class="mod-section">
+        <div class="mod-header">
+          <div class="mod-title">${modDef?.icon||''} ${m.name}</div>
+          <div class="mod-score" style="background:${col}20;border:1px solid ${col};color:${col}">
+            <span class="score-num">${pct}%</span> ${lbl}
+          </div>
+        </div>
+        <table class="req-table">
+          <thead><tr><th style="width:35%">Campo</th><th colspan="4">Resposta</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+    }
+
+    // Requirements module
+    if(m.requirements){
+      const altaReqs = m.requirements.filter(r=>r.prioridade==='Alta');
+      const gaps = m.requirements.filter(r=>r.faz==='Não'||(!r.faz&&r.prioridade));
+      const simReqs = m.requirements.filter(r=>r.faz==='Sim').length;
+      const modAdh = m.requirements.length>0 ? Math.round(((simReqs+m.requirements.filter(r=>r.faz==='Parcial').length*0.5)/m.requirements.length)*100) : 0;
+
+      const rows = m.requirements.map(r=>`
+        <tr class="${r.prioridade==='Alta'&&r.faz!=='Sim'?'row-critical':''}">
+          <td class="req-text">${r.text}</td>
+          <td style="text-align:center">${fazIcon(r.faz)}</td>
+          <td style="color:#94a3b8;font-size:11px">${r.execucao||'—'}</td>
+          <td style="color:#94a3b8;font-size:11px">${r.controle||'—'}</td>
+          <td style="text-align:center">${prioTag(r.prioridade)}</td>
+        </tr>
+        ${r.observacao?`<tr class="obs-row"><td></td><td colspan="4" style="font-size:10px;color:#64748b;padding:2px 8px 6px;font-style:italic">💬 ${r.observacao}</td></tr>`:''}
+      `).join('');
+
+      const gapHtml = gaps.length ? `
+        <div class="gap-box">
+          <div class="gap-title">⚠️ Gaps Críticos Identificados</div>
+          <ul class="gap-list">${gaps.map(g=>`<li>${g.text}${g.prioridade?` <span class="gap-prio">${g.prioridade}</span>`:''}</li>`).join('')}</ul>
+        </div>` : '';
+
+      const recomHtml = altaReqs.length ? `
+        <div class="recom-box">
+          <div class="recom-title">🎯 Recomendações Prioritárias</div>
+          <ul class="gap-list">${altaReqs.filter(r=>r.faz!=='Sim').map(r=>`<li>Implementar: <strong>${r.text}</strong></li>`).join('')}</ul>
+        </div>` : '';
+
+      return `
+      <div class="mod-section">
+        <div class="mod-header">
+          <div class="mod-title">${modDef?.icon||''} ${m.name}</div>
+          <div class="mod-score" style="background:${col}20;border:1px solid ${col};color:${col}">
+            <span class="score-num">${modAdh}%</span> ${scoreLabel(modAdh)}
+          </div>
+        </div>
+        <div class="mod-stats">
+          <div class="stat-pill sim">✔ ${simReqs} Implementado${simReqs!==1?'s':''}</div>
+          <div class="stat-pill parcial">◑ ${m.requirements.filter(r=>r.faz==='Parcial').length} Parcial</div>
+          <div class="stat-pill nao">✘ ${m.requirements.filter(r=>r.faz==='Não').length} Não possui</div>
+          <div class="stat-pill alta">● ${altaReqs.length} Alta prioridade</div>
+        </div>
+        <table class="req-table">
+          <thead><tr>
+            <th style="width:38%">Requisito / Processo</th>
+            <th style="width:10%;text-align:center">Faz?</th>
+            <th style="width:18%">Como Executa</th>
+            <th style="width:18%">Como Controla</th>
+            <th style="width:10%;text-align:center">Prioridade</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${gapHtml}${recomHtml}
+      </div>`;
+    }
+    return '';
+  }
+
+  // ── Mapa de calor de prioridades por módulo ──
+  function heatmap(){
+    return modReqs.map(k=>{
+      const m=rfp.dados[k];if(!m?.requirements)return'';
+      const modDef=RFP_MODULES.find(x=>x.id===k);
+      const alta=m.requirements.filter(r=>r.prioridade==='Alta'&&r.faz!=='Sim').length;
+      const media=m.requirements.filter(r=>r.prioridade==='Média'&&r.faz!=='Sim').length;
+      const pct=rfpModProgress(rfp,k);
+      return`<tr>
+        <td style="font-weight:600;color:#e2e8f0">${modDef?.icon||''} ${m.name}</td>
+        <td><div class="heat-bar"><div style="width:${pct}%;background:${scoreColor(pct)};height:8px;border-radius:4px"></div></div><span style="font-size:10px;color:#94a3b8">${pct}%</span></td>
+        <td style="text-align:center;color:#ef4444;font-weight:700">${alta||'—'}</td>
+        <td style="text-align:center;color:#f59e0b;font-weight:700">${media||'—'}</td>
+        <td style="text-align:center"><span style="background:${scoreColor(pct)}20;color:${scoreColor(pct)};padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700">${scoreLabel(pct)}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Gerar HTML completo do relatório ──
+  const reportHTML = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diagnóstico RFP — ${proj.name}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800;900&family=Inter:wght@300;400;500;600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#0f172a;color:#e2e8f0;line-height:1.6;font-size:13px}
+  @media print{
+    body{background:#fff;color:#1e293b}
+    .no-print{display:none!important}
+    .page-break{page-break-before:always}
+    .mod-section{page-break-inside:avoid}
+    body{font-size:11px}
+  }
+
+  /* COVER */
+  .cover{min-height:100vh;background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 50%,#0f172a 100%);display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px;text-align:center;position:relative;overflow:hidden}
+  .cover::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%234472C4' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
+  .cover-logo{font-family:'Outfit',sans-serif;font-size:13px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#4472C4;margin-bottom:60px}
+  .cover-badge{background:rgba(68,114,196,.15);border:1px solid rgba(68,114,196,.4);color:#4472C4;padding:6px 18px;border-radius:20px;font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;margin-bottom:24px}
+  .cover-title{font-family:'Outfit',sans-serif;font-size:52px;font-weight:900;line-height:1.1;color:#fff;margin-bottom:12px}
+  .cover-title span{color:#4472C4}
+  .cover-sub{font-size:18px;color:#94a3b8;margin-bottom:48px;font-weight:300}
+  .cover-project{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:28px 48px;margin-bottom:48px}
+  .cover-client{font-size:28px;font-weight:700;color:#fff;font-family:'Outfit',sans-serif}
+  .cover-meta{display:flex;gap:32px;justify-content:center;margin-top:16px;flex-wrap:wrap}
+  .cover-meta-item{font-size:12px;color:#64748b}
+  .cover-meta-item strong{display:block;color:#94a3b8;font-size:13px}
+  .cover-score-row{display:flex;gap:24px;justify-content:center;flex-wrap:wrap}
+  .cover-kpi{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:20px 32px;text-align:center}
+  .cover-kpi-num{font-family:'Outfit',sans-serif;font-size:36px;font-weight:800}
+  .cover-kpi-lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;margin-top:4px}
+  .cover-footer{position:absolute;bottom:32px;left:0;right:0;text-align:center;font-size:11px;color:#334155}
+
+  /* CONTENT */
+  .content{max-width:1100px;margin:0 auto;padding:48px 32px}
+  h2.section-title{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:#fff;margin:48px 0 20px;padding-bottom:10px;border-bottom:2px solid #1e3a5f;display:flex;align-items:center;gap:10px}
+  h2.section-title span{font-size:13px;font-weight:400;color:#64748b;margin-left:auto}
+
+  /* SUMMARY CARDS */
+  .summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+  @media(max-width:800px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+  .sum-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;text-align:center}
+  .sum-num{font-family:'Outfit',sans-serif;font-size:32px;font-weight:800}
+  .sum-lbl{font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-top:4px}
+  .sum-sub{font-size:11px;color:#475569;margin-top:6px}
+
+  /* ADERÊNCIA GAUGE */
+  .adherence-row{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:32px}
+  @media(max-width:800px){.adherence-row{grid-template-columns:1fr}}
+  .adh-card{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:24px}
+  .adh-title{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.07em;margin-bottom:16px}
+  .adh-big{font-family:'Outfit',sans-serif;font-size:56px;font-weight:900;line-height:1}
+  .adh-bar{height:10px;background:#0f172a;border-radius:5px;overflow:hidden;margin-top:12px}
+  .adh-bar-fill{height:100%;border-radius:5px;transition:width .4s}
+  .faz-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .faz-chip{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+
+  /* HEATMAP TABLE */
+  .heat-table{width:100%;border-collapse:collapse;margin-bottom:32px}
+  .heat-table th{background:#1e293b;padding:10px 14px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#64748b;border-bottom:2px solid #334155}
+  .heat-table td{padding:10px 14px;border-bottom:1px solid #1e293b;vertical-align:middle}
+  .heat-table tr:hover td{background:#1e293b}
+  .heat-bar{height:8px;background:#0f172a;border-radius:4px;overflow:hidden;width:120px;display:inline-block;margin-right:8px;vertical-align:middle}
+
+  /* MODULE SECTIONS */
+  .mod-section{background:#1e293b;border:1px solid #334155;border-radius:12px;margin-bottom:24px;overflow:hidden}
+  .mod-header{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;background:#162032;border-bottom:1px solid #334155}
+  .mod-title{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:#fff}
+  .mod-score{padding:4px 14px;border-radius:20px;font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px}
+  .score-num{font-size:16px;font-family:'Outfit',sans-serif;font-weight:800}
+  .mod-stats{display:flex;gap:8px;padding:12px 20px;background:#0f172a;flex-wrap:wrap}
+  .stat-pill{padding:3px 12px;border-radius:20px;font-size:11px;font-weight:600}
+  .stat-pill.sim{background:rgba(34,197,94,.1);color:#22c55e}
+  .stat-pill.parcial{background:rgba(245,158,11,.1);color:#f59e0b}
+  .stat-pill.nao{background:rgba(239,68,68,.1);color:#ef4444}
+  .stat-pill.alta{background:rgba(239,68,68,.08);color:#fca5a5}
+
+  /* REQ TABLE */
+  .req-table{width:100%;border-collapse:collapse;font-size:12px}
+  .req-table th{background:#0f172a;padding:8px 12px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;border-bottom:2px solid #334155}
+  .req-table td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);vertical-align:top}
+  .req-table tr.row-critical td{background:rgba(239,68,68,.04)}
+  .req-table tr.obs-row td{background:rgba(0,0,0,.1)}
+  .req-table tr:last-child td{border-bottom:none}
+  .req-text{color:#cbd5e1;line-height:1.4}
+
+  /* STATUS TAGS */
+  .tag-sim{background:rgba(34,197,94,.15);color:#22c55e;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+  .tag-nao{background:rgba(239,68,68,.15);color:#ef4444;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+  .tag-parcial{background:rgba(245,158,11,.15);color:#f59e0b;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap}
+  .tag-nd{background:rgba(100,116,139,.1);color:#64748b;padding:2px 8px;border-radius:10px;font-size:10px;white-space:nowrap}
+  .prio-alta{color:#ef4444;font-weight:700;font-size:11px}
+  .prio-media{color:#f59e0b;font-weight:700;font-size:11px}
+  .prio-baixa{color:#22c55e;font-weight:700;font-size:11px}
+
+  /* GAP / RECOM */
+  .gap-box{margin:0 20px 16px;padding:14px 16px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;border-left:3px solid #ef4444}
+  .gap-title{font-size:11px;font-weight:700;color:#fca5a5;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+  .recom-box{margin:0 20px 20px;padding:14px 16px;background:rgba(68,114,196,.06);border:1px solid rgba(68,114,196,.2);border-radius:8px;border-left:3px solid #4472C4}
+  .recom-title{font-size:11px;font-weight:700;color:#93c5fd;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em}
+  .gap-list{list-style:none;padding:0}
+  .gap-list li{padding:3px 0;color:#94a3b8;font-size:12px;padding-left:14px;position:relative}
+  .gap-list li::before{content:'›';position:absolute;left:0;color:#64748b}
+  .gap-prio{font-size:10px;font-weight:700;color:#ef4444;background:rgba(239,68,68,.1);padding:1px 6px;border-radius:8px;margin-left:6px}
+
+  /* PRINT BUTTON */
+  .print-bar{position:sticky;top:0;z-index:100;background:rgba(15,23,42,.95);backdrop-filter:blur(8px);border-bottom:1px solid #334155;padding:12px 32px;display:flex;align-items:center;justify-content:space-between}
+  .print-bar-title{font-size:13px;font-weight:600;color:#94a3b8}
+  .btn-print{background:#4472C4;color:#fff;border:none;padding:8px 20px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+  .btn-print:hover{background:#5585d9}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,#334155,transparent);margin:40px 0}
+
+  /* ROADMAP */
+  .roadmap-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px}
+  @media(max-width:700px){.roadmap-grid{grid-template-columns:1fr}}
+  .road-card{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:18px}
+  .road-phase{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
+  .road-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:10px;font-family:'Outfit',sans-serif}
+  .road-items{list-style:none;padding:0}
+  .road-items li{font-size:11px;color:#94a3b8;padding:3px 0;padding-left:14px;position:relative}
+  .road-items li::before{content:'▸';position:absolute;left:0;color:#4472C4}
+  .phase-1{color:#ef4444}
+  .phase-2{color:#f59e0b}
+  .phase-3{color:#22c55e}
+
+  .footer-report{text-align:center;padding:40px;color:#334155;font-size:11px;border-top:1px solid #1e293b;margin-top:40px}
+</style>
+</head>
+<body>
+
+<!-- PRINT BAR -->
+<div class="print-bar no-print">
+  <span class="print-bar-title">📄 Diagnóstico RFP — ${esc(proj.name)}</span>
+  <div style="display:flex;gap:10px">
+    <button class="btn-print" onclick="window.print()" style="background:#1e293b;border:1px solid #334155">🖨️ Imprimir / PDF</button>
+    <button class="btn-print" onclick="window.close()">✕ Fechar</button>
+  </div>
+</div>
+
+<!-- CAPA -->
+<div class="cover">
+  <div class="cover-logo">AXL IntraLog · WMS Intelligence</div>
+  <div class="cover-badge">Diagnóstico de Implantação</div>
+  <div class="cover-title">Análise de <span>Aderência</span><br>& Diagnóstico WMS</div>
+  <div class="cover-sub">Levantamento de Requisitos e Processos</div>
+  <div class="cover-project">
+    <div class="cover-client">${esc(proj.name)}</div>
+    <div class="cover-meta">
+      ${rfp.responsavel?`<div class="cover-meta-item"><strong>Responsável</strong>${esc(rfp.responsavel)}</div>`:''}
+      ${rfp.cidade?`<div class="cover-meta-item"><strong>Localidade</strong>${esc(rfp.cidade)}${rfp.estado?'/'+rfp.estado:''}</div>`:''}
+      ${rfp.unidadeSuporte?`<div class="cover-meta-item"><strong>Unidade de Suporte</strong>${esc(rfp.unidadeSuporte)}</div>`:''}
+      <div class="cover-meta-item"><strong>Data do Levantamento</strong>${rfp.dataLevantamento?new Date(rfp.dataLevantamento+'T12:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}):now}</div>
+      <div class="cover-meta-item"><strong>Gerado em</strong>${now}</div>
+    </div>
+  </div>
+  <div class="cover-score-row">
+    <div class="cover-kpi"><div class="cover-kpi-num" style="color:${scoreColor(aderencia)}">${aderencia}%</div><div class="cover-kpi-lbl">Índice de Aderência</div></div>
+    <div class="cover-kpi"><div class="cover-kpi-num" style="color:#4472C4">${pctGeral}%</div><div class="cover-kpi-lbl">RFP Preenchida</div></div>
+    <div class="cover-kpi"><div class="cover-kpi-num" style="color:#ef4444">${totalAlta}</div><div class="cover-kpi-lbl">Prioridades Altas</div></div>
+    <div class="cover-kpi"><div class="cover-kpi-num" style="color:#f59e0b">${naoCount}</div><div class="cover-kpi-lbl">Gaps Identificados</div></div>
+  </div>
+  <div class="cover-footer">Documento confidencial · Gerado automaticamente pela plataforma AXL IntraLog</div>
+</div>
+
+<!-- CONTEÚDO -->
+<div class="content">
+
+  <!-- SUMÁRIO EXECUTIVO -->
+  <h2 class="section-title">1. Sumário Executivo</h2>
+  <div class="summary-grid">
+    <div class="sum-card">
+      <div class="sum-num" style="color:${scoreColor(aderencia)}">${aderencia}%</div>
+      <div class="sum-lbl">Índice de Aderência</div>
+      <div class="sum-sub">${scoreLabel(aderencia)}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-num" style="color:#22c55e">${simCount}</div>
+      <div class="sum-lbl">Processos Implementados</div>
+      <div class="sum-sub">de ${totalFaz} mapeados</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-num" style="color:#ef4444">${naoCount}</div>
+      <div class="sum-lbl">Gaps Identificados</div>
+      <div class="sum-sub">processos ausentes</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-num" style="color:#f59e0b">${parcialCount}</div>
+      <div class="sum-lbl">Processos Parciais</div>
+      <div class="sum-sub">necessitam evolução</div>
+    </div>
+  </div>
+
+  <div class="adherence-row">
+    <div class="adh-card">
+      <div class="adh-title">Aderência Geral à Operação WMS</div>
+      <div class="adh-big" style="color:${scoreColor(aderencia)}">${aderencia}<span style="font-size:24px;color:#64748b">%</span></div>
+      <div style="font-size:12px;color:#94a3b8;margin-top:8px">${scoreLabel(aderencia)} — ${aderencia>=80?'A operação possui boa maturidade de processos logísticos. O WMS potencializará a gestão já existente.':aderencia>=50?'A operação possui processos básicos implementados. Há gaps importantes que serão endereçados com a implantação do WMS.':'A operação apresenta gaps críticos nos processos. O WMS será fundamental para estruturar e padronizar a operação.'}</div>
+      <div class="adh-bar" style="margin-top:16px"><div class="adh-bar-fill" style="width:${aderencia}%;background:${scoreColor(aderencia)}"></div></div>
+    </div>
+    <div class="adh-card">
+      <div class="adh-title">Distribuição dos Processos Mapeados</div>
+      <div class="faz-row">
+        <div class="faz-chip" style="background:rgba(34,197,94,.1);color:#22c55e">✔ ${simCount} Implementados</div>
+        <div class="faz-chip" style="background:rgba(245,158,11,.1);color:#f59e0b">◑ ${parcialCount} Parciais</div>
+        <div class="faz-chip" style="background:rgba(239,68,68,.1);color:#ef4444">✘ ${naoCount} Não possui</div>
+      </div>
+      <div style="margin-top:20px">
+        <div style="font-size:11px;color:#64748b;margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Prioridades identificadas</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap">
+          <div style="font-size:12px"><span style="color:#ef4444;font-weight:700">● ${totalAlta}</span> <span style="color:#64748b">Alta</span></div>
+          <div style="font-size:12px"><span style="color:#f59e0b;font-weight:700">● ${totalMedia}</span> <span style="color:#64748b">Média</span></div>
+          <div style="font-size:12px"><span style="color:#22c55e;font-weight:700">● ${totalBaixa}</span> <span style="color:#64748b">Baixa</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HEATMAP -->
+  <h2 class="section-title">2. Mapa de Aderência por Processo <span>Visão consolidada</span></h2>
+  <table class="heat-table">
+    <thead><tr>
+      <th>Processo / Módulo</th>
+      <th>Maturidade</th>
+      <th style="text-align:center">Gaps Alta Prio.</th>
+      <th style="text-align:center">Gaps Média Prio.</th>
+      <th style="text-align:center">Status</th>
+    </tr></thead>
+    <tbody>${heatmap()}</tbody>
+  </table>
+
+  <!-- ROADMAP -->
+  <h2 class="section-title">3. Roadmap de Implantação Sugerido <span>Baseado nos gaps identificados</span></h2>
+  <div class="roadmap-grid">
+    <div class="road-card" style="border-top:3px solid #ef4444">
+      <div class="road-phase phase-1">Fase 1 — Estruturação (0–60 dias)</div>
+      <div class="road-title">Processos Críticos</div>
+      <ul class="road-items">
+        ${modReqs.flatMap(k=>(rfp.dados[k]?.requirements||[]).filter(r=>r.prioridade==='Alta'&&r.faz!=='Sim').slice(0,2).map(r=>`<li>${rfp.dados[k].name}: ${r.text}</li>`)).slice(0,6).join('')||'<li style="color:#475569">Nenhum gap de alta prioridade identificado</li>'}
+      </ul>
+    </div>
+    <div class="road-card" style="border-top:3px solid #f59e0b">
+      <div class="road-phase phase-2">Fase 2 — Evolução (60–180 dias)</div>
+      <div class="road-title">Processos Parciais</div>
+      <ul class="road-items">
+        ${modReqs.flatMap(k=>(rfp.dados[k]?.requirements||[]).filter(r=>r.faz==='Parcial').slice(0,2).map(r=>`<li>${rfp.dados[k].name}: ${r.text}</li>`)).slice(0,6).join('')||'<li style="color:#475569">Definir após fase 1</li>'}
+      </ul>
+    </div>
+    <div class="road-card" style="border-top:3px solid #22c55e">
+      <div class="road-phase phase-3">Fase 3 — Otimização (180+ dias)</div>
+      <div class="road-title">KPIs & Performance</div>
+      <ul class="road-items">
+        ${modReqs.flatMap(k=>(rfp.dados[k]?.requirements||[]).filter(r=>r.text.includes('KPI')&&r.faz!=='Sim').slice(0,2).map(r=>`<li>${rfp.dados[k].name}: ${r.text}</li>`)).slice(0,6).join('')||'<li style="color:#475569">Todos os KPIs em monitoramento</li>'}
+      </ul>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- DIAGNÓSTICO POR PROCESSO -->
+  <h2 class="section-title">4. Diagnóstico Detalhado por Processo <span>Análise individual</span></h2>
+  ${allMods.map(k=>buildModSection(k)).join('\n')}
+
+</div>
+
+<div class="footer-report">
+  Diagnóstico RFP gerado automaticamente pela plataforma AXL IntraLog · ${esc(proj.name)} · ${now}<br>
+  Documento confidencial — para uso interno
+</div>
+
+</body></html>`;
+
+  // Abrir em nova aba
+  const win = window.open('','_blank');
+  if(win){
+    win.document.write(reportHTML);
+    win.document.close();
+  } else {
+    toast('Permita pop-ups para gerar o relatório','err');
+  }
+}
+
 
 function switchTab(el,tid){
   document.querySelectorAll('.dtab').forEach(t=>t.classList.remove('on'));
