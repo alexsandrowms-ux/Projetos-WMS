@@ -1801,11 +1801,11 @@ function renderStages(){
             <span class="schev open" id="chev_${root.id}">▼</span>
           </div>
           <div class="sroot-acts">
-            <button class="btn-ev" data-evbtn="${root.id}" onclick="openEvModal('${root.id}')">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
-            <button class="btn-log" data-logbtn="${root.id}" onclick="openLogModal('${root.id}')">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
-            <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${root.id}')">✏️</button>
-            <button class="btn btn-success btn-xs" onclick="openStageModal(true,null,'${root.id}')">+ Sub</button>
-            <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${root.id}')">🗑</button>
+            <button class="btn-ev" data-evbtn="${root.id}" onclick="event.stopPropagation();openEvModal('${root.id}')">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${root.id}" onclick="event.stopPropagation();openLogModal('${root.id}')">📝 Registros${root.activityLog&&root.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.activityLog.length}</span>`:''}</button>
+            <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openStageModal(false,'${root.id}')">✏️</button>
+            <button class="btn btn-success btn-xs" onclick="event.stopPropagation();openStageModal(true,null,'${root.id}')">+ Sub</button>
+            <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteStage('${root.id}')">🗑</button>
           </div>
         </div>
         <div class="sr-row2">
@@ -1847,15 +1847,15 @@ function renderStages(){
             </div>
           </div>
           <div class="ssrow-acts">
-            <button class="btn-ev" data-evbtn="${k.id}" onclick="openEvModal('${k.id}')">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
-            <button class="btn-log" data-logbtn="${k.id}" onclick="openLogModal('${k.id}')">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
+            <button class="btn-ev" data-evbtn="${k.id}" onclick="event.stopPropagation();openEvModal('${k.id}')">📎${k.evidence&&k.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.evidence.length}</span>`:''}</button>
+            <button class="btn-log" data-logbtn="${k.id}" onclick="event.stopPropagation();openLogModal('${k.id}')">📝${k.activityLog&&k.activityLog.length?` <span style='background:#a78bfa;color:#fff;border-radius:10px;padding:0 4px;font-size:9px'>${k.activityLog.length}</span>`:''}</button>
             <button class="btn-move" onclick="moveSubStage('${k.id}','up')" title="Mover para cima" ${ki===0?'disabled':''}>▲</button>
             <button class="btn-move" onclick="moveSubStage('${k.id}','down')" title="Mover para baixo" ${ki===lastKidIdx?'disabled':''}>▼</button>
-            <button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${k.id}')">✏️</button>
-            <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${k.id}')">🗑</button>
+            <button class="btn btn-ghost btn-xs" onclick="event.stopPropagation();openStageModal(false,'${k.id}')">✏️</button>
+            <button class="btn btn-danger btn-xs" onclick="event.stopPropagation();askDeleteStage('${k.id}')">🗑</button>
           </div>
         </div>`}).join('')}
-        <div class="add-sub-btn" onclick="openStageModal(true,null,'${root.id}')">
+        <div class="add-sub-btn" onclick="event.stopPropagation();openStageModal(true,null,'${root.id}')">
           <span style="font-size:14px;color:var(--accent)">+</span> Sub-etapa em <strong style="color:var(--accent)">&nbsp;${esc(root.num||root.name)}</strong>
         </div>
       </div>
