@@ -753,8 +753,8 @@ datalist{display:none}
           <input class="fc" type="time" id="fs-break" onchange="calcModalHours()" placeholder="01:30" title="Intervalo (ex: 01:30)">
         </div>
         <div class="fg" id="fs-hoursreal-wrap"><label>Horas Realizadas</label>
-          <input class="fc" type="number" id="fs-hoursreal" placeholder="Ex: 10" min="0">
-          <span id="fs-hoursreal-auto" style="display:none;font-size:12px;color:var(--green);padding:8px 4px;font-weight:600"></span>
+          <input class="fc" type="number" id="fs-hoursreal" placeholder="Calculado automaticamente" min="0" title="Calculado com base em Início Real e Término Real">
+          <span id="fs-hoursreal-auto" style="font-size:11px;color:var(--accent);padding:4px 2px;display:block">⚡ Auto calculado por Início/Término Real</span>
         </div>
         <div class="fg"><label>💰 Valor/hora (R$) <span style="font-size:10px;color:var(--dim)">(vazio = padrão do projeto)</span></label><input class="fc" type="number" id="fs-rate" placeholder="Ex: 150.00" min="0" step="0.01"></div>
       </div>
@@ -763,7 +763,8 @@ datalist{display:none}
         <div class="fg"><label>🏁 Término Planejado</label><input class="fc" type="datetime-local" id="fs-dateend" onchange="calcModalHours()"></div>
       </div>
       <div class="frow">
-        <div class="fg"><label>✅ Término Real</label><input class="fc" type="date" id="fs-datereal" placeholder="Preencher ao concluir"></div>
+        <div class="fg"><label>▶️ Início Real</label><input class="fc" type="datetime-local" id="fs-datestartreal" onchange="calcRealHours()" title="Data/hora que a tarefa foi efetivamente iniciada"></div>
+        <div class="fg"><label>✅ Término Real</label><input class="fc" type="datetime-local" id="fs-datereal" onchange="calcRealHours()" placeholder="Preencher ao concluir"></div>
         <div class="fg" id="fg-reschedule" style="display:none">
           <label style="color:var(--amber)">🔄 Reagendamento</label>
           <input class="fc" type="datetime-local" id="fs-datereschedule" title="Substitui o prazo em Gantt e análises">
@@ -1302,7 +1303,7 @@ function clearSession(){localStorage.removeItem(SSTORE);CU=null;}
 // ════════════════════════════════════
 const uid  = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const fD   = d=>d?d.split('-').reverse().join('/'):'—';
-const fDS  = d=>{if(!d)return'—';const p=d.split('-');return`${p[2]}/${p[1]}`;};
+const fDS  = d=>{if(!d)return'—';const dd=d.includes('T')?d.split('T')[0]:d;const p=dd.split('-');return`${p[2]}/${p[1]}`;};
 const getP = id=>S.projects.find(p=>p.id===id);
 const esc  = s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
@@ -2231,7 +2232,7 @@ function renderGantt(){
     const _rEffEnd=effectiveDateEnd(r);
     const rdEnd  =_rEffEnd ? new Date(_rEffEnd+'T00:00:00') : rdStart;
     const _isResch=!!r.dateReschedule;
-    const rdReal =r.dateReal? new Date(r.dateReal+'T00:00:00'): null;
+    const rdReal =r.dateReal? new Date(r.dateReal.includes('T')?r.dateReal:r.dateReal+'T00:00:00'): null;
     const ps=prazoStatus(r);
 
     const _barTooltip=_isResch
@@ -2378,6 +2379,9 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   document.getElementById('fs-date').value = dtStart;
   document.getElementById('fs-dateend').value = dtEnd;
   document.getElementById('fs-datereal').value=stage?.dateReal||'';
+  document.getElementById('fs-datestartreal').value=stage?.dateStartReal||'';
+  // Recalculate real hours from dates
+  if(stage?.dateStartReal&&stage?.dateReal) calcRealHours();
   if(document.getElementById('fs-break'))document.getElementById('fs-break').value=decHToHHMM(stage?.breakHours||0);
   if(document.getElementById('fs-rate')) document.getElementById('fs-rate').value=stage?.hourRate||'';
   // Horas Realizadas: root = auto (soma das sub-etapas), sub = manual
@@ -2455,6 +2459,42 @@ function calcModalHours(){
     hEl.title='Calculado automaticamente pelo horário';
   }
 }
+function calcRealHours(){
+  const sEl=document.getElementById('fs-datestartreal');
+  const eEl=document.getElementById('fs-datereal');
+  const hEl=document.getElementById('fs-hoursreal');
+  const autoSpan=document.getElementById('fs-hoursreal-auto');
+  if(!sEl||!eEl||!hEl)return;
+  const s=sEl.value, e=eEl.value;
+  if(!s||!e){
+    hEl.style.background='';
+    hEl.removeAttribute('readonly');
+    if(autoSpan)autoSpan.style.color='var(--accent)';
+    return;
+  }
+  const diff=(new Date(e)-new Date(s))/3600000;
+  if(diff>0&&diff<1000){
+    const h=Math.round(diff*100)/100;
+    hEl.value=h;
+    hEl.setAttribute('readonly','readonly');
+    hEl.style.background='rgba(34,197,94,.08)';
+    hEl.style.color='var(--green)';
+    hEl.title=`Calculado: ${formatHorasMin(diff)}`;
+    if(autoSpan){
+      autoSpan.textContent=`⚡ ${formatHorasMin(diff)} (${h}h)`;
+      autoSpan.style.color='var(--green)';
+    }
+  } else if(diff<=0){
+    hEl.style.background='rgba(239,68,68,.08)';
+    hEl.style.color='var(--red)';
+    if(autoSpan){autoSpan.textContent='⚠️ Término Real anterior ao Início Real';autoSpan.style.color='var(--red)';}
+  }
+}
+function formatHorasMin(decHours){
+  const h=Math.floor(decHours);
+  const m=Math.round((decHours-h)*60);
+  return m>0?`${h}h ${m}min`:`${h}h`;
+}
 function saveStage(){
   const name=document.getElementById('fs-name').value.trim();if(!name){toast('Informe o nome da etapa','err');return;}
   const proj=getP(S.cur);if(!proj)return;if(!proj.stages)proj.stages=[];
@@ -2462,9 +2502,10 @@ function saveStage(){
   const statusVal=document.getElementById('fs-status')?.value;
   const parentVal=document.getElementById('fs-parent')?.value||_defParent;
   const hoursRealVal=parseFloat(document.getElementById('fs-hoursreal')?.value);
-  if(statusVal==='Concluído' && parentVal && (isNaN(hoursRealVal)||hoursRealVal<=0)){
-    toast('⚠️ Informe as Horas Realizadas antes de concluir a sub-etapa','err');
-    document.getElementById('fs-hoursreal')?.focus();
+  const hasRealDates=document.getElementById('fs-datestartreal')?.value && document.getElementById('fs-datereal')?.value;
+  if(statusVal==='Concluído' && parentVal && (isNaN(hoursRealVal)||hoursRealVal<=0) && !hasRealDates){
+    toast('⚠️ Informe as Horas Realizadas (ou preencha Início/Término Real) antes de concluir','err');
+    document.getElementById('fs-datestartreal')?.focus();
     return;
   }
   const d={name,
@@ -2475,6 +2516,7 @@ function saveStage(){
     timeStart:(()=>{const v=document.getElementById('fs-date').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     timeEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     dateReal:document.getElementById('fs-datereal').value,
+    dateStartReal:document.getElementById('fs-datestartreal')?.value||'',
     hours:document.getElementById('fs-hours').value,
     hoursReal: (document.getElementById('fs-parent')?.value||_defParent) ? (document.getElementById('fs-hoursreal')?.value||'') : '', // root = auto from kids
     hourRate:parseFloat(document.getElementById('fs-rate')?.value)||0,
