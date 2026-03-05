@@ -749,8 +749,8 @@ datalist{display:none}
       </div>
       <div class="frow">
         <div class="fg">
-          <label>☕ Intervalo (h)</label>
-          <input class="fc" type="time" id="fs-break" onchange="calcModalHours()" placeholder="01:30" title="Intervalo em horas:minutos (ex: 01:30)">
+          <label>☕ Intervalo</label>
+          <input class="fc" type="time" id="fs-break" onchange="calcModalHours()" placeholder="01:30" title="Intervalo (ex: 01:30)">
         </div>
         <div class="fg" id="fs-hoursreal-wrap"><label>Horas Realizadas</label>
           <input class="fc" type="number" id="fs-hoursreal" placeholder="Ex: 10" min="0">
@@ -1198,7 +1198,6 @@ function refreshCurrentView(){
   if(active==='dashboard')renderDash();
   else if(active==='projects')renderProjList();
   else if(active==='detail'){
-    // Preserva aba ativa ao atualizar via polling
     const _at=document.querySelector('.dtab.on')?.getAttribute('onclick')?.match(/tab-[a-z]+/)?.[0];
     if(_at==='tab-gantt')renderGantt();
     else if(_at==='tab-cost')renderCostTab();
@@ -1627,12 +1626,7 @@ function showPage(page,pid=null){
   } else if(page==='detail'){
     const _prevPid=S.cur;
     if(pid)S.cur=pid;
-    // Se mudou de projeto, limpa inputs do Gantt para recarregar período salvo
-    if(pid&&pid!==_prevPid){
-      const _gs=document.getElementById('gstart');
-      const _ge=document.getElementById('gend');
-      if(_gs)_gs.value='';if(_ge)_ge.value='';
-    }
+    if(pid&&pid!==_prevPid){const _gs=document.getElementById('gstart');const _ge=document.getElementById('gend');if(_gs)_gs.value='';if(_ge)_ge.value='';}
     document.getElementById('page-detail').classList.add('on');
     document.getElementById('snav-proj').classList.add('on');
     renderDetail();
@@ -1716,16 +1710,9 @@ function _refreshDetailHeader(){
   const subEl=document.getElementById('det-sub');
   if(subEl)subEl.textContent=`Cliente: ${proj.client||'—'}  ·  Responsável: ${proj.owner||'—'}`;
   const badgeEl=document.getElementById('det-badges');
-  if(badgeEl)badgeEl.innerHTML=`
-    <span class="badge ${SB[proj.status]||'badge-gray'}">${proj.status}</span>
-    <span class="badge badge-gray">📅 ${fD(proj.startDate)} → ${fD(proj.endDate)}</span>
-    <span class="badge badge-amber">⏱️ ${proj.totalHours||0}h FAP</span>`;
+  if(badgeEl)badgeEl.innerHTML=`<span class="badge ${SB[proj.status]||'badge-gray'}">${proj.status}</span><span class="badge badge-gray">📅 ${fD(proj.startDate)} → ${fD(proj.endDate)}</span><span class="badge badge-amber">⏱️ ${proj.totalHours||0}h FAP</span>`;
   const hEl=document.getElementById('det-hours');
-  if(hEl)hEl.innerHTML=`
-    <div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div>
-    <div class="hcard"><div class="hval" style="color:var(--amber)">${st.totalRootBudget}h</div><div class="hlbl">Etapas (orçamento)</div></div>
-    <div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div>
-    <div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>`;
+  if(hEl)hEl.innerHTML=`<div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div><div class="hcard"><div class="hval" style="color:var(--amber)">${st.totalRootBudget}h</div><div class="hlbl">Etapas (orçamento)</div></div><div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div><div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>`;
 }
 function renderDetail(){
   const proj=getP(S.cur);if(!proj){showPage('projects');return;}
@@ -2178,15 +2165,8 @@ function renderGantt(){
   const allDates=[...stages.filter(s=>s.date).map(s=>s.date),...stages.map(s=>effectiveDateEnd(s)).filter(Boolean)].filter(Boolean).sort();
   const autoStart=allDates[0]||new Date().toISOString().split('T')[0];
   const autoEnd  =allDates[allDates.length-1]||autoStart;
-  // Restaura período salvo ou usa 1º dia do mês atual como padrão
-  const _saved=loadGanttPeriod();
-  const _now=new Date();
-  const _firstDay=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-01';
-  if(!siEl?.value && !eiEl?.value){
-    // Inputs vazios: restaura período salvo ou usa 1º dia do mês
-    if(_saved?.s){siEl.value=_saved.s;if(_saved.e)eiEl.value=_saved.e;}
-    else{siEl.value=autoStart||_firstDay;eiEl.value=autoEnd||_firstDay;}
-  }
+  if(!siEl?.value)siEl.value=autoStart;
+  if(!eiEl?.value)eiEl.value=autoEnd;
   const sd=new Date(siEl.value+'T00:00:00');
   const ed=new Date(eiEl.value+'T00:00:00');
   if(ed<sd){eiEl.value=siEl.value;ed.setTime(sd.getTime());}
@@ -2254,7 +2234,6 @@ function renderGantt(){
     const rdReal =r.dateReal? new Date(r.dateReal+'T00:00:00'): null;
     const ps=prazoStatus(r);
 
-    // Tooltip do bar
     const _barTooltip=_isResch
       ?`🔄 REAGENDADO — ${esc(r.name)}\n📅 Início: ${fD(r.date)}${r.timeStart?' às '+r.timeStart:''}\n⚠️ Novo prazo: ${fD((r.dateReschedule||'').split('T')[0])}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}`
       :`✏️ ${esc(r.name)}\n📅 Início: ${fD(r.date)}${r.timeStart?' às '+r.timeStart:''}\n🏁 Término: ${fD(r.dateEnd)}${r.timeEnd?' às '+r.timeEnd:''}\n${ps.icon} ${ps.label}${r.hours?' | '+r.hours+'h':''}`;
@@ -2459,8 +2438,7 @@ function timeToDecH(t){
 }
 function decHToHHMM(d){
   if(!d||d<=0)return '';
-  const h=Math.floor(d);
-  const m=Math.round((d-h)*60);
+  const h=Math.floor(d),m=Math.round((d-h)*60);
   return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');
 }
 function calcModalHours(){
@@ -2469,8 +2447,7 @@ function calcModalHours(){
   const hEl=document.getElementById('fs-hours');
   if(!s||!e||!hEl)return;
   const diff=(new Date(e)-new Date(s))/3600000;
-  const brkRaw=document.getElementById('fs-break')?.value||'';
-  const brk=brkRaw?timeToDecH(brkRaw):0;
+  const brk=timeToDecH(document.getElementById('fs-break')?.value||'');
   const net=diff-brk;
   if(net>0&&diff<1000){
     hEl.value=Math.round(net*10)/10;
@@ -2499,28 +2476,22 @@ function saveStage(){
     timeEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     dateReal:document.getElementById('fs-datereal').value,
     hours:document.getElementById('fs-hours').value,
-    breakHours: timeToDecH(document.getElementById('fs-break')?.value||''),
     hoursReal: (document.getElementById('fs-parent')?.value||_defParent) ? (document.getElementById('fs-hoursreal')?.value||'') : '', // root = auto from kids
     hourRate:parseFloat(document.getElementById('fs-rate')?.value)||0,
     status:document.getElementById('fs-status').value,
     parentId:document.getElementById('fs-parent').value||null,
     bgColor:(()=>{const sel=document.querySelector('.stage-color-opt[style*="var(--accent)"]');return sel?sel.dataset.c:'';})(),
+    breakHours: timeToDecH(document.getElementById('fs-break')?.value||''),
     dateReschedule:(()=>{const v=document.getElementById('fs-datereschedule')?.value;return v||'';})()};
   if(_eStageId){const i=proj.stages.findIndex(s=>s.id===_eStageId);if(i>=0)proj.stages[i]={...proj.stages[i],...d};toast('Etapa atualizada ✓');}
   else{proj.stages.push({id:uid(),...d});toast('Etapa adicionada ✓');}
   autoNumberStages(proj);
   saveS();closeModal('modal-stage');
-  // Re-render apenas a aba ativa sem resetar para FAP
-  const _activeTab=document.querySelector('.dtab.on')?.getAttribute('onclick')?.match(/tab-[a-z]+/)?.[0];
-  // Se tem reagendamento, expande período do Gantt se necessário
-  if(d.dateReschedule){
-    const _reDate=d.dateReschedule.split('T')[0];
-    const _gend=document.getElementById('gend');
-    if(_gend&&_reDate>(_gend.value||'')){_gend.value=_reDate;saveGanttPeriod();}
-  }
-  if(_activeTab==='tab-gantt')renderGantt();
-  else if(_activeTab==='tab-cost')renderCostTab();
-  else if(_activeTab==='tab-perf')renderPerfTab();
+  if(d.dateReschedule){const _rd=d.dateReschedule.split('T')[0];const _ge=document.getElementById('gend');if(_ge&&_rd>(_ge.value||'')){_ge.value=_rd;saveGanttPeriod();}}
+  const _at=document.querySelector('.dtab.on')?.getAttribute('onclick')?.match(/tab-[a-z]+/)?.[0];
+  if(_at==='tab-gantt')renderGantt();
+  else if(_at==='tab-cost')renderCostTab();
+  else if(_at==='tab-perf')renderPerfTab();
   else renderStages();
   _refreshDetailHeader();
   _eStageId=null;_defParent=null;
@@ -2805,7 +2776,7 @@ function exportHTML(projs){
     const roots=(p.stages||[]).filter(s=>!s.parentId);
     const cm={};(p.stages||[]).filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
     body+=`<div class="ps"><div class="ph" style="border-left:5px solid ${c}"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:18px;font-weight:800;color:${c};margin-bottom:4px">${esc(p.name)}</div><div style="font-size:12px;color:#64748b">Cliente: ${esc(p.client||'—')} · Responsável: ${esc(p.owner||'—')} · ${p.status}</div><div style="font-size:12px;color:#64748b">${fD(p.startDate)} → ${fD(p.endDate)} · FAP: ${p.totalHours||0}h</div></div><div style="display:flex;gap:14px">${[{l:'Planejadas',v:st.pl+'h'},{l:'Realizadas',v:st.dn+'h',c:'#22c55e'},{l:'Progresso',v:st.pct+'%',c}].map(k=>`<div style="text-align:center"><div style="font-size:20px;font-weight:800;color:${k.c||'#1e293b'}">${k.v}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase">${k.l}</div></div>`).join('')}</div></div></div>
-    <table class="st"><thead><tr><th>Num</th><th>Etapa</th><th>Tipo</th><th>Executante</th><th>Início Plan.</th><th>Término Plan.</th><th>H. Plan.</th><th>H. Real</th><th>Custo Plan.</th><th>Custo Real</th><th>Variação</th><th>Status</th><th>Prazo</th></tr></thead><tbody>
+    <table class="st"><thead><tr><th>Num</th><th>Etapa</th><th>Tipo</th><th>Executante</th><th>Início Plan.</th><th>Término Plan.</th><th>Reagendada</th><th>H. Plan.</th><th>H. Real</th><th>Custo Plan.</th><th>Custo Real</th><th>Variação</th><th>Status</th><th>Prazo</th></tr></thead><tbody>
     ${roots.map((r,ri)=>{
       const rc=PCOLS[ri%PCOLS.length];const kids=cm[r.id]||[];
       const defRate=parseFloat(p.defaultRate)||0;
@@ -2814,7 +2785,7 @@ function exportHTML(projs){
         const cp=Math.round(hp*rate*100)/100;const cr=Math.round(hr*rate*100)/100;const vr=Math.round((cp-cr)*100)/100;
         const ps2=prazoStatus(s);
         const prefix=indent?`<td style="padding-left:18px">${esc(s.num||'')}</td><td style="padding-left:18px">↳ ${esc(s.name)}</td>`:`<td>${esc(s.num||'')}</td><td><strong>${esc(s.name)}</strong></td>`;
-        return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td>${hp}h</td><td>${hr}h</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
+        return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td style="${s.dateReschedule?'color:#d97706;font-weight:700':''}">${s.dateReschedule?('🔄 '+fD(s.dateReschedule.split('T')[0])):'—'}</td><td>${hp}h</td><td>${hr}h</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
       }
       return`<tr style="border-left:3px solid ${rc}">${rowCells(r,false)}</tr>`+kids.map(k=>`<tr>${rowCells(k,true)}</tr>`).join('');}).join('')}
     </tbody>
