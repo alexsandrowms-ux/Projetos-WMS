@@ -2777,7 +2777,7 @@ function exportHTML(projs){
     const cm={};(p.stages||[]).filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
     const kids_all=(p.stages||[]).filter(s=>s.parentId);
     body+=`<div class="ps"><div class="ph" style="border-left:5px solid ${c}"><div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px"><div><div style="font-size:18px;font-weight:800;color:${c};margin-bottom:4px">${esc(p.name)}</div><div style="font-size:12px;color:#64748b">Cliente: ${esc(p.client||'—')} · Responsável: ${esc(p.owner||'—')} · ${p.status}</div><div style="font-size:12px;color:#64748b">${fD(p.startDate)} → ${fD(p.endDate)} · FAP: ${p.totalHours||0}h</div></div><div style="display:flex;gap:14px">${[{l:'Planejadas',v:st.pl+'h'},{l:'Realizadas',v:st.dn+'h',c:'#22c55e'},{l:'Progresso',v:st.pct+'%',c}].map(k=>`<div style="text-align:center"><div style="font-size:20px;font-weight:800;color:${k.c||'#1e293b'}">${k.v}</div><div style="font-size:10px;color:#94a3b8;text-transform:uppercase">${k.l}</div></div>`).join('')}</div></div></div>
-    <table class="st"><thead><tr><th>Num</th><th>Etapa</th><th>Tipo</th><th>Executante</th><th>Início Plan.</th><th>Término Plan.</th><th>Reagendada</th><th>Horário Exec.</th><th>Intervalo</th><th>H. Plan.</th><th>H. Real</th><th>Total H. Real</th><th>Custo Plan.</th><th>Custo Real</th><th>Variação</th><th>Status</th><th>Prazo</th></tr></thead><tbody>
+    <table class="st"><thead><tr><th>Num</th><th>Etapa</th><th>Tipo</th><th>Executante</th><th>Início Plan.</th><th>Término Plan.</th><th>Reagendada</th><th>Horário Exec.</th><th>Intervalo</th><th>H. Plan.</th><th>H. Real</th><th>Custo Plan.</th><th>Custo Real</th><th>Variação</th><th>Status</th><th>Prazo</th></tr></thead><tbody>
     ${roots.map((r,ri)=>{
       const rc=PCOLS[ri%PCOLS.length];const kids=cm[r.id]||[];
       const defRate=parseFloat(p.defaultRate)||0;
@@ -2786,7 +2786,7 @@ function exportHTML(projs){
         const cp=Math.round(hp*rate*100)/100;const cr=Math.round(hr*rate*100)/100;const vr=Math.round((cp-cr)*100)/100;
         const ps2=prazoStatus(s);
         const prefix=indent?`<td style="padding-left:18px">${esc(s.num||'')}</td><td style="padding-left:18px">↳ ${esc(s.name)}</td>`:`<td>${esc(s.num||'')}</td><td><strong>${esc(s.name)}</strong></td>`;
-        return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td style="${s.dateReschedule?'color:#d97706;font-weight:700':''}">${s.dateReschedule?('🔄 '+fD(s.dateReschedule.split('T')[0])):'—'}</td><td style="text-align:center">${s.timeStart&&s.timeEnd?s.timeStart+' → '+s.timeEnd:'—'}</td><td style="text-align:center;color:#d97706">${s.breakHours>0?decHToHHMM(s.breakHours):'—'}</td><td>${hp}h</td><td>${hr}h</td><td style="font-weight:700;color:#16a34a">${hr>0?hr+'h':'—'}</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
+        return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td style="${s.dateReschedule?'color:#d97706;font-weight:700':''}">${s.dateReschedule?('🔄 '+fD(s.dateReschedule.split('T')[0])):'—'}</td><td style="text-align:center">${s.timeStart&&s.timeEnd?s.timeStart+' → '+s.timeEnd:'—'}</td><td style="text-align:center;color:#d97706">${s.breakHours>0?decHToHHMM(s.breakHours):'—'}</td><td>${hp}h</td><td style="font-weight:700;color:#16a34a">${hr>0?hr+'h':'—'}</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
       }
       return`<tr style="border-left:3px solid ${rc}">${rowCells(r,false)}</tr>`+kids.map(k=>`<tr>${rowCells(k,true)}</tr>`).join('');}).join('')}
     </tbody>
@@ -2800,9 +2800,8 @@ function exportHTML(projs){
       const totV=totCP-totCR;
       const cur=v=>'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
       return`<tfoot><tr style="background:#f1f5f9;font-weight:800;border-top:2px solid #cbd5e1">
-        <td colspan="8" style="padding:8px 10px;font-size:12px;color:#475569">TOTAL DO PROJETO</td>
+        <td colspan="7" style="padding:8px 10px;font-size:12px;color:#475569">TOTAL DO PROJETO</td>
         <td style="padding:8px 6px;text-align:center;font-size:12px">${totHP}h</td>
-        <td style="padding:8px 6px;text-align:center;font-size:12px">${totHR}h</td>
         <td style="padding:8px 6px;text-align:center;font-size:12px;font-weight:800;color:#16a34a">${Math.round(totHR*100)/100}h</td>
         <td style="padding:8px 8px;text-align:right;font-size:12px;color:#b45309">${totCP>0?cur(totCP):'—'}</td>
         <td style="padding:8px 8px;text-align:right;font-size:12px;color:#7c3aed">${totCR>0?cur(totCR):'—'}</td>
