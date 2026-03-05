@@ -2800,8 +2800,8 @@ function exportHTML(projs){
       const totV=totCP-totCR;
       const cur=v=>'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
       return`<tfoot><tr style="background:#f1f5f9;font-weight:800;border-top:2px solid #cbd5e1">
-        <td colspan="7" style="padding:8px 10px;font-size:12px;color:#475569">TOTAL DO PROJETO</td>
-        <td style="padding:8px 6px;text-align:center;font-size:12px">${totHP}h</td>
+        <td colspan="9" style="padding:8px 10px;font-size:12px;color:#475569">TOTAL DO PROJETO</td>
+        <td style="padding:8px 6px;text-align:center;font-size:12px;color:#b45309">${totHP}h</td>
         <td style="padding:8px 6px;text-align:center;font-size:12px;font-weight:800;color:#16a34a">${Math.round(totHR*100)/100}h</td>
         <td style="padding:8px 8px;text-align:right;font-size:12px;color:#b45309">${totCP>0?cur(totCP):'—'}</td>
         <td style="padding:8px 8px;text-align:right;font-size:12px;color:#7c3aed">${totCR>0?cur(totCR):'—'}</td>
