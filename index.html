@@ -130,9 +130,9 @@ textarea.fc{resize:vertical;min-height:60px}
 /* ── DETAIL ── */
 .det-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;gap:14px;flex-wrap:wrap}
 .det-title{font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:4px}
-.hours-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:20px}
-.hcard{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;text-align:center}
-.hval{font-family:var(--display);font-size:20px;font-weight:700}
+.hours-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;min-width:0}
+.hcard{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;text-align:center;min-width:0;overflow:hidden}
+.hval{font-family:var(--display);font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .hlbl{font-size:10px;color:var(--mid);margin-top:3px;letter-spacing:.04em;text-transform:uppercase}
 .tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;width:fit-content;margin-bottom:18px}
 .dtab{padding:6px 18px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--mid);transition:all .15s;user-select:none}
@@ -1322,9 +1322,10 @@ function stats(proj){
   const pl=roots.reduce((s,x)=>s+h(x),0);
   // Realizadas = soma das hoursReal efetivamente preenchidas nas sub-etapas
   const subs=a.filter(x=>x.parentId);
-  const dn = subs.length > 0
+  const _dnRaw = subs.length > 0
     ? subs.reduce((s,k)=>s+(parseFloat(k.hoursReal)||0), 0)
     : roots.filter(r=>r.status==='Concluído').reduce((s,r)=>s+(parseFloat(r.hoursReal)||0), 0);
+  const dn = Math.round(_dnRaw * 10) / 10;
   const fap=parseFloat(proj.totalHours)||0;
   const base=fap>0?fap:pl;
   // Soma das horas das sub-etapas por etapa raiz (consumo planejado)
@@ -1338,7 +1339,8 @@ function stats(proj){
   const totalRootBudget=roots.reduce((s,r)=>s+h(r),0);
   const projBudget=parseFloat(proj.totalHours)||0;
   const projDiff=projBudget>0?totalRootBudget-projBudget:0;
-  return{pl,dn,rem:Math.max(0,base-dn),pct:base>0?Math.round(dn/base*100):0,rootStats,totalRootBudget,projBudget,projDiff};
+  const _rem=Math.round(Math.max(0,base-dn)*10)/10;
+  return{pl,dn,rem:_rem,pct:base>0?Math.round(dn/base*100):0,rootStats,totalRootBudget,projBudget,projDiff};
 }
 
 function parseDate(v){
@@ -1713,7 +1715,7 @@ function _refreshDetailHeader(){
   const badgeEl=document.getElementById('det-badges');
   if(badgeEl)badgeEl.innerHTML=`<span class="badge ${SB[proj.status]||'badge-gray'}">${proj.status}</span><span class="badge badge-gray">📅 ${fD(proj.startDate)} → ${fD(proj.endDate)}</span><span class="badge badge-amber">⏱️ ${proj.totalHours||0}h FAP</span>`;
   const hEl=document.getElementById('det-hours');
-  if(hEl)hEl.innerHTML=`<div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div><div class="hcard"><div class="hval" style="color:var(--amber)">${st.totalRootBudget}h</div><div class="hlbl">Etapas (orçamento)</div></div><div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div><div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>`;
+  if(hEl)hEl.innerHTML=`<div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div><div class="hcard"><div class="hval" style="color:var(--amber)">${Math.round(st.totalRootBudget*10)/10}h</div><div class="hlbl">Etapas (orçamento)</div></div><div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div><div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>`;
 }
 function renderDetail(){
   const proj=getP(S.cur);if(!proj){showPage('projects');return;}
@@ -1742,7 +1744,7 @@ function renderDetail(){
   if(warnEl) warnEl.innerHTML = warnHtml;
   document.getElementById('det-hours').innerHTML=`
     <div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div>
-    <div class="hcard"><div class="hval" style="color:var(--amber)">${st.totalRootBudget}h</div><div class="hlbl">Etapas (orçamento)</div></div>
+    <div class="hcard"><div class="hval" style="color:var(--amber)">${Math.round(st.totalRootBudget*10)/10}h</div><div class="hlbl">Etapas (orçamento)</div></div>
     <div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div>
     <div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>
     <div class="hcard"><div class="hval" style="color:${c}">${st.pct}%</div><div class="hlbl">Progresso</div></div>
@@ -1775,7 +1777,7 @@ function renderStages(){
     const overBudget=remaining<0;
     const barCls=overBudget?'hbudget-over':pctUsed>=90?'hbudget-warn':'hbudget-ok';
     const lastKidIdx=kids.length-1;
-    const realizado=kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
+    const realizado=Math.round(kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)*10)/10;
     const ps=prazoStatus(root);
     return`<div class="stage-section">
       <div class="sroot" style="border-left:3px solid ${col}${root.bgColor?`;background:${root.bgColor}`:''}">
@@ -1831,7 +1833,7 @@ function renderStages(){
               ${k.dateReschedule?`<div class="ssi"><span class="ssi-l" style="color:var(--amber)">🔄 Reagend.</span><span class="ssi-v" style="color:var(--amber);font-weight:600">${fDS(k.dateReschedule.split('T')[0])||'—'}</span></div>`:''}
             ${(k.timeStart||k.timeEnd)?`<div class="ssi"><span class="ssi-l">Horário</span><span class="ssi-v" style="color:var(--accent)">${k.timeStart||'—'} → ${k.timeEnd||'—'}</span></div>`:''}
               <div class="ssi"><span class="ssi-l">H. Plan.</span><span class="ssi-v" style="color:var(--amber)">${k.hours||0}h</span></div>
-              <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal||'—'}</span></div>
+              <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal?(Math.round(parseFloat(k.hoursReal)*10)/10):'—'}</span></div>
               ${k.breakHours>0?`<div class="ssi"><span class="ssi-l" style="color:var(--amber)">☕ Intervalo</span><span class="ssi-v" style="color:var(--amber)">${decHToHHMM(k.breakHours)}</span></div>`:''}
               ${k.dateReal?`<div class="ssi"><span class="ssi-l">Conclusão</span><span class="ssi-v" style="color:var(--green)">${fDS(k.dateReal)}</span></div>`:''}
               <div class="ssi"><span class="ssi-l">Status</span><span class="badge ${SB[k.status]||'badge-gray'}" style="font-size:9px;margin-top:2px">${SE[k.status]||''} ${k.status}</span></div>
@@ -1861,10 +1863,13 @@ function renderStages(){
 // Returns effective hoursReal: for root = sum of kids, for sub = own value
 function getHoursReal(stage, allStages){
   const kids = allStages.filter(s=>s.parentId===stage.id);
+  let val;
   if(kids.length>0){
-    return kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0), 0);
+    val = kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0), 0);
+  } else {
+    val = parseFloat(stage.hoursReal)||0;
   }
-  return parseFloat(stage.hoursReal)||0;
+  return Math.round(val*10)/10;
 }
 
 function calcEVM(proj){
@@ -2397,7 +2402,7 @@ function openStageModal(isNew=true,editId=null,defParent=null){
       const autoSum=kids2.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
       hrInput.value='';
       hrInput.style.display='none';
-      hrAuto.textContent=autoSum+'h (automático — soma das sub-etapas)';
+      hrAuto.textContent=(Math.round(autoSum*10)/10)+'h (automático — soma das sub-etapas)';
       hrAuto.style.display='block';
     } else {
       hrInput.style.display='';
@@ -3242,7 +3247,7 @@ function renderPerfTab(){
   const rLabels=roots.map(r=>(r.num?r.num+' ':'')+r.name.substring(0,16));
   const rBudget=roots.map(r=>parseFloat(r.hours)||0);
   const rConsumed=roots.map(r=>{const k=stages.filter(s=>s.parentId===r.id);return k.length>0?k.reduce((a,s)=>a+(parseFloat(s.hours)||0),0):parseFloat(r.hours)||0;});
-  const rReal=roots.map(r=>stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0));
+  const rReal=roots.map(r=>Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)*10)/10);
 
   // Cost per root
   const rCostPlan=roots.map(r=>Math.round((parseFloat(r.hours)||0)*(r.hourRate||defRate)*100)/100);
