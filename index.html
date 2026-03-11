@@ -750,7 +750,7 @@ datalist{display:none}
       <div class="frow">
         <div class="fg">
           <label>☕ Intervalo</label>
-          <input class="fc" type="time" id="fs-break" onchange="calcModalHours()" placeholder="01:30" title="Intervalo (ex: 01:30)">
+          <input class="fc" type="time" id="fs-break" onchange="calcModalHours();calcRealHours();" placeholder="01:30" title="Intervalo (ex: 01:30)">
         </div>
         <div class="fg" id="fs-hoursreal-wrap"><label>Horas Realizadas</label>
           <input class="fc" type="number" id="fs-hoursreal" placeholder="Calculado automaticamente" min="0" title="Calculado com base em Início Real e Término Real">
@@ -2474,25 +2474,36 @@ function calcRealHours(){
   if(!s||!e){
     hEl.style.background='';
     hEl.removeAttribute('readonly');
-    if(autoSpan)autoSpan.style.color='var(--accent)';
+    if(autoSpan){autoSpan.textContent='⚡ Auto calculado por Início/Término Real';autoSpan.style.color='var(--accent)';}
     return;
   }
   const diff=(new Date(e)-new Date(s))/3600000;
-  if(diff>0&&diff<1000){
-    const h=Math.round(diff*100)/100;
-    hEl.value=h;
-    hEl.setAttribute('readonly','readonly');
-    hEl.style.background='rgba(34,197,94,.08)';
-    hEl.style.color='var(--green)';
-    hEl.title=`Calculado: ${formatHorasMin(diff)}`;
-    if(autoSpan){
-      autoSpan.textContent=`⚡ ${formatHorasMin(diff)} (${h}h)`;
-      autoSpan.style.color='var(--green)';
-    }
-  } else if(diff<=0){
+  const brk=timeToDecH(document.getElementById('fs-break')?.value||'');
+  const net=diff-brk;
+  if(diff<=0){
     hEl.style.background='rgba(239,68,68,.08)';
     hEl.style.color='var(--red)';
+    hEl.removeAttribute('readonly');
     if(autoSpan){autoSpan.textContent='⚠️ Término Real anterior ao Início Real';autoSpan.style.color='var(--red)';}
+    return;
+  }
+  if(net<=0){
+    hEl.style.background='rgba(239,68,68,.08)';
+    hEl.style.color='var(--red)';
+    hEl.removeAttribute('readonly');
+    if(autoSpan){autoSpan.textContent='⚠️ Intervalo maior que o período real';autoSpan.style.color='var(--red)';}
+    return;
+  }
+  const h=Math.round(net*100)/100;
+  hEl.value=h;
+  hEl.setAttribute('readonly','readonly');
+  hEl.style.background='rgba(34,197,94,.08)';
+  hEl.style.color='var(--green)';
+  hEl.title=`Início Real → Término Real: ${formatHorasMin(diff)} − Intervalo: ${formatHorasMin(brk)} = ${formatHorasMin(net)}`;
+  if(autoSpan){
+    const brkTxt=brk>0?` − ${formatHorasMin(brk)} intervalo`:'';
+    autoSpan.textContent=`⚡ ${formatHorasMin(diff)}${brkTxt} = ${formatHorasMin(net)} (${h}h)`;
+    autoSpan.style.color='var(--green)';
   }
 }
 function formatHorasMin(decHours){
