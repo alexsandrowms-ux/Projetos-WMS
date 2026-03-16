@@ -208,6 +208,10 @@ textarea.fc{resize:vertical;min-height:60px}
 .btn-log:hover{background:rgba(167,139,250,.2)}
 .schev{color:var(--dim);font-size:11px;flex-shrink:0;transition:transform .2s;padding:0 4px}
 .schev.open{transform:rotate(180deg)}
+.collapse-btn{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:5px;background:var(--bg4);border:1px solid var(--border);color:var(--mid);font-size:16px;font-weight:700;line-height:1;flex-shrink:0;transition:all .15s;cursor:pointer;user-select:none}
+.collapse-btn:hover{background:var(--border2);color:var(--text);border-color:var(--accent)}
+.collapse-btn.open{background:rgba(14,165,233,.12);color:var(--accent);border-color:rgba(14,165,233,.3)}
+.substages-wrap{transition:none}
 .add-sub-btn{display:flex;align-items:center;gap:8px;padding:6px 13px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--dim);font-size:12px;transition:all .15s;margin-top:3px}
 .add-sub-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(14,165,233,.05)}
 .add-root-btn{display:flex;align-items:center;gap:10px;padding:12px 15px;border:1.5px dashed var(--border);border-radius:var(--r);cursor:pointer;color:var(--dim);font-size:13px;font-weight:500;transition:all .15s;margin-top:8px}
@@ -543,6 +547,7 @@ datalist{display:none}
       <div class="sb-nav">
         <div class="sb-item on" id="snav-dash" onclick="showPage('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
         <div class="sb-item" id="snav-proj" onclick="showPage('projects')"><span class="sb-icon">📁</span>Projetos</div>
+        <div class="sb-item" id="snav-cgantt" onclick="showPage('cgantt')"><span class="sb-icon">🗓️</span>Agenda Consolidada</div>
         <div class="sb-sep"></div>
 <div class="sb-item" id="snav-users" style="display:none" onclick="showPage('users')"><span class="sb-icon">👥</span>Usuários</div>
       </div>
@@ -612,6 +617,12 @@ datalist{display:none}
           <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
             <div class="add-root-btn" onclick="openStageModal()" style="margin-top:0;flex:1;min-width:200px">
               <span style="font-size:17px;color:var(--accent)">+</span> Adicionar Etapa Principal
+            </div>
+            <div class="add-root-btn" onclick="toggleAllKids(true)" style="margin-top:0;border-color:var(--border2);color:var(--mid);padding:8px 14px">
+              <span style="font-size:13px">−</span> Recolher Todas
+            </div>
+            <div class="add-root-btn" onclick="toggleAllKids(false)" style="margin-top:0;border-color:var(--border2);color:var(--mid);padding:8px 14px">
+              <span style="font-size:13px">+</span> Expandir Todas
             </div>
             <div class="add-root-btn" onclick="openDefaultStagesModal()" style="margin-top:0;border-color:var(--amber);color:var(--amber)">
               <span style="font-size:15px">⚡</span> Etapas Padrão WMS
@@ -1097,6 +1108,36 @@ datalist{display:none}
     </div>
     <div class="mfooter">
       <button class="btn btn-ghost" onclick="closeModal('modal-log')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="page" id="page-cgantt">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+    <div>
+      <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">🗓️ Agenda Consolidada</div>
+      <div style="font-size:12px;color:var(--mid)" id="cg-info">Todos os projetos · todas as tarefas</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <label style="font-size:11px;color:var(--mid);font-weight:600">DE</label>
+      <input class="fc" type="date" id="cg-start" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
+      <label style="font-size:11px;color:var(--mid);font-weight:600">ATÉ</label>
+      <input class="fc" type="date" id="cg-end" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
+      <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(7)">7d</button>
+      <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(30)">30d</button>
+      <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(90)">3m</button>
+      <button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="renderCGantt()">🔄 Atualizar</button>
+    </div>
+  </div>
+
+  <!-- LEGEND -->
+  <div id="cg-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+
+  <!-- GANTT TABLE -->
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+    <div style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px)">
+      <div id="cg-box"><div class="loading"><span class="spin">⟳</span> Carregando agenda...</div></div>
     </div>
   </div>
 </div>
@@ -1646,6 +1687,10 @@ function showPage(page,pid=null){
     document.getElementById('page-users').classList.add('on');
     document.getElementById('snav-users').classList.add('on');
     renderUsersPage();
+  } else if(page==='cgantt'){
+    document.getElementById('page-cgantt').classList.add('on');
+    document.getElementById('snav-cgantt').classList.add('on');
+    renderCGantt();
   }
 }
 
@@ -1791,14 +1836,15 @@ function renderStages(){
       <div class="sroot" style="border-left:3px solid ${col}${root.bgColor?`;background:${root.bgColor}`:''}">
         <div style="display:flex;align-items:stretch">
           <div class="sroot-body" onclick="toggleKids('${root.id}')">
+            ${kids.length>0?`<span class="collapse-btn" id="chev_${root.id}" title="${kids.length} sub-etapa(s)">−</span>`:'<span style="width:26px;flex-shrink:0"></span>'}
             <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40">${esc(root.num)||'–'}</span>
             <span class="sname">${esc(root.name)}</span>
             <div class="sr-pills">
               <span class="badge ${SB[root.status]||'badge-gray'}" style="font-size:9px">${SE[root.status]||''} ${root.status}</span>
               <span class="ps-badge ${ps.cls}" style="font-size:9px">${ps.icon} ${ps.label}</span>
               ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}" style="font-size:9px">${overBudget?'⚠️ +'+Math.abs(remaining)+'h':remaining===0?'✅ Exato':'💚 '+remaining+'h livre'}</span>`:''}
+              ${kids.length>0?`<span style="font-size:9px;color:var(--dim)">${kids.length} sub</span>`:''}
             </div>
-            <span class="schev open" id="chev_${root.id}">▼</span>
           </div>
           <div class="sroot-acts">
             <button class="btn-ev" data-evbtn="${root.id}" data-action="ev" data-sid="${root.id}">📎 Evidências${root.evidence&&root.evidence.length?` <span style='background:var(--accent);color:#fff;border-radius:10px;padding:0 5px;font-size:9px'>${root.evidence.length}</span>`:''}</button>
@@ -2012,9 +2058,20 @@ function autoNumberStages(proj){
 
 function toggleKids(id){
   const el=document.getElementById(`kids_${id}`),ch=document.getElementById(`chev_${id}`);
+  if(!el)return;
   const hide=el.style.display!=='none';
   el.style.display=hide?'none':'';
-  ch.textContent=hide?'▶':'▼';ch.classList.toggle('open',!hide);
+  if(ch){ch.textContent=hide?'+':'−';ch.classList.toggle('open',!hide);}
+}
+function toggleAllKids(collapse){
+  const proj=getP(S.cur);if(!proj)return;
+  (proj.stages||[]).filter(s=>!s.parentId).forEach(r=>{
+    const el=document.getElementById(`kids_${r.id}`);
+    const ch=document.getElementById(`chev_${r.id}`);
+    if(!el)return;
+    el.style.display=collapse?'none':'';
+    if(ch){ch.textContent=collapse?'+':'−';ch.classList.toggle('open',!collapse);}
+  });
 }
 
 // ════════════════════════════════════
@@ -2464,6 +2521,222 @@ function confirmDelAllStages(){
     renderDetail();
   };
   openModal('modal-confirm');
+}
+
+
+// ════════════════════════════════════════════════
+// AGENDA CONSOLIDADA
+// ════════════════════════════════════════════════
+function cgSetPeriod(days){
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - 7); // start a week back
+  const end = new Date(today);
+  end.setDate(today.getDate() + days);
+  document.getElementById('cg-start').value = start.toISOString().split('T')[0];
+  document.getElementById('cg-end').value   = end.toISOString().split('T')[0];
+  renderCGantt();
+}
+
+function renderCGantt(){
+  const el = document.getElementById('cg-box');
+  if(!el) return;
+
+  // ── Período ──
+  let sdStr = document.getElementById('cg-start')?.value;
+  let edStr = document.getElementById('cg-end')?.value;
+  if(!sdStr || !edStr){
+    const today = new Date();
+    const d7 = new Date(today); d7.setDate(today.getDate() - 7);
+    const d90 = new Date(today); d90.setDate(today.getDate() + 90);
+    sdStr = d7.toISOString().split('T')[0];
+    edStr = d90.toISOString().split('T')[0];
+    document.getElementById('cg-start').value = sdStr;
+    document.getElementById('cg-end').value   = edStr;
+  }
+  const sd = new Date(sdStr + 'T00:00:00');
+  const ed = new Date(edStr + 'T00:00:00');
+
+  // ── Gera dias ──
+  const days = [];
+  for(let d = new Date(sd); d <= ed; d.setDate(d.getDate()+1)) days.push(new Date(d));
+  if(days.length > 366){ el.innerHTML='<div class="empty">Período máximo: 366 dias</div>'; return; }
+
+  // ── Coleta todas as tarefas de todos os projetos ──
+  const allRows = [];
+  (S.projects||[]).forEach((proj, pi) => {
+    const col = proj.color || PCOLS[pi % PCOLS.length];
+    const stages = proj.stages || [];
+    const roots = stages.filter(s => !s.parentId);
+    roots.forEach(root => {
+      const kids = stages.filter(s => s.parentId === root.id);
+      if(kids.length){
+        kids.forEach(k => {
+          const startD = k.date ? k.date.split('T')[0] : null;
+          const endD   = effectiveDateEnd(k);
+          if(!startD && !endD) return; // sem data, pula
+          allRows.push({ proj, col, root, stage: k, startD, endD });
+        });
+      } else {
+        const startD = root.date ? root.date.split('T')[0] : null;
+        const endD   = effectiveDateEnd(root);
+        if(!startD && !endD) return;
+        allRows.push({ proj, col, root, stage: root, startD, endD });
+      }
+    });
+  });
+
+  // ── Filtra rows que tocam o período ──
+  const visible = allRows.filter(r => {
+    const rS = r.startD ? new Date(r.startD+'T00:00:00') : null;
+    const rE = r.endD   ? new Date(r.endD+'T00:00:00')   : rS;
+    if(!rS && !rE) return false;
+    return (!rE || rE >= sd) && (!rS || rS <= ed);
+  });
+
+  // ── Info ──
+  const infoEl = document.getElementById('cg-info');
+  if(infoEl) infoEl.textContent = `${days.length} dia(s) · ${visible.length} tarefa(s) · ${new Set(visible.map(r=>r.proj.id)).size} projeto(s)`;
+
+  // ── Legend ──
+  const legEl = document.getElementById('cg-legend');
+  if(legEl){
+    const projs = [...new Map(visible.map(r=>[r.proj.id, r])).values()];
+    legEl.innerHTML = projs.map(r=>`
+      <div style="display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--text)">
+        <span style="width:10px;height:10px;border-radius:50%;background:${r.col};flex-shrink:0;display:inline-block"></span>
+        <span>${esc(r.proj.client||r.proj.name)}</span>
+        <span style="color:var(--dim)">· ${esc(r.proj.name)}</span>
+      </div>`).join('');
+  }
+
+  if(!visible.length){
+    el.innerHTML=`<div class="empty" style="padding:40px"><span style="font-size:32px;display:block;margin-bottom:10px">🗓️</span><div>Nenhuma tarefa com datas no período selecionado.</div></div>`;
+    return;
+  }
+
+  // ── Sort: por projeto, depois por data início ──
+  visible.sort((a,b) => {
+    const pA = a.proj.name, pB = b.proj.name;
+    if(pA !== pB) return pA.localeCompare(pB);
+    return (a.startD||'').localeCompare(b.startD||'');
+  });
+
+  // ── Mês agrupamento header ──
+  const months = [];
+  days.forEach(d => {
+    const mk = d.getFullYear()+'-'+(d.getMonth()+1);
+    if(!months.length || months[months.length-1].key !== mk)
+      months.push({key:mk, label:d.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}), count:1});
+    else months[months.length-1].count++;
+  });
+
+  const DN = ['D','S','T','Q','Q','S','S'];
+  const today = new Date(); today.setHours(0,0,0,0);
+  const COL_W = 28;
+  const LABEL_W = 170;
+  const CLIENT_W = 110;
+  const EXEC_W = 90;
+  const TIME_W = 80;
+
+  // ── Cabeçalho ──
+  let h = `<table class="gtbl" style="table-layout:fixed;min-width:${LABEL_W+CLIENT_W+EXEC_W+TIME_W + days.length*COL_W}px">
+    <colgroup>
+      <col style="width:${LABEL_W}px">
+      <col style="width:${CLIENT_W}px">
+      <col style="width:${EXEC_W}px">
+      <col style="width:${TIME_W}px">
+      ${days.map(()=>`<col style="width:${COL_W}px">`).join('')}
+    </colgroup>
+    <thead>
+      <tr>
+        <th rowspan="2" style="position:sticky;left:0;z-index:3;background:var(--bg3)">Tarefa</th>
+        <th rowspan="2" style="position:sticky;left:${LABEL_W}px;z-index:3;background:var(--bg3)">Cliente</th>
+        <th rowspan="2">Responsável</th>
+        <th rowspan="2" style="font-size:9px;text-align:center">Horário</th>
+        ${months.map(m=>`<th colspan="${m.count}" style="text-align:center;font-size:10px;background:rgba(14,165,233,.1);color:var(--accent);border-bottom:1px solid var(--border2)">${m.label}</th>`).join('')}
+      </tr>
+      <tr>
+        ${days.map(d=>{
+          const isToday=d.getTime()===today.getTime();
+          const isSun=d.getDay()===0, isSat=d.getDay()===6;
+          return`<th style="text-align:center;font-size:9px;padding:3px 1px;${isToday?'background:rgba(14,165,233,.25);color:var(--accent);font-weight:800':isSun||isSat?'color:var(--amber);background:rgba(245,158,11,.06)':''}">
+            <div>${DN[d.getDay()]}</div>
+            <div style="font-weight:${isToday?800:400}">${d.getDate()}</div>
+          </th>`;
+        }).join('')}
+      </tr>
+    </thead>
+    <tbody>`;
+
+  // ── Rows agrupadas por projeto ──
+  let lastProjId = null;
+  visible.forEach(r => {
+    const {proj, col, root, stage} = r;
+    const rS = r.startD ? new Date(r.startD+'T00:00:00') : null;
+    const rE = r.endD   ? new Date(r.endD+'T00:00:00')   : rS;
+    const isDone = stage.status === 'Concluído';
+    const isActive = rS && rE && rS <= today && rE >= today;
+
+    // Group header por projeto
+    if(proj.id !== lastProjId){
+      lastProjId = proj.id;
+      h += `<tr>
+        <td colspan="${4 + days.length}" style="background:${col}18;border-top:2px solid ${col};border-bottom:1px solid ${col}40;padding:5px 10px;font-size:11px;font-weight:700;color:${col};position:sticky;left:0">
+          ● ${esc(proj.name)} <span style="font-weight:400;color:var(--mid)">· ${esc(proj.client||'—')}</span>
+          <span style="margin-left:8px;font-size:10px;font-weight:400;padding:1px 8px;border-radius:10px;background:${col}25">${esc(proj.status||'')}</span>
+        </td>
+      </tr>`;
+    }
+
+    // Cells de dias
+    const cells = days.map(d => {
+      const dStr = d.toISOString().split('T')[0];
+      const inRange = rS && rE && d >= rS && d <= rE;
+      const isStart = rS && dStr === r.startD;
+      const isEnd   = rE && dStr === r.endD;
+      const isToday = d.getTime() === today.getTime();
+      const isSun = d.getDay()===0, isSat = d.getDay()===6;
+
+      let bg = '';
+      if(isToday) bg = 'background:rgba(14,165,233,.07)';
+      else if(isSun||isSat) bg = 'background:rgba(245,158,11,.04)';
+
+      if(inRange){
+        const barCol = isDone ? '#22c55e' : col;
+        const radius = isStart && isEnd ? '4px' : isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : '0';
+        const opacity = isDone ? '0.6' : isActive ? '1' : '0.75';
+        return `<td style="${bg};padding:2px 1px">
+          <div style="height:16px;background:${barCol};border-radius:${radius};opacity:${opacity};min-width:4px"></div>
+        </td>`;
+      }
+      return `<td style="${bg}"></td>`;
+    }).join('');
+
+    const timeStr = (stage.timeStart||stage.timeEnd) ? `${stage.timeStart||'—'} → ${stage.timeEnd||'—'}` : '—';
+    const execStr = stage.executor || '—';
+    const parentLabel = root.id !== stage.id ? `<span style="font-size:9px;color:var(--dim)">${esc((root.num?root.num+' ':'')+root.name)} › </span>` : '';
+
+    h += `<tr style="${isDone?'opacity:.6':''}">
+      <td style="position:sticky;left:0;z-index:2;background:var(--bg2);border-left:3px solid ${col}">
+        <div style="padding:5px 8px">
+          ${parentLabel}
+          <div style="font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px" title="${esc(stage.name)}">${esc(stage.name)}</div>
+          <div style="display:flex;gap:4px;margin-top:2px">
+            <span class="badge ${({Concluído:'badge-green',Cancelado:'badge-red','Em Andamento':'badge-blue'})[stage.status]||'badge-gray'}" style="font-size:8px">${stage.status||'Pendente'}</span>
+            ${r.startD?`<span style="font-size:9px;color:var(--dim)">${fDS(r.startD)}${r.endD&&r.endD!==r.startD?' → '+fDS(r.endD):''}</span>`:''}
+          </div>
+        </div>
+      </td>
+      <td style="position:sticky;left:${LABEL_W}px;z-index:2;background:var(--bg2);font-size:11px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${CLIENT_W}px;padding:0 8px" title="${esc(proj.client||proj.name)}">${esc(proj.client||proj.name)}</td>
+      <td style="font-size:11px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px">${esc(execStr)}</td>
+      <td style="font-size:10px;color:var(--accent);text-align:center;white-space:nowrap;padding:0 4px">${timeStr}</td>
+      ${cells}
+    </tr>`;
+  });
+
+  h += `</tbody></table>`;
+  el.innerHTML = h;
 }
 
 // ════════════════════════════════════
