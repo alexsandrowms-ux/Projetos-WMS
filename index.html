@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>AXL IntraLog — WMS Projetos</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
@@ -132,8 +132,8 @@ textarea.fc{resize:vertical;min-height:60px}
 .det-title{font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:4px}
 .hours-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:20px;min-width:0}
 .hcard{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;text-align:center;min-width:0;overflow:hidden}
-.hval{font-family:var(--display);font-size:18px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.hlbl{font-size:10px;color:var(--mid);margin-top:3px;letter-spacing:.04em;text-transform:uppercase}
+.hval{font-family:"Inter",var(--display);font-size:20px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;font-variant-numeric:tabular-nums;letter-spacing:-0.5px}
+.hlbl{font-size:10px;font-family:"Inter",var(--sans);color:var(--mid);margin-top:3px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
 .tabs{display:flex;gap:2px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:4px;width:fit-content;margin-bottom:18px}
 .dtab{padding:6px 18px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;color:var(--mid);transition:all .15s;user-select:none}
 .dtab.on{background:var(--bg4);color:var(--text)}
@@ -609,8 +609,13 @@ datalist{display:none}
         </div>
         <div id="tab-stages">
           <div id="stages-list"></div>
-          <div class="add-root-btn" onclick="openStageModal()">
-            <span style="font-size:17px;color:var(--accent)">+</span> Adicionar Etapa Principal
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+            <div class="add-root-btn" onclick="openStageModal()" style="margin-top:0;flex:1;min-width:200px">
+              <span style="font-size:17px;color:var(--accent)">+</span> Adicionar Etapa Principal
+            </div>
+            <div class="add-root-btn" onclick="openDefaultStagesModal()" style="margin-top:0;border-color:var(--amber);color:var(--amber)">
+              <span style="font-size:15px">⚡</span> Etapas Padrão WMS
+            </div>
           </div>
         </div>
         <div id="tab-perf" style="display:none">
@@ -1688,7 +1693,7 @@ function renderCards(id,list){
           <div class="pmi">📋 <strong>${dS}/${tS}</strong></div>
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-          <span style="font-size:11px;color:var(--mid)">${st.dn}h de ${st.pl}h</span>
+          <span style="font-size:11px;color:var(--mid)">${decHToHHMM(st.dn)||st.dn+"h"} de ${st.pl}h</span>
           <span style="font-size:13px;font-weight:700;color:${c}">${st.pct}%</span>
         </div>
         <div class="prog-bar"><div class="prog-fill" style="width:${st.pct}%;background:${c}"></div></div>
@@ -1715,7 +1720,7 @@ function _refreshDetailHeader(){
   const badgeEl=document.getElementById('det-badges');
   if(badgeEl)badgeEl.innerHTML=`<span class="badge ${SB[proj.status]||'badge-gray'}">${proj.status}</span><span class="badge badge-gray">📅 ${fD(proj.startDate)} → ${fD(proj.endDate)}</span><span class="badge badge-amber">⏱️ ${proj.totalHours||0}h FAP</span>`;
   const hEl=document.getElementById('det-hours');
-  if(hEl)hEl.innerHTML=`<div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div><div class="hcard"><div class="hval" style="color:var(--amber)">${Math.round(st.totalRootBudget*10)/10}h</div><div class="hlbl">Etapas (orçamento)</div></div><div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div><div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>`;
+  if(hEl)hEl.innerHTML=`<div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div><div class="hcard"><div class="hval" style="color:var(--amber)">${Math.round(st.totalRootBudget*10)/10}h</div><div class="hlbl">Etapas (orçamento)</div></div><div class="hcard"><div class="hval" style="color:var(--green)">${decHToHHMM(st.dn)||st.dn+'h'}</div><div class="hlbl">Realizadas</div></div><div class="hcard"><div class="hval" style="color:var(--mid)">${decHToHHMM(st.rem)||st.rem+'h'}</div><div class="hlbl">Restantes</div></div>`;
 }
 function renderDetail(){
   const proj=getP(S.cur);if(!proj){showPage('projects');return;}
@@ -1745,8 +1750,8 @@ function renderDetail(){
   document.getElementById('det-hours').innerHTML=`
     <div class="hcard"><div class="hval" style="color:var(--accent)">${proj.totalHours||0}h</div><div class="hlbl">FAP Total</div></div>
     <div class="hcard"><div class="hval" style="color:var(--amber)">${Math.round(st.totalRootBudget*10)/10}h</div><div class="hlbl">Etapas (orçamento)</div></div>
-    <div class="hcard"><div class="hval" style="color:var(--green)">${st.dn}h</div><div class="hlbl">Realizadas</div></div>
-    <div class="hcard"><div class="hval" style="color:var(--mid)">${st.rem}h</div><div class="hlbl">Restantes</div></div>
+    <div class="hcard"><div class="hval" style="color:var(--green)">${decHToHHMM(st.dn)||st.dn+'h'}</div><div class="hlbl">Realizadas</div></div>
+    <div class="hcard"><div class="hval" style="color:var(--mid)">${decHToHHMM(st.rem)||st.rem+'h'}</div><div class="hlbl">Restantes</div></div>
     <div class="hcard"><div class="hval" style="color:${c}">${st.pct}%</div><div class="hlbl">Progresso</div></div>
     <div class="hcard"><div class="hval">${(proj.stages||[]).filter(s=>!s.parentId).length}</div><div class="hlbl">Etapas</div></div>`;
   renderStages();
@@ -1807,7 +1812,7 @@ function renderStages(){
           ${root.dateReal?`<div class="sri"><span class="sri-l">Conclusão</span><span class="sri-v" style="color:var(--green)">${fDS(root.dateReal)}</span></div>`:''}
           <div class="sri"><span class="sri-l">Orçamento</span><span class="sri-v" style="color:var(--amber)">${budget}h</span></div>
           <div class="sri"><span class="sri-l">Consumido</span><span class="sri-v">${consumed}h</span></div>
-          <div class="sri"><span class="sri-l">Realizado</span><span class="sri-v" style="color:var(--green)">${realizado}h</span></div>
+          <div class="sri"><span class="sri-l">Realizado</span><span class="sri-v" style="color:var(--green)">${decHToHHMM(realizado)||realizado+'h'}</span></div>
           ${kids.length>0?`<div class="sri sri-bar">
             <span class="sri-l">${pctUsed}% do orçamento</span>
             <div class="hbudget" style="margin-top:3px">
@@ -1833,7 +1838,7 @@ function renderStages(){
               ${k.dateReschedule?`<div class="ssi"><span class="ssi-l" style="color:var(--amber)">🔄 Reagend.</span><span class="ssi-v" style="color:var(--amber);font-weight:600">${fDS(k.dateReschedule.split('T')[0])||'—'}</span></div>`:''}
             ${(k.timeStart||k.timeEnd)?`<div class="ssi"><span class="ssi-l">Horário</span><span class="ssi-v" style="color:var(--accent)">${k.timeStart||'—'} → ${k.timeEnd||'—'}</span></div>`:''}
               <div class="ssi"><span class="ssi-l">H. Plan.</span><span class="ssi-v" style="color:var(--amber)">${k.hours||0}h</span></div>
-              <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal?(Math.round(parseFloat(k.hoursReal)*10)/10):'—'}</span></div>
+              <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal?(decHToHHMM(parseFloat(k.hoursReal))||k.hoursReal):'—'}</span></div>
               ${k.breakHours>0?`<div class="ssi"><span class="ssi-l" style="color:var(--amber)">☕ Intervalo</span><span class="ssi-v" style="color:var(--amber)">${decHToHHMM(k.breakHours)}</span></div>`:''}
               ${k.dateReal?`<div class="ssi"><span class="ssi-l">Conclusão</span><span class="ssi-v" style="color:var(--green)">${fDS(k.dateReal)}</span></div>`:''}
               <div class="ssi"><span class="ssi-l">Status</span><span class="badge ${SB[k.status]||'badge-gray'}" style="font-size:9px;margin-top:2px">${SE[k.status]||''} ${k.status}</span></div>
@@ -2402,11 +2407,13 @@ function openStageModal(isNew=true,editId=null,defParent=null){
       const autoSum=kids2.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0);
       hrInput.value='';
       hrInput.style.display='none';
-      hrAuto.textContent=(Math.round(autoSum*10)/10)+'h (automático — soma das sub-etapas)';
+      hrAuto.textContent=(decHToHHMM(autoSum)||Math.round(autoSum*10)/10+'h')+' (automático — soma das sub-etapas)';
       hrAuto.style.display='block';
     } else {
       hrInput.style.display='';
-      hrInput.value=stage?.hoursReal||'';
+      const _hrRaw=stage?.hoursReal||'';
+      hrInput.value=_hrRaw?(decHToHHMM(parseFloat(_hrRaw))||_hrRaw):'';
+      hrInput.setAttribute('type','text');
       hrAuto.style.display='none';
     }
   }
@@ -2494,15 +2501,16 @@ function calcRealHours(){
     if(autoSpan){autoSpan.textContent='⚠️ Intervalo maior que o período real';autoSpan.style.color='var(--red)';}
     return;
   }
-  const h=Math.round(net*100)/100;
-  hEl.value=h;
+  const hhmm=decHToHHMM(net);
+  hEl.value=hhmm;
   hEl.setAttribute('readonly','readonly');
+  hEl.setAttribute('type','text');
   hEl.style.background='rgba(34,197,94,.08)';
   hEl.style.color='var(--green)';
   hEl.title=`Início Real → Término Real: ${formatHorasMin(diff)} − Intervalo: ${formatHorasMin(brk)} = ${formatHorasMin(net)}`;
   if(autoSpan){
     const brkTxt=brk>0?` − ${formatHorasMin(brk)} intervalo`:'';
-    autoSpan.textContent=`⚡ ${formatHorasMin(diff)}${brkTxt} = ${formatHorasMin(net)} (${h}h)`;
+    autoSpan.textContent=`⚡ ${formatHorasMin(diff)}${brkTxt} = ${hhmm}`;
     autoSpan.style.color='var(--green)';
   }
 }
@@ -2511,6 +2519,192 @@ function formatHorasMin(decHours){
   const m=Math.round((decHours-h)*60);
   return m>0?`${h}h ${m}min`:`${h}h`;
 }
+
+// ══════════════════════════════════════════
+// ETAPAS PADRÃO WMS
+// ══════════════════════════════════════════
+const WMS_DEFAULT_STAGES = [
+  { name: 'Endereçamento', subs: [
+    'Criar Máscara de Endereçamento',
+    'Criar Endereço de Forma Massiva',
+    'Inserir Cubagem e Peso',
+    'Inserir Níveis',
+    'Tipos de Endereço (Picking / Pulmão)',
+    'Lado Par / Ímpar',
+    'Ordem dos Endereços',
+    'Área de Armazenagem',
+    'Docas',
+    'Endereços Especiais',
+    'Endereços Virtuais',
+    'Checkouts',
+  ]},
+  { name: 'Configuração Regra de Armazenagem', subs: [
+    '1.1 - Configurar Algoritmo de Armazenagem (Picking, Endereços Vazios e Completar Endereço)',
+    '1.2 - Produtos Compatíveis',
+    '1.3 - Regra para Armazenagem de NF de Dev. Venda',
+    '1.4 - Priorizar a Menor Data de Validade no Picking',
+    '1.5 - Armazenar Utilizando L×C (Norma de Paletização)',
+    '1.6 - Geração Automática de Tarefas de Armazenagem (Job)',
+    '1.7 - FIFO (First In, First Out)',
+    '1.8 - FEFO (First Expired, First Out)',
+    '1.9 - Lote Único por Endereço',
+  ]},
+  { name: 'Configurações da Empresa (Preferências)', subs: [
+    'Config. Gerais (Controlado pelo WMS / Empresa / Endereço)',
+    'Endereços Especiais (Avaria, Divergência, Perda, Sobra, Garantia)',
+    'Expedição de Mercadoria (Checkout Indefinido / Retorno)',
+    'Movimentação e Armazenagem (Endereço Indefinido)',
+    'Permite Fragmentar Estoque = S',
+  ]},
+  { name: 'Aptidão de Tarefas / Unidade / Equipamento', subs: [
+    'Cadastro de Equipamento',
+    'Cadastro de Tipo de Equipamento',
+    'Configuração por Usuário / Operador',
+    'Grupo de Endereços',
+  ]},
+  { name: 'Motivo de Corte e Divergência', subs: [
+    '1.1 - Motivo de Corte',
+    '1.2 - Motivo de Divergência (Entrada e Saída)',
+    '1.3 - Liberação de Ocorrência',
+  ]},
+  { name: 'Configurações para Expedição de Mercadoria', subs: [
+    'Utiliza Doca Automaticamente — Separações Balcão',
+    'Considerar Armazenagens Pendentes no Envio para Expedição',
+    'Envio Ped. Balcão Considera Entradas Pendentes',
+    'Tratamento p/ Falta de Estoque no Envio da OC',
+    'Tipo de Corte na Separação',
+    'Gerar Reabastecimento Corretivo',
+  ]},
+  { name: 'Impressão de Etiquetas', subs: [
+    'Modelo Padrão de Etiqueta de Volume',
+    'Impressora Padrão da Etiqueta de Volume',
+    'Impressão de Etiqueta de Volumes',
+    'Imprimir Etiquetas de Volume na Conferência',
+    'Imprime Etiquetas de Separação por OC',
+  ]},
+  { name: 'Config. Modelo de Nota / Série / TOPs', subs: [
+    'Nota Modelo Sobra Estoque WMS (Entrada)',
+    'Nota Modelo Perda Estoque WMS (Saída)',
+    'Local para Ajuste de Estoque',
+    'Modelo Retorno de Estoque Gerencial WMS (Venda)',
+    'Série p/ Devolução de Mercadorias',
+    'TOP p/ Devolução de Mercadorias',
+  ]},
+  { name: 'Estratégia de Reabastecimento', subs: [
+    'Reabastecimento Regra Padrão (Corretivo)',
+    'Reabastecimento sem Extrapolar Est. Máx. do Picking (Corretivo)',
+    'Reabastecimento somente com Quantidade Completa do Pulmão (Corretivo)',
+    'Reabastecimento Preventivo (Rotina)',
+    'Reabastecimento Preventivo (Gerado ao Atingir Est. Mínimo do Picking)',
+    'Reabastecimento Corretivo (Gerado no Registro de Ocorrência de Separação)',
+  ]},
+  { name: 'Cadastros Logísticos', subs: [
+    '1.1 - Código de Barras (Referência, Unidade Alternativa, Duplicados)',
+    '1.2 - Medidas do Produto (Flag WMS, Peso Bruto/Líquido, Altura, Largura, Profundidade)',
+    '1.3 - Aba WMS (Recuperável de Avaria, Controle Adicional, Fragmenta Lote, ShelfLife, Dias p/ Expedição)',
+  ]},
+  { name: 'Criação dos Picking Estático', subs: [
+    'Criação dos Picking Estático',
+    'Dimensionamento de Picking',
+  ]},
+];
+
+function openDefaultStagesModal(){
+  const proj = getP(S.cur);
+  if(!proj){ toast('Selecione um projeto','err'); return; }
+  const existing = (proj.stages||[]).filter(s=>!s.parentId).length;
+  const msg = existing > 0
+    ? `Este projeto já possui ${existing} etapa(s). Deseja adicionar as etapas padrão WMS sem remover as existentes?`
+    : 'Deseja inserir as etapas padrão de implantação WMS neste projeto?';
+
+  // Build modal HTML
+  const rows = WMS_DEFAULT_STAGES.map((g,i) => `
+    <label style="display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:6px;cursor:pointer;transition:.15s;border:1px solid var(--border);background:var(--bg3);margin-bottom:6px">
+      <input type="checkbox" checked data-idx="${i}" style="margin-top:3px;accent-color:var(--accent);width:15px;height:15px;flex-shrink:0">
+      <div>
+        <div style="font-size:13px;font-weight:600;color:var(--text)">${esc(g.name)}</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:2px">${g.subs.length} sub-etapa${g.subs.length!==1?'s':''}</div>
+      </div>
+    </label>`).join('');
+
+  const modalHtml = `
+    <div id="modal-def-stages" style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:600;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:24px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto">
+        <div style="font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:6px">⚡ Etapas Padrão WMS</div>
+        <div style="font-size:12px;color:var(--mid);margin-bottom:16px">Selecione as etapas a inserir. Cada etapa será criada com suas sub-etapas.</div>
+        <div style="margin-bottom:16px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mid);cursor:pointer;margin-bottom:10px">
+            <input type="checkbox" id="def-check-all" checked onchange="document.querySelectorAll('#modal-def-stages [data-idx]').forEach(c=>c.checked=this.checked)" style="accent-color:var(--accent)">
+            Selecionar / desmarcar todas
+          </label>
+          ${rows}
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px">
+          <button class="btn btn-ghost" onclick="document.getElementById('modal-def-stages').remove()">Cancelar</button>
+          <button class="btn btn-primary" onclick="insertDefaultStages()">⚡ Inserir Selecionadas</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+}
+
+async function insertDefaultStages(){
+  const proj = getP(S.cur);
+  if(!proj) return;
+  if(!proj.stages) proj.stages = [];
+
+  const checks = document.querySelectorAll('#modal-def-stages [data-idx]');
+  const selected = Array.from(checks).filter(c=>c.checked).map(c=>parseInt(c.dataset.idx));
+
+  if(!selected.length){ toast('Nenhuma etapa selecionada','warn'); return; }
+
+  let inserted = 0;
+  for(const idx of selected){
+    const grp = WMS_DEFAULT_STAGES[idx];
+    const rootId = 'st_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+    const rootNum = String((proj.stages||[]).filter(s=>!s.parentId).length + 1);
+    proj.stages.push({
+      id: rootId,
+      name: grp.name,
+      num: rootNum,
+      executor: '',
+      date: '', dateEnd: '', timeStart: '', timeEnd: '',
+      dateReal: '', dateStartReal: '',
+      hours: String(grp.subs.length), hoursReal: '',
+      hourRate: 0, status: 'Pendente',
+      parentId: null, bgColor: '', breakHours: 0,
+    });
+    grp.subs.forEach((subName, si) => {
+      const subId = 'st_' + Date.now() + '_' + Math.random().toString(36).slice(2,7) + si;
+      proj.stages.push({
+        id: subId,
+        name: subName,
+        num: rootNum + '.' + (si+1),
+        executor: '',
+        date: '', dateEnd: '', timeStart: '', timeEnd: '',
+        dateReal: '', dateStartReal: '',
+        hours: '1', hoursReal: '',
+        hourRate: 0, status: 'Pendente',
+        parentId: rootId, bgColor: '', breakHours: 0,
+      });
+    });
+    inserted++;
+  }
+
+  document.getElementById('modal-def-stages').remove();
+
+  // Save to Firebase
+  const data = await fsGet('data') || {};
+  data.projects = S.projects;
+  const ok = await fsPatch('data', data);
+  if(ok){
+    toast(`✓ ${inserted} etapa(s) padrão inseridas com sucesso`, 'ok');
+  } else {
+    toast('Etapas inseridas (salvar manualmente)', 'warn');
+  }
+  renderDetail();
+}
+
 function saveStage(){
   const name=document.getElementById('fs-name').value.trim();if(!name){toast('Informe o nome da etapa','err');return;}
   const proj=getP(S.cur);if(!proj)return;if(!proj.stages)proj.stages=[];
@@ -2534,7 +2728,14 @@ function saveStage(){
     dateReal:document.getElementById('fs-datereal').value,
     dateStartReal:document.getElementById('fs-datestartreal')?.value||'',
     hours:document.getElementById('fs-hours').value,
-    hoursReal: (document.getElementById('fs-parent')?.value||_defParent) ? (document.getElementById('fs-hoursreal')?.value||'') : '', // root = auto from kids
+    hoursReal: (()=>{
+      const p=document.getElementById('fs-parent')?.value||_defParent;
+      if(!p)return ''; // root = auto from kids
+      const raw=document.getElementById('fs-hoursreal')?.value||'';
+      // Convert HH:MM to decimal if needed
+      if(raw.includes(':'))return String(timeToDecH(raw));
+      return raw;
+    })(),
     hourRate:parseFloat(document.getElementById('fs-rate')?.value)||0,
     status:document.getElementById('fs-status').value,
     parentId:document.getElementById('fs-parent').value||null,
