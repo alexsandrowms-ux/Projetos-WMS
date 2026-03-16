@@ -699,6 +699,33 @@ datalist{display:none}
         <div class="users-grid" id="users-grid"></div>
       </div>
 
+
+      <!-- AGENDA CONSOLIDADA -->
+      <div class="page" id="page-cgantt">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">🗓️ Agenda Consolidada</div>
+            <div style="font-size:12px;color:var(--mid)" id="cg-info">Todos os projetos · todas as tarefas</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <label style="font-size:11px;color:var(--mid);font-weight:600">DE</label>
+            <input class="fc" type="date" id="cg-start" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
+            <label style="font-size:11px;color:var(--mid);font-weight:600">ATÉ</label>
+            <input class="fc" type="date" id="cg-end" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
+            <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(7)">7d</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(30)">30d</button>
+            <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(90)">3m</button>
+            <button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="renderCGantt()">🔄 Atualizar</button>
+          </div>
+        </div>
+        <div id="cg-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+          <div style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px)">
+            <div id="cg-box"><div class="loading"><span class="spin">⟳</span> Carregando agenda...</div></div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- main-content -->
   </div><!-- app-body -->
 </div><!-- app-shell -->
@@ -1112,35 +1139,6 @@ datalist{display:none}
   </div>
 </div>
 
-
-<div class="page" id="page-cgantt">
-  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
-    <div>
-      <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">🗓️ Agenda Consolidada</div>
-      <div style="font-size:12px;color:var(--mid)" id="cg-info">Todos os projetos · todas as tarefas</div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-      <label style="font-size:11px;color:var(--mid);font-weight:600">DE</label>
-      <input class="fc" type="date" id="cg-start" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
-      <label style="font-size:11px;color:var(--mid);font-weight:600">ATÉ</label>
-      <input class="fc" type="date" id="cg-end" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
-      <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(7)">7d</button>
-      <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(30)">30d</button>
-      <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(90)">3m</button>
-      <button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="renderCGantt()">🔄 Atualizar</button>
-    </div>
-  </div>
-
-  <!-- LEGEND -->
-  <div id="cg-legend" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
-
-  <!-- GANTT TABLE -->
-  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
-    <div style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px)">
-      <div id="cg-box"><div class="loading"><span class="spin">⟳</span> Carregando agenda...</div></div>
-    </div>
-  </div>
-</div>
 
 <div class="toast" id="toast"></div>
 
