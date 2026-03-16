@@ -616,6 +616,9 @@ datalist{display:none}
             <div class="add-root-btn" onclick="openDefaultStagesModal()" style="margin-top:0;border-color:var(--amber);color:var(--amber)">
               <span style="font-size:15px">⚡</span> Etapas Padrão WMS
             </div>
+            <div class="add-root-btn" onclick="openDeleteStagesModal()" style="margin-top:0;border-color:var(--red);color:var(--red)">
+              <span style="font-size:15px">🗑</span> Excluir Etapas
+            </div>
           </div>
         </div>
         <div id="tab-perf" style="display:none">
@@ -2359,15 +2362,106 @@ function saveProject(){
 }
 
 function askDeleteProject(id=null){
-  const pid=id||S.cur,proj=getP(pid);if(!proj)return;
+  const pid=id||S.cur;
+  if(!pid){toast('Nenhum projeto selecionado','err');return;}
+  const proj=getP(pid);
+  if(!proj){toast('Projeto não encontrado','err');return;}
+  // Safety: show project name prominently
   document.getElementById('mc-icon').textContent='🗑️';
   document.getElementById('mc-title').textContent='Excluir Projeto';
-  document.getElementById('mc-msg').innerHTML=`Deseja excluir o projeto<br><span class="confirm-name">"${esc(proj.name)}"</span>?<br><br><span style="color:var(--red);font-size:12px">⚠️ Todas as etapas serão removidas.</span>`;
+  document.getElementById('mc-msg').innerHTML=`Deseja excluir o projeto<br><span class="confirm-name">"${esc(proj.name)}"</span>?<br><br><span style="color:var(--red);font-size:12px">⚠️ Esta ação é irreversível. Todas as etapas serão removidas.</span>`;
   document.getElementById('mc-btn').onclick=()=>{
     S.projects=S.projects.filter(p=>p.id!==pid);
     saveS();closeModal('modal-confirm');
-    toast('Projeto excluído','warn');
-    if(S.cur===pid)showPage('projects');else{renderDash();renderProjList();}
+    toast(`Projeto "${esc(proj.name)}" excluído`,'warn');
+    if(S.cur===pid){S.cur=null;showPage('projects');}else{renderDash();renderProjList();}
+  };
+  openModal('modal-confirm');
+}
+
+// ── Modal de exclusão de etapas ──
+function openDeleteStagesModal(){
+  const proj=getP(S.cur);if(!proj)return;
+  const stages=proj.stages||[];
+  const roots=stages.filter(s=>!s.parentId);
+  if(!roots.length){toast('Este projeto não possui etapas','warn');return;}
+
+  const rows=roots.map(r=>{
+    const kids=stages.filter(s=>s.parentId===r.id);
+    const subRows=kids.map(k=>`
+      <label style="display:flex;align-items:center;gap:8px;padding:5px 8px 5px 28px;cursor:pointer;border-radius:5px;transition:.12s" onmouseover="this.style.background='rgba(239,68,68,.06)'" onmouseout="this.style.background=''">
+        <input type="checkbox" class="del-stage-cb" data-id="${k.id}" style="accent-color:var(--red);width:14px;height:14px">
+        <span style="font-size:11.5px;color:var(--mid)">${esc(k.num||'')} ${esc(k.name)}</span>
+      </label>`).join('');
+    return`
+      <div style="border:1px solid var(--border);border-radius:7px;margin-bottom:8px;overflow:hidden">
+        <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;cursor:pointer;background:var(--bg3)">
+          <input type="checkbox" class="del-stage-cb del-root" data-id="${r.id}" data-root="1"
+            onchange="toggleRootKids(this,'${r.id}')"
+            style="accent-color:var(--red);width:15px;height:15px;flex-shrink:0">
+          <span style="font-size:13px;font-weight:600;color:var(--text)">${esc(r.num||'')} ${esc(r.name)}</span>
+          ${kids.length?`<span style="margin-left:auto;font-size:10px;color:var(--dim)">${kids.length} sub-etapa${kids.length!==1?'s':''}</span>`:''}
+        </label>
+        ${subRows}
+      </div>`;
+  }).join('');
+
+  const html=`
+    <div id="modal-del-stages" style="position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:600;display:flex;align-items:center;justify-content:center" onclick="if(event.target===this)this.remove()">
+      <div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:24px;width:100%;max-width:540px;max-height:88vh;overflow-y:auto">
+        <div style="font-family:var(--display);font-size:16px;font-weight:700;margin-bottom:4px;color:var(--red)">🗑 Excluir Etapas</div>
+        <div style="font-size:12px;color:var(--mid);margin-bottom:14px">Selecione as etapas/sub-etapas a remover. Ao excluir uma etapa raiz, todas as suas sub-etapas também são removidas.</div>
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-xs" onclick="document.querySelectorAll('.del-stage-cb').forEach(c=>c.checked=true)">☑ Selecionar todas</button>
+          <button class="btn btn-ghost btn-xs" onclick="document.querySelectorAll('.del-stage-cb').forEach(c=>c.checked=false)">☐ Desmarcar todas</button>
+        </div>
+        <div id="del-stages-list">${rows}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;flex-wrap:wrap;gap:8px">
+          <button class="btn btn-ghost" onclick="document.getElementById('modal-del-stages').remove()">Cancelar</button>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-danger btn-xs" onclick="confirmDelStages(false)">🗑 Excluir Selecionadas</button>
+            <button class="btn btn-danger" onclick="confirmDelAllStages()" style="background:rgba(239,68,68,.2)">⚠️ Excluir TODAS</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend',html);
+}
+
+function toggleRootKids(rootCb, rootId){
+  document.querySelectorAll(`.del-stage-cb[data-id]`).forEach(cb=>{
+    const proj=getP(S.cur);
+    if(!proj)return;
+    const stage=(proj.stages||[]).find(s=>s.id===cb.dataset.id);
+    if(stage&&stage.parentId===rootId) cb.checked=rootCb.checked;
+  });
+}
+
+function confirmDelStages(all){
+  const proj=getP(S.cur);if(!proj)return;
+  const checked=Array.from(document.querySelectorAll('.del-stage-cb:checked')).map(c=>c.dataset.id);
+  if(!checked.length){toast('Nenhuma etapa selecionada','warn');return;}
+  // Expand: if root is selected, include all its kids
+  const toRemove=new Set(checked);
+  (proj.stages||[]).forEach(s=>{if(s.parentId&&toRemove.has(s.parentId))toRemove.add(s.id);});
+  proj.stages=(proj.stages||[]).filter(s=>!toRemove.has(s.id));
+  saveS();
+  document.getElementById('modal-del-stages')?.remove();
+  toast(`${toRemove.size} etapa(s) removida(s)`,'warn');
+  renderDetail();
+}
+
+function confirmDelAllStages(){
+  const proj=getP(S.cur);if(!proj)return;
+  document.getElementById('modal-del-stages')?.remove();
+  document.getElementById('mc-icon').textContent='⚠️';
+  document.getElementById('mc-title').textContent='Excluir TODAS as Etapas';
+  document.getElementById('mc-msg').innerHTML=`Deseja remover <strong>TODAS</strong> as etapas e sub-etapas do projeto<br><span class="confirm-name">"${esc(proj.name)}"</span>?<br><br><span style="color:var(--red);font-size:12px">⚠️ Esta ação é irreversível.</span>`;
+  document.getElementById('mc-btn').onclick=()=>{
+    proj.stages=[];
+    saveS();closeModal('modal-confirm');
+    toast('Todas as etapas removidas','warn');
+    renderDetail();
   };
   openModal('modal-confirm');
 }
@@ -2607,6 +2701,26 @@ const WMS_DEFAULT_STAGES = [
     'Criação dos Picking Estático',
     'Dimensionamento de Picking',
   ]},
+  { name: 'Teste de Validação WMS', subs: [
+    'Recebimento / Armazenagem',
+    'Gestão de Estoque',
+    'Operação de Picking',
+    'Packing (Etiquetas)',
+    'Expedição',
+  ]},
+  { name: 'Simulação Integrada', subs: [
+    'Recebimento / Armazenagem',
+    'Gestão de Estoque',
+    'Operação de Picking',
+    'Packing (Etiquetas)',
+    'Expedição',
+  ]},
+  { name: 'Go-Live', subs: [
+    'Acompanhamento da Operação in Loco',
+  ]},
+  { name: 'Operação Assistida (Pós Implantação)', subs: [
+    'Acompanhamento da Operação in Loco',
+  ]},
 ];
 
 function openDefaultStagesModal(){
@@ -2692,16 +2806,8 @@ async function insertDefaultStages(){
   }
 
   document.getElementById('modal-def-stages').remove();
-
-  // Save to Firebase
-  const data = await fsGet('data') || {};
-  data.projects = S.projects;
-  const ok = await fsPatch('data', data);
-  if(ok){
-    toast(`✓ ${inserted} etapa(s) padrão inseridas com sucesso`, 'ok');
-  } else {
-    toast('Etapas inseridas (salvar manualmente)', 'warn');
-  }
+  saveS();
+  toast(`✓ ${inserted} etapa(s) padrão inseridas com sucesso`, 'ok');
   renderDetail();
 }
 
