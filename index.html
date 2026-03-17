@@ -1318,6 +1318,20 @@ const PCOLS   = ['#0ea5e9','#22c55e','#f59e0b','#a78bfa','#f472b6','#ef4444','#0
 const PNAMES  = {'1':'Levantamento de Processo','2':'Configuração','3':'Teste de Validações por Pilar','4':'Estrutura Física','5':'Treinamento','6':'Infraestrutura','7':'Integração','8':'Go-Live','9':'Suporte Pós-Implantação'};
 const SB      = {'Concluído':'badge-green','Em Andamento':'badge-blue','Planejamento':'badge-amber','Pausado':'badge-gray','Pendente':'badge-gray','Bloqueado':'badge-red'};
 const SE      = {'Pendente':'○','Em Andamento':'◑','Concluído':'●','Bloqueado':'✕'};
+
+// ── Status derivado da etapa raiz com base nas sub-etapas ──
+function getRootStatus(root, allStages){
+  const kids = allStages.filter(s=>s.parentId===root.id);
+  if(!kids.length) return root.status; // sem subs → usa próprio status
+  const allDone  = kids.every(k=>k.status==='Concluído');
+  const anyDone  = kids.some(k=>k.status==='Concluído');
+  const anyBlock = kids.some(k=>k.status==='Bloqueado');
+  const anyWork  = kids.some(k=>k.status==='Em Andamento');
+  if(allDone)  return 'Concluído';
+  if(anyBlock) return 'Bloqueado';
+  if(anyWork||anyDone) return 'Em Andamento';
+  return 'Pendente';
+}
 const STORE   = 'axl_wms_v1';
 const USTORE  = 'axl_users_v1';
 const SSTORE  = 'axl_sess_v1';
@@ -1537,7 +1551,7 @@ function stats(proj){
   // Sum in minutes to avoid decimal rounding (ex: 4h10min = 4.1666... decimal)
   const _dnMinutes = subs.length > 0
     ? subs.reduce((s,k)=>s+Math.round((parseFloat(k.hoursReal)||0)*60), 0)
-    : roots.filter(r=>r.status==='Concluído').reduce((s,r)=>s+Math.round((parseFloat(r.hoursReal)||0)*60), 0);
+    : roots.filter(r=>getRootStatus(r,(proj.stages||[]))==='Concluído').reduce((s,r)=>s+Math.round((parseFloat(r.hoursReal)||0)*60), 0);
   const dn = _dnMinutes / 60; // keep full precision
   const fap=parseFloat(proj.totalHours)||0;
   const base=fap>0?fap:pl;
@@ -2014,7 +2028,7 @@ function renderStages(){
             <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40">${esc(root.num)||'–'}</span>
             <span class="sname">${esc(root.name)}</span>
             <div class="sr-pills">
-              <span class="badge ${SB[root.status]||'badge-gray'}" style="font-size:9px">${SE[root.status]||''} ${root.status}</span>
+              <span class="badge ${SB[getRootStatus(root,stages)]||'badge-gray'}" style="font-size:9px">${SE[getRootStatus(root,stages)]||''} ${getRootStatus(root,stages)}</span>
               <span class="ps-badge ${ps.cls}" style="font-size:9px">${ps.icon} ${ps.label}</span>
               ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}" style="font-size:9px">${overBudget?'⚠️ +'+decHToHHMM(Math.abs(budget-consumed)):remaining===0?'✅ Exato':'💚 '+(decHToHHMM(remaining)||remaining+'h')+' livre'}</span>`:''}
               ${kids.length>0?`<span style="font-size:9px;color:var(--dim)">${kids.length} sub</span>`:''}
@@ -2290,7 +2304,7 @@ function renderCostTab(){
       <td style="text-align:right;padding:7px 8px;font-size:11px;color:var(--amber)">${rRate>0?fCur(rPlan):'—'}</td>
       <td style="text-align:right;padding:7px 8px;font-size:11px">${rRate>0?fCur(rAC):'—'}</td>
       <td style="text-align:right;padding:7px 8px;font-size:11px;color:${rDiff>=0?'var(--green)':'var(--red)'}">${rRate>0?(rDiff>=0?'+':'')+fCur(rDiff):'—'}</td>
-      <td style="text-align:center;padding:7px 6px"><span class="badge ${SB[r.status]||'badge-gray'}" style="font-size:9px">${r.status}</span></td>
+      <td style="text-align:center;padding:7px 6px"><span class="badge ${SB[getRootStatus(r,stages)]||'badge-gray'}" style="font-size:9px">${getRootStatus(r,stages)}</span></td>
     </tr>`;
     const kidRows = kids.map(k=>{
       const kRate = k.hourRate || defRate;
@@ -4309,6 +4323,185 @@ function mkChart(id){
   return c;
 }
 
+
+// ════════════════════════════════════════════════
+// PERF DRILL-DOWN
+// ════════════════════════════════════════════════
+function closePerfDrill(){
+  const el=document.getElementById('perf-drill');
+  if(el)el.style.display='none';
+}
+
+function showPerfDrill(type, label, countStages, allStages, roots){
+  const drillEl=document.getElementById('perf-drill');
+  const titleEl=document.getElementById('perf-drill-title');
+  const listEl=document.getElementById('perf-drill-list');
+  if(!drillEl||!titleEl||!listEl)return;
+
+  let filtered=[];
+  const icons={'Concluído':'✅','Em Andamento':'◑','Pendente':'○','Bloqueado':'🔴',
+    'Finalizada':'✅','Dentro do Prazo':'🟢','Em Risco':'⚠️','Atrasada':'🔴',
+    'Não Iniciada':'⚪','Sem prazo':'—'};
+
+  if(type==='status'){
+    filtered=countStages.filter(s=>{
+      const st=s.parentId?s.status:getRootStatus(s,allStages);
+      return st===label;
+    });
+    titleEl.innerHTML=`${icons[label]||'●'} <span style="color:var(--accent)">${label}</span> — ${filtered.length} tarefa${filtered.length!==1?'s':''}`;
+  } else if(type==='prazo'){
+    filtered=countStages.filter(s=>{
+      const p=prazoStatus(s);
+      return p.label.startsWith(label);
+    });
+    titleEl.innerHTML=`${icons[label]||'●'} <span style="color:var(--accent)">${label}</span> — ${filtered.length} tarefa${filtered.length!==1?'s':''}`;
+  } else if(type==='budget' && roots){
+    // Budget chart click — show subs of the clicked root
+    const root=roots.find(r=>((r.num?r.num+' ':'')+r.name.substring(0,16))===label);
+    if(root){
+      filtered=allStages.filter(s=>s.parentId===root.id);
+      titleEl.innerHTML=`📦 Sub-etapas de <span style="color:var(--accent)">${esc(root.name)}</span> — ${filtered.length} tarefa${filtered.length!==1?'s':''}`;
+    }
+  }
+
+  if(!filtered.length){
+    listEl.innerHTML='<div style="font-size:12px;color:var(--dim);padding:8px 0">Nenhuma tarefa encontrada.</div>';
+  } else {
+    const STATUS_COLOR={'Concluído':'#22c55e','Em Andamento':'#0ea5e9','Pendente':'#64748b','Bloqueado':'#ef4444'};
+    listEl.innerHTML=filtered.map(s=>{
+      const isRoot=!s.parentId;
+      const st=isRoot?getRootStatus(s,allStages):s.status;
+      const sc=STATUS_COLOR[st]||'#64748b';
+      const ps=prazoStatus(s);
+      const hrReal=s.hoursReal?decHToHHMM(Math.round((parseFloat(s.hoursReal)||0)*60)/60):'—';
+      return`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border)">
+        <span style="width:8px;height:8px;border-radius:50%;background:${sc};flex-shrink:0;display:inline-block"></span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:12.5px;font-weight:${isRoot?700:500};color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+            ${s.num?`<span style="font-size:10px;color:var(--dim);margin-right:4px">${esc(s.num)}</span>`:''}
+            ${isRoot?'':'↳ '}${esc(s.name)}
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--mid);margin-top:2px">
+            ${s.executor?`<span>👤 ${esc(s.executor)}</span>`:''}
+            ${s.date?`<span>📅 ${fDS(s.date)}${s.dateEnd?'→'+fDS(s.dateEnd):''}</span>`:''}
+            ${s.hoursReal?`<span style="color:var(--green)">⏱ ${hrReal}</span>`:''}
+            <span class="ps-badge ${ps.cls}" style="font-size:10px">${ps.icon} ${ps.label}</span>
+          </div>
+        </div>
+        <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${sc}18;color:${sc};flex-shrink:0">${st}</span>
+      </div>`;
+    }).join('');
+  }
+
+  drillEl.style.display='';
+  drillEl.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+
+// ════════════════════════════════════════════════
+// DRILL-DOWN: Performance Charts
+// ════════════════════════════════════════════════
+function closePerfDrill(){
+  const el=document.getElementById('perf-drill');
+  if(el){el.style.display='none';}
+}
+
+function showPerfDrill(type, name, countStages, stages, roots){
+  const el=document.getElementById('perf-drill');
+  const titleEl=document.getElementById('perf-drill-title');
+  const listEl=document.getElementById('perf-drill-list');
+  if(!el||!titleEl||!listEl)return;
+
+  let tasks=[];
+
+  if(type==='status'){
+    // Filter by derived status
+    tasks=countStages.filter(s=>{
+      const st=s.parentId ? s.status : getRootStatus(s,stages);
+      return st===name;
+    });
+    titleEl.innerHTML=`${getStatusIcon(name)} <span style="color:${getStatusColor(name)}">${name}</span> — ${tasks.length} tarefa${tasks.length!==1?'s':''}`;
+  }
+  else if(type==='prazo'){
+    tasks=countStages.filter(s=>{
+      const ps=prazoStatus(s);
+      return ps.label.startsWith(name);
+    });
+    const pzColors={'Finalizada':'#22c55e','Dentro do Prazo':'#38bdf8','Em Risco':'#f59e0b','Atrasada':'#ef4444','Não Iniciada':'#a78bfa','Sem prazo':'#475569'};
+    titleEl.innerHTML=`🗓️ <span style="color:${pzColors[name]||'#94a3b8'}">${name}</span> — ${tasks.length} tarefa${tasks.length!==1?'s':''}`;
+  }
+  else if(type==='budget'){
+    // name is the root label
+    const root=(roots||[]).find(r=>((r.num?r.num+' ':'')+r.name.substring(0,16))===name);
+    if(root){
+      tasks=stages.filter(s=>s.parentId===root.id);
+      titleEl.innerHTML=`📦 <span style="color:var(--accent)">${esc(root.name)}</span> — ${tasks.length} sub-etapa${tasks.length!==1?'s':''}`;
+    }
+  }
+
+  if(!tasks.length){
+    listEl.innerHTML='<div style="color:var(--dim);font-size:12px;padding:8px 0">Nenhuma tarefa encontrada.</div>';
+    el.style.display='';
+    el.scrollIntoView({behavior:'smooth',block:'nearest'});
+    return;
+  }
+
+  // Render task list
+  listEl.innerHTML=`
+    <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead>
+        <tr style="background:var(--bg3)">
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Num</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Tarefa</th>
+          <th style="padding:7px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Executante</th>
+          <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Início</th>
+          <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Término</th>
+          <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">H. Real</th>
+          <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Status</th>
+          <th style="padding:7px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)">Prazo</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tasks.map(s=>{
+          const ps=prazoStatus(s);
+          const st=s.parentId?s.status:getRootStatus(s,stages);
+          const sc=getStatusColor(st);
+          const hr=s.hoursReal?(decHToHHMM(Math.round((parseFloat(s.hoursReal)||0)*60)/60)||s.hoursReal+'h'):'—';
+          const isRoot=!s.parentId;
+          return`<tr style="border-bottom:1px solid var(--border);${isRoot?'background:var(--bg3)':''}" onmouseover="this.style.background='rgba(14,165,233,.05)'" onmouseout="this.style.background='${isRoot?'var(--bg3)':'transparent'}'">
+            <td style="padding:7px 10px;color:var(--mid);font-size:11px">${esc(s.num||'—')}</td>
+            <td style="padding:7px 10px;font-weight:${isRoot?'700':'400'};max-width:260px">
+              ${isRoot?'':'<span style="color:var(--dim)">└ </span>'}
+              <span title="${esc(s.name)}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-block;max-width:230px;vertical-align:middle">${esc(s.name)}</span>
+            </td>
+            <td style="padding:7px 10px;color:var(--mid);font-size:11px">${esc(s.executor||'—')}</td>
+            <td style="padding:7px 10px;text-align:center;font-size:11px">${s.date?fDS(s.date):'—'}</td>
+            <td style="padding:7px 10px;text-align:center;font-size:11px">${s.dateEnd?fDS(s.dateEnd):'—'}</td>
+            <td style="padding:7px 10px;text-align:center;font-size:11px;font-weight:700;color:var(--green)">${hr}</td>
+            <td style="padding:7px 10px;text-align:center">
+              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${sc}18;color:${sc};border:1px solid ${sc}30">${SE[st]||''} ${st}</span>
+            </td>
+            <td style="padding:7px 10px;text-align:center">
+              <span class="ps-badge ${ps.cls}" style="font-size:10px">${ps.icon} ${ps.label}</span>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+
+  el.style.display='';
+  el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+function getStatusColor(st){
+  const map={'Concluído':'#22c55e','Em Andamento':'#3b82f6','Pendente':'#475569','Bloqueado':'#ef4444'};
+  return map[st]||'#94a3b8';
+}
+function getStatusIcon(st){
+  const map={'Concluído':'✅','Em Andamento':'🔵','Pendente':'⚪','Bloqueado':'🚫'};
+  return map[st]||'•';
+}
+
 function renderPerfTab(){
   const proj=getP(S.cur);if(!proj)return;
   const el=document.getElementById('perf-content');if(!el)return;
@@ -4322,7 +4515,10 @@ function renderPerfTab(){
   // Status — conta apenas sub-etapas (as raízes são containers)
   const stMap={Pendente:0,'Em Andamento':0,'Concluído':0,'Bloqueado':0};
   const countStages = subs.length > 0 ? subs : roots; // usa subs se existirem
-  countStages.forEach(s=>{if(stMap[s.status]!==undefined)stMap[s.status]++;});
+  countStages.forEach(s=>{
+    const st = s.parentId ? s.status : getRootStatus(s, stages);
+    if(stMap[st]!==undefined)stMap[st]++;
+  });
 
   // Prazo — conta apenas sub-etapas
   const pzMap={'Finalizada':0,'Dentro do Prazo':0,'Em Risco':0,'Atrasada':0,'Não Iniciada':0,'Sem prazo':0};
@@ -4334,6 +4530,9 @@ function renderPerfTab(){
   // Consumed = realized hours from subs (subs have no planned hours)
   const rConsumed=roots.map(r=>Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+Math.round((parseFloat(k.hoursReal)||0)*60),0))/60);
   const rReal=roots.map(r=>Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+Math.round((parseFloat(k.hoursReal)||0)*60),0))/60);
+  // Round for display
+  const rConsumedR=rConsumed.map(v=>Math.round(v*60)/60);
+  const rRealR=rReal.map(v=>Math.round(v*60)/60);
 
   // Cost per root
   const rCostPlan=roots.map(r=>Math.round((parseFloat(r.hours)||0)*(r.hourRate||defRate)*100)/100);
@@ -4351,17 +4550,17 @@ function renderPerfTab(){
   el.innerHTML=`
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <div class="card" style="padding:16px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 Status das Etapas</div>
-      <div id="ch-status" style="height:260px"></div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">📊 Status das Etapas <span style="font-size:10px;font-weight:400;color:var(--dim)">· clique no gráfico para ver as tarefas</span></div>
+      <div id="ch-status" style="height:260px;cursor:pointer" title="Clique para filtrar tarefas"></div>
     </div>
     <div class="card" style="padding:16px">
-      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🗓️ Situação de Prazo</div>
-      <div id="ch-prazo" style="height:260px"></div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px">🗓️ Situação de Prazo <span style="font-size:10px;font-weight:400;color:var(--dim)">· clique no gráfico</span></div>
+      <div id="ch-prazo" style="height:260px;cursor:pointer" title="Clique para filtrar tarefas"></div>
     </div>
   </div>
   <div class="card" style="padding:16px;margin-bottom:16px">
-    <div style="font-size:12px;font-weight:700;margin-bottom:8px">📦 Orçamento × Consumido × Realizado por Etapa (h)</div>
-    <div id="ch-budget" style="height:320px"></div>
+    <div style="font-size:12px;font-weight:700;margin-bottom:8px">📦 Orçamento × Consumido × Realizado por Etapa (h) <span style="font-size:10px;font-weight:400;color:var(--dim)">· clique na barra</span></div>
+    <div id="ch-budget" style="height:320px;cursor:pointer" title="Clique em uma barra para ver as sub-etapas"></div>
   </div>
   ${hasCost?`<div class="card" style="padding:16px;margin-bottom:16px">
     <div style="font-size:12px;font-weight:700;margin-bottom:8px">💰 Custo Planejado × Real por Etapa (R$)</div>
@@ -4372,7 +4571,22 @@ function renderPerfTab(){
     <div id="ch-burn" style="height:280px"></div>
   </div>`:''}`;
 
-  setTimeout(()=>{
+
+  // Add drill-down panel after charts
+  const drillEl = document.createElement('div');
+  drillEl.id = 'perf-drill';
+  drillEl.style.cssText = 'display:none;margin-top:16px';
+  drillEl.innerHTML = `
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:700" id="perf-drill-title">Tarefas</div>
+        <button class="btn btn-ghost btn-xs" onclick="closePerfDrill()">✕ Fechar</button>
+      </div>
+      <div id="perf-drill-list" style="max-height:400px;overflow-y:auto;padding:12px 16px"></div>
+    </div>`;
+  el.appendChild(drillEl);
+
+    setTimeout(()=>{
     const txtColor='#94a3b8';
     const bg='transparent';
 
@@ -4380,13 +4594,16 @@ function renderPerfTab(){
     const stLabels=Object.keys(stMap).filter(k=>stMap[k]>0);
     const stColors=['#475569','#3b82f6','#22c55e','#ef4444'];
     const c1=mkChart('ch-status');
-    if(c1) c1.setOption({backgroundColor:bg,
+    if(c1){c1.setOption({backgroundColor:bg,
       series:[{type:'pie',radius:['35%','70%'],center:['50%','50%'],
         itemStyle:{shadowBlur:20,shadowColor:'rgba(0,0,0,.4)',borderRadius:6},
         label:{color:txtColor,fontSize:11},
         emphasis:{itemStyle:{shadowBlur:30}},
         data:stLabels.map((k,i)=>({name:k,value:stMap[k],itemStyle:{color:stColors[i%stColors.length]}}))}]
     });
+    c1.on('click',function(p){
+      showPerfDrill('status', p.name, countStages, stages);
+    });}
 
     // ── Pizza 3D: Prazo ──
     const pzColors={'Finalizada':'#22c55e','Dentro do Prazo':'#38bdf8','Em Risco':'#f59e0b','Atrasada':'#ef4444','Não Iniciada':'#a78bfa','Sem prazo':'#475569'};
@@ -4398,6 +4615,9 @@ function renderPerfTab(){
         label:{color:txtColor,fontSize:11},
         emphasis:{itemStyle:{shadowBlur:30}},
         data:pzLabels.map(k=>({name:k,value:pzMap[k],itemStyle:{color:pzColors[k]||'#475569'}}))}]
+    });
+    c2.on('click',function(p){
+      showPerfDrill('prazo', p.name, countStages, stages);
     });
 
     // ── Bar 3D: Budget ──
@@ -4414,7 +4634,17 @@ function renderPerfTab(){
           });
         });
         c3.setOption({backgroundColor:bg,
-          tooltip:{trigger:'axis',axisPointer:{type:'shadow'}},
+          tooltip:{trigger:'axis',axisPointer:{type:'shadow'},
+            formatter:function(params){
+              let s=params[0].axisValueLabel+'<br>';
+              params.forEach(p=>{
+                const v=Math.round(p.value*60)/60; // round to nearest minute
+                const h=Math.floor(v),m=Math.round((v-h)*60);
+                const hhmm=(h<10?'0'+h:h)+':'+(m<10?'0'+m:m);
+                s+=p.marker+' '+p.seriesName+' &nbsp;<b>'+hhmm+'h</b><br>';
+              });
+              return s;
+            }},
           legend:{data:series3,textStyle:{color:txtColor},top:0},
           grid:{left:'3%',right:'4%',bottom:'8%',top:'40px',containLabel:true},
           xAxis:{type:'category',data:rLabels,
@@ -4429,10 +4659,10 @@ function renderPerfTab(){
             {name:'Orçamento',type:'bar',data:rBudget,barMaxWidth:32,
               itemStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'#fbbf24'},{offset:1,color:'#92400e'}]},
                 shadowColor:'rgba(245,158,11,.4)',shadowBlur:8,borderRadius:[4,4,0,0]}},
-            {name:'Consumido',type:'bar',data:rConsumed,barMaxWidth:32,
+            {name:'Consumido',type:'bar',data:rConsumedR,barMaxWidth:32,
               itemStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'#38bdf8'},{offset:1,color:'#0369a1'}]},
                 shadowColor:'rgba(14,165,233,.4)',shadowBlur:8,borderRadius:[4,4,0,0]}},
-            {name:'Realizado',type:'bar',data:rReal,barMaxWidth:32,
+            {name:'Realizado',type:'bar',data:rRealR,barMaxWidth:32,
               itemStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'#4ade80'},{offset:1,color:'#166534'}]},
                 shadowColor:'rgba(34,197,94,.4)',shadowBlur:8,borderRadius:[4,4,0,0]}}
           ]
@@ -4473,6 +4703,11 @@ function renderPerfTab(){
               itemStyle:{color:{type:'linear',x:0,y:0,x2:0,y2:1,colorStops:[{offset:0,color:'#c084fc'},{offset:1,color:'#6b21a8'}]},
                 shadowColor:'rgba(167,139,250,.4)',shadowBlur:8,borderRadius:[4,4,0,0]}}
           ]
+        });
+        c3.on('click',function(p){
+          if(p.seriesName&&p.name){
+            showPerfDrill('budget', p.name, countStages, stages, roots);
+          }
         });
       }
     }
