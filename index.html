@@ -1231,8 +1231,13 @@ datalist{display:none}
       <div class="frow">
         <div class="fg"><label class="fl">Nº OS / Tkt Snk</label><input class="fc" id="ch-os-snk" placeholder="Ex: 626245"></div>
         <div class="fg"><label class="fl">Nº OS Panice</label><input class="fc" id="ch-os-panice" placeholder="Ex: PAL-00123"></div>
-        <div class="fg"><label class="fl">Projeto / Cliente</label>
-          <select class="fc" id="ch-proj-id"><option value="">— Selecione —</option></select>
+        <div class="fg"><label class="fl">Projeto Vinculado</label>
+          <select class="fc" id="ch-proj-id" onchange="onChProjChange(this.value)">
+            <option value="">— Sem projeto —</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Cliente <span style="color:var(--dim);font-weight:400;text-transform:none">(preenchido pelo projeto ou manual)</span></label>
+          <input class="fc" id="ch-cliente" placeholder="Nome do cliente">
         </div>
       </div>
 
@@ -1241,6 +1246,16 @@ datalist{display:none}
         <div class="fg"><label class="fl">Consultor</label><input class="fc" id="ch-consultor" placeholder="Nome do consultor"></div>
         <div class="fg"><label class="fl">Produto Atendido</label><input class="fc" id="ch-produto" placeholder="Ex: WMS Sankhya, ERP..."></div>
         <div class="fg"><label class="fl">Versão Utilizada</label><input class="fc" id="ch-versao" placeholder="Ex: 4.15.2, SB22..."></div>
+      </div>
+
+      <!-- Contato -->
+      <div class="frow">
+        <div class="fg"><label class="fl">👤 Contato <span style="color:var(--dim);font-weight:400;text-transform:none">(pessoa no cliente ou Unidade Sankhya)</span></label>
+          <input class="fc" id="ch-contato" placeholder="Nome do contato"></div>
+        <div class="fg"><label class="fl">✉️ E-mail do Contato</label>
+          <input class="fc" type="email" id="ch-email" placeholder="contato@cliente.com.br"></div>
+        <div class="fg"><label class="fl">📱 Telefone / WhatsApp</label>
+          <input class="fc" id="ch-fone" placeholder="(34) 99999-9999"></div>
       </div>
 
       <!-- Status e SLA -->
@@ -2949,6 +2964,22 @@ function slaStatus(chamado){
   return{cls:'ok',icon:'✅',label:'Dentro SLA',color:'#22c55e'};
 }
 
+function onChProjChange(projId){
+  const clienteEl = document.getElementById('ch-cliente');
+  if(!clienteEl) return;
+  if(projId){
+    const proj = (S.projects||[]).find(p=>p.id===projId);
+    if(proj && proj.client){
+      clienteEl.value = proj.client;
+      clienteEl.style.background = 'rgba(14,165,233,.06)';
+      clienteEl.title = 'Preenchido automaticamente pelo projeto';
+    }
+  } else {
+    clienteEl.style.background = '';
+    clienteEl.title = '';
+  }
+}
+
 function calcChamadoTempo(){
   const s=document.getElementById('ch-inicio')?.value;
   const e=document.getElementById('ch-fim')?.value;
@@ -3007,6 +3038,9 @@ function openChamadoModal(id=null){
   document.getElementById('ch-consultor').value=ch?.consultor||'';
   document.getElementById('ch-produto').value=ch?.produto||'';
   document.getElementById('ch-versao').value=ch?.versao||'';
+  document.getElementById('ch-contato').value=ch?.contato||'';
+  document.getElementById('ch-email').value=ch?.email||'';
+  document.getElementById('ch-fone').value=ch?.fone||'';
   document.getElementById('ch-status').value=ch?.status||'Aberto';
   document.getElementById('ch-tipo').value=ch?.tipo||'Suporte';
   document.getElementById('ch-inicio').value=ch?.inicio||'';
@@ -3015,7 +3049,16 @@ function openChamadoModal(id=null){
   document.getElementById('ch-descricao').value=ch?.descricao||'';
   document.getElementById('ch-solucao').value=ch?.solucao||'';
   const projSel=document.getElementById('ch-proj-id');
-  projSel.innerHTML='<option value="">— Selecione —</option>'+(S.projects||[]).map(p=>`<option value="${p.id}" ${ch?.projId===p.id?'selected':''}>${esc(p.name)} · ${esc(p.client||'')}</option>`).join('');
+  projSel.innerHTML='<option value="">— Sem projeto —</option>'+(S.projects||[]).map(p=>`<option value="${p.id}" ${ch?.projId===p.id?'selected':''}>${esc(p.name)} · ${esc(p.client||'')}</option>`).join('');
+  // Populate client field
+  const clienteEl=document.getElementById('ch-cliente');
+  if(clienteEl){
+    clienteEl.value=ch?.cliente||'';
+    if(ch?.projId && !ch?.cliente){
+      const proj=(S.projects||[]).find(p=>p.id===ch.projId);
+      if(proj?.client){ clienteEl.value=proj.client; clienteEl.style.background='rgba(14,165,233,.06)'; }
+    }
+  }
   const slaSel=document.getElementById('ch-sla-nivel');
   slaSel.innerHTML='<option value="">— Sem SLA —</option>'+getSlaConfigs().map(c=>`<option value="${c.id}" ${ch?.slaId===c.id?'selected':''}>${esc(c.name)} (${c.horas}h)</option>`).join('');
   _chEvList=ch?.evidencias?[...ch.evidencias]:[];
@@ -3056,9 +3099,13 @@ function saveChamado(){
     id:_eChamadoId||uid(),
     osSnk,osPanice:document.getElementById('ch-os-panice').value.trim(),
     projId:document.getElementById('ch-proj-id').value,
+    cliente:document.getElementById('ch-cliente')?.value.trim()||'',
     consultor:document.getElementById('ch-consultor').value.trim(),
     produto:document.getElementById('ch-produto').value.trim(),
     versao:document.getElementById('ch-versao').value.trim(),
+    contato:document.getElementById('ch-contato')?.value.trim()||'',
+    email:document.getElementById('ch-email')?.value.trim()||'',
+    fone:document.getElementById('ch-fone')?.value.trim()||'',
     status:document.getElementById('ch-status').value,
     tipo:document.getElementById('ch-tipo').value,
     slaId,slaHoras:slaCfg?.horas||0,slaNome:slaCfg?.name||'',
@@ -3110,7 +3157,7 @@ function renderChamados(){
   const fStatus=document.getElementById('ch-filter-status')?.value||'';
   const fProj=document.getElementById('ch-filter-proj')?.value||'';
   const fSla=document.getElementById('ch-filter-sla')?.value||'';
-  if(search)chs=chs.filter(c=>[(c.osSnk||''),(c.osPanice||''),(c.consultor||''),(c.descricao||''),(c.produto||'')].some(v=>v.toLowerCase().includes(search)));
+  if(search)chs=chs.filter(c=>[(c.osSnk||''),(c.osPanice||''),(c.consultor||''),(c.descricao||''),(c.produto||''),(c.cliente||'')].some(v=>v.toLowerCase().includes(search)));
   if(fStatus)chs=chs.filter(c=>c.status===fStatus);
   if(fProj)chs=chs.filter(c=>c.projId===fProj);
   if(fSla)chs=chs.filter(c=>{const s=slaStatus(c);return s&&s.cls===fSla;});
@@ -3144,8 +3191,9 @@ function renderChamados(){
           </div>
           <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px">${esc(c.descricao||'Sem descrição')}</div>
           <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--mid)">
-            ${proj?`<span>📁 ${esc(proj.name)} · ${esc(proj.client||'')}</span>`:''}
+            ${proj?`<span>📁 ${esc(proj.name)} · ${esc(proj.client||c.cliente||'')}</span>`:c.cliente?`<span>👤 ${esc(c.cliente)}</span>`:''}
             ${c.consultor?`<span>👤 ${esc(c.consultor)}</span>`:''}
+            ${c.contato?`<span>🤝 ${esc(c.contato)}${c.fone?' · '+esc(c.fone):''}${c.email?' · <a href="mailto:'+esc(c.email)+'" style="color:var(--accent)">'+esc(c.email)+'</a>':''}</span>`:''}
             ${c.produto?`<span>📦 ${esc(c.produto)}${c.versao?' v'+esc(c.versao):''}</span>`:''}
             ${c.inicio?`<span>🕐 ${fmtDT(c.inicio)}${c.fim?' → '+fmtDT(c.fim):''}</span>`:''}
             ${c.tempo?`<span style="color:var(--green);font-weight:700">⏱ ${esc(c.tempo)}</span>`:''}
