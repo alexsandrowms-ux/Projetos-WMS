@@ -791,7 +791,7 @@ datalist{display:none}
       <div class="fg"><label>Nome da Etapa *</label><input class="fc" id="fs-name" placeholder="Ex: Escopo e Modelagem"></div>
       <div class="frow">
         <div class="fg"><label>Executante</label><input class="fc" id="fs-executor" placeholder="Nome do responsável"></div>
-        <div class="fg"><label>Horas Planejadas</label><input class="fc" type="number" id="fs-hours" placeholder="Ex: 8" min="0"></div>
+        <div class="fg" id="fs-fg-hours"><label id="fs-hours-label">📋 Horas Orçadas (total da etapa)</label><input class="fc" type="number" id="fs-hours" placeholder="Ex: 8" min="0"></div>
       </div>
       <div class="frow" id="fs-row-execution">
         <div class="fg">
@@ -1884,7 +1884,7 @@ function renderStages(){
               <div class="ssi"><span class="ssi-l">Término</span><span class="ssi-v" style="${k.dateReschedule?'text-decoration:line-through;opacity:.5':''}">${fDS(k.dateEnd)||'—'}</span></div>
               ${k.dateReschedule?`<div class="ssi"><span class="ssi-l" style="color:var(--amber)">🔄 Reagend.</span><span class="ssi-v" style="color:var(--amber);font-weight:600">${fDS(k.dateReschedule.split('T')[0])||'—'}</span></div>`:''}
             ${(k.timeStart||k.timeEnd)?`<div class="ssi"><span class="ssi-l">Horário</span><span class="ssi-v" style="color:var(--accent)">${k.timeStart||'—'} → ${k.timeEnd||'—'}</span></div>`:''}
-              <div class="ssi"><span class="ssi-l">H. Plan.</span><span class="ssi-v" style="color:var(--amber)">${k.hours||0}h</span></div>
+              ${k.hours?`<div class="ssi"><span class="ssi-l">H. Plan.</span><span class="ssi-v" style="color:var(--amber)">${k.hours}h</span></div>`:''  }
               <div class="ssi"><span class="ssi-l">H. Real</span><span class="ssi-v" style="color:var(--green)">${k.hoursReal?(decHToHHMM(parseFloat(k.hoursReal))||k.hoursReal):'—'}</span></div>
               ${k.breakHours>0?`<div class="ssi"><span class="ssi-l" style="color:var(--amber)">☕ Intervalo</span><span class="ssi-v" style="color:var(--amber)">${decHToHHMM(k.breakHours)}</span></div>`:''}
               ${k.dateReal?`<div class="ssi"><span class="ssi-l">Conclusão</span><span class="ssi-v" style="color:var(--green)">${fDS(k.dateReal)}</span></div>`:''}
@@ -2119,14 +2119,14 @@ function renderCostTab(){
     </tr>`;
     const kidRows = kids.map(k=>{
       const kRate = k.hourRate || defRate;
-      const kHP   = parseFloat(k.hours)||0;
+      const kHP   = parseFloat(k.hours)||0; // será 0 pois sub não tem horas planejadas
       const kHR   = parseFloat(k.hoursReal)||0;
       const kPlan = kHP * kRate;
       const kAC   = kHR * kRate;
       const kDiff = kPlan - kAC;
       return `<tr>
         <td style="padding:5px 10px;font-size:11px;color:var(--mid)">└ ${esc(k.num)||'—'} ${esc(k.name)}</td>
-        <td style="text-align:center;padding:5px 6px;font-size:11px">${kHP}h</td>
+        <td style="text-align:center;padding:5px 6px;font-size:11px;color:var(--dim)">—</td>
         <td style="text-align:center;padding:5px 6px;font-size:11px">${kHR}h</td>
         <td style="text-align:center;padding:5px 6px;font-size:11px">${kRate>0?fCur(kRate):'<span style="color:var(--dim)">—</span>'}</td>
         <td style="text-align:right;padding:5px 8px;font-size:11px;color:var(--amber)">${kRate>0?fCur(kPlan):'—'}</td>
@@ -2742,12 +2742,19 @@ function renderCGantt(){
 // ════════════════════════════════════
 
 function toggleSubFields(isSub){
-  const rowExec = document.getElementById('fs-row-execution');
-  const rowReal = document.getElementById('fs-row-realdates');
-  const fgRe    = document.getElementById('fg-reschedule');
-  if(rowExec) rowExec.style.display = isSub ? '' : 'none';
-  if(rowReal) rowReal.style.display = isSub ? '' : 'none';
-  if(fgRe)    fgRe.style.display    = isSub ? '' : 'none';
+  const rowExec  = document.getElementById('fs-row-execution');
+  const rowReal  = document.getElementById('fs-row-realdates');
+  const fgRe     = document.getElementById('fg-reschedule');
+  const fgHours  = document.getElementById('fs-fg-hours');
+  const lblHours = document.getElementById('fs-hours-label');
+  if(rowExec)  rowExec.style.display  = isSub ? '' : 'none';
+  if(rowReal)  rowReal.style.display  = isSub ? '' : 'none';
+  if(fgRe)     fgRe.style.display     = isSub ? '' : 'none';
+  // Horas Planejadas: só aparece na etapa raiz
+  if(fgHours)  fgHours.style.display  = isSub ? 'none' : '';
+  if(lblHours) lblHours.textContent   = isSub
+    ? '⏱ Horas Orçadas'
+    : '📋 Horas Orçadas (total da etapa)';
 }
 
 function openStageModal(isNew=true,editId=null,defParent=null){
@@ -2815,19 +2822,8 @@ function openStageModal(isNew=true,editId=null,defParent=null){
     document.getElementById('fs-datereschedule').value=stage?.dateReschedule||'';
 
   // Campos exclusivos de sub-etapa: Intervalo, Horas Realizadas, Início/Término Real
-  const _rowExec  = document.getElementById('fs-row-execution');
-  const _rowReal  = document.getElementById('fs-row-realdates');
-  if(_rowExec) _rowExec.style.display = _isSub ? '' : 'none';
-  if(_rowReal) _rowReal.style.display = _isSub ? '' : 'none';
-
-  // Label de Horas Planejadas muda conforme contexto
-  const _hoursLabel = document.querySelector('label[for-hours-label]') ||
-    document.getElementById('fs-hours')?.closest('.fg')?.querySelector('label');
-  if(_hoursLabel){
-    _hoursLabel.textContent = _isSub
-      ? '⏱ Horas Planejadas (sub-etapa)'
-      : '📋 Horas Orçadas (total da etapa)';
-  }
+  // Horas Planejadas só na etapa raiz
+  toggleSubFields(_isSub);
 
   openModal('modal-stage');
 }
@@ -3130,7 +3126,7 @@ function saveStage(){
     timeEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     dateReal:document.getElementById('fs-datereal').value,
     dateStartReal:document.getElementById('fs-datestartreal')?.value||'',
-    hours:document.getElementById('fs-hours').value,
+    hours:(document.getElementById('fs-parent')?.value||_defParent)?'':document.getElementById('fs-hours').value,
     hoursReal: (()=>{
       const p=document.getElementById('fs-parent')?.value||_defParent;
       if(!p)return ''; // root = auto from kids
@@ -3448,7 +3444,7 @@ function exportHTML(projs){
         const cp=Math.round(hp*rate*100)/100;const cr=Math.round(hr*rate*100)/100;const vr=Math.round((cp-cr)*100)/100;
         const ps2=prazoStatus(s);
         const prefix=indent?`<td style="padding-left:18px">${esc(s.num||'')}</td><td style="padding-left:18px">↳ ${esc(s.name)}</td>`:`<td>${esc(s.num||'')}</td><td><strong>${esc(s.name)}</strong></td>`;
-        return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td style="${s.dateReschedule?'color:#d97706;font-weight:700':''}">${s.dateReschedule?('🔄 '+fD(s.dateReschedule.split('T')[0])):'—'}</td><td style="text-align:center">${s.timeStart&&s.timeEnd?s.timeStart+' → '+s.timeEnd:'—'}</td><td style="text-align:center;color:#d97706">${s.breakHours>0?decHToHHMM(s.breakHours):'—'}</td><td>${hp}h</td><td style="font-weight:700;color:#16a34a">${hr>0?hr+'h':'—'}</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
+        return`${prefix}<td>${indent?'Sub-etapa':'Etapa'}</td><td>${esc(s.executor||'—')}</td><td>${fD(s.date)}</td><td>${fD(s.dateEnd)}</td><td style="${s.dateReschedule?'color:#d97706;font-weight:700':''}">${s.dateReschedule?('🔄 '+fD(s.dateReschedule.split('T')[0])):'—'}</td><td style="text-align:center">${s.timeStart&&s.timeEnd?s.timeStart+' → '+s.timeEnd:'—'}</td><td style="text-align:center;color:#d97706">${s.breakHours>0?decHToHHMM(s.breakHours):'—'}</td><td>${indent?'<span style=\'color:#94a3b8\'>—</span>':hp+'h'}</td><td style="font-weight:700;color:#16a34a">${hr>0?hr+'h':'—'}</td><td>${rate>0?'R$ '+cp.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td>${rate>0?'R$ '+cr.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td><td style="color:${vr>=0?'#16a34a':'#dc2626'}">${rate>0?(vr>=0?'+':'')+('R$ '+Math.abs(vr).toLocaleString('pt-BR',{minimumFractionDigits:2})):'—'}</td><td><span class="sb sb-${(s.status||'').toLowerCase().replace(/ /g,'-')}">${s.status}</span></td><td>${ps2.icon} ${ps2.label}</td>`;
       }
       return`<tr style="border-left:3px solid ${rc}">${rowCells(r,false)}</tr>`+kids.map(k=>{
         const logs=(k.activityLog||[]);
