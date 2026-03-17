@@ -1277,6 +1277,20 @@ datalist{display:none}
         </div>
       </div>
 
+      <!-- Agendamento -->
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Agendamento</div>
+      <div class="frow">
+        <div class="fg"><label class="fl">📅 Data/Hora Agendada</label>
+          <input class="fc" type="datetime-local" id="ch-agendamento" title="Data e hora agendada para o atendimento" onchange="updateChAgendStatus(this.value)">
+        </div>
+        <div class="fg"><label class="fl">⏳ Prazo de Conclusão</label>
+          <input class="fc" type="datetime-local" id="ch-prazo-conclusao" title="Data limite para resolver o chamado">
+        </div>
+        <div class="fg"><label class="fl" style="color:var(--mid)">Status do Agendamento</label>
+          <div id="ch-agend-status" style="font-size:12px;color:var(--dim);padding:7px 0">— Preencha a data agendada —</div>
+        </div>
+      </div>
+
       <!-- Datas e Horas -->
       <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Tempo de Atendimento</div>
       <div class="frow">
@@ -2788,6 +2802,30 @@ function renderCGantt(){
     });
   });
 
+  // ── Adiciona chamados com agendamento ──
+  (S.chamados||[]).forEach((ch,ci) => {
+    if(!ch.agendamento) return;
+    const agdDate = ch.agendamento.split('T')[0];
+    const endDate = ch.prazoConclusao ? ch.prazoConclusao.split('T')[0] : agdDate;
+    const proj = (S.projects||[]).find(p=>p.id===ch.projId);
+    const label = ch.cliente || proj?.client || '—';
+    allRows.push({
+      isChamado: true,
+      ch, proj, label,
+      col: '#a78bfa', // purple for chamados
+      root: null,
+      stage: {
+        name: (ch.osSnk?'['+ch.osSnk+'] ':'')+ch.descricao,
+        status: ch.status,
+        executor: ch.consultor||'',
+        timeStart: ch.agendamento?.split('T')[1]?.slice(0,5)||'',
+        timeEnd: ch.fim?.split('T')[1]?.slice(0,5)||'',
+      },
+      startD: agdDate,
+      endD: endDate,
+    });
+  });
+
   // ── Filtra rows que tocam o período ──
   const visible = allRows.filter(r => {
     const rS = r.startD ? new Date(r.startD+'T00:00:00') : null;
@@ -2880,15 +2918,24 @@ function renderCGantt(){
     const isDone = stage.status === 'Concluído';
     const isActive = rS && rE && rS <= today && rE >= today;
 
-    // Group header por projeto
-    if(proj.id !== lastProjId){
-      lastProjId = proj.id;
-      h += `<tr>
-        <td colspan="${4 + days.length}" style="background:${col}18;border-top:2px solid ${col};border-bottom:1px solid ${col}40;padding:5px 10px;font-size:11px;font-weight:700;color:${col};position:sticky;left:0">
-          ● ${esc(proj.name)} <span style="font-weight:400;color:var(--mid)">· ${esc(proj.client||'—')}</span>
-          <span style="margin-left:8px;font-size:10px;font-weight:400;padding:1px 8px;border-radius:10px;background:${col}25">${esc(proj.status||'')}</span>
-        </td>
-      </tr>`;
+    // Group header por projeto / chamados
+    const groupKey = r.isChamado ? '__chamados__' : (proj?.id||'');
+    if(groupKey !== lastProjId){
+      lastProjId = groupKey;
+      if(r.isChamado){
+        h += `<tr>
+          <td colspan="${4 + days.length}" style="background:rgba(167,139,250,.12);border-top:2px solid #a78bfa;border-bottom:1px solid rgba(167,139,250,.3);padding:5px 10px;font-size:11px;font-weight:700;color:#a78bfa;position:sticky;left:0">
+            🎧 Atendimentos / Chamados Agendados
+          </td>
+        </tr>`;
+      } else {
+        h += `<tr>
+          <td colspan="${4 + days.length}" style="background:${col}18;border-top:2px solid ${col};border-bottom:1px solid ${col}40;padding:5px 10px;font-size:11px;font-weight:700;color:${col};position:sticky;left:0">
+            ● ${esc(proj.name)} <span style="font-weight:400;color:var(--mid)">· ${esc(proj.client||'—')}</span>
+            <span style="margin-left:8px;font-size:10px;font-weight:400;padding:1px 8px;border-radius:10px;background:${col}25">${esc(proj.status||'')}</span>
+          </td>
+        </tr>`;
+      }
     }
 
     // Cells de dias
@@ -2923,14 +2970,14 @@ function renderCGantt(){
       <td style="position:sticky;left:0;z-index:2;background:var(--bg2);border-left:3px solid ${col}">
         <div style="padding:5px 8px">
           ${parentLabel}
-          <div style="font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px" title="${esc(stage.name)}">${esc(stage.name)}</div>
+          <div style="font-size:11.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:155px" title="${esc(stage.name)}">${r.isChamado?'🎧 ':''}${esc(stage.name)}</div>
           <div style="display:flex;gap:4px;margin-top:2px">
             <span class="badge ${({Concluído:'badge-green',Cancelado:'badge-red','Em Andamento':'badge-blue'})[stage.status]||'badge-gray'}" style="font-size:8px">${stage.status||'Pendente'}</span>
             ${r.startD?`<span style="font-size:9px;color:var(--dim)">${fDS(r.startD)}${r.endD&&r.endD!==r.startD?' → '+fDS(r.endD):''}</span>`:''}
           </div>
         </div>
       </td>
-      <td style="position:sticky;left:${LABEL_W}px;z-index:2;background:var(--bg2);font-size:11px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${CLIENT_W}px;padding:0 8px" title="${esc(proj.client||proj.name)}">${esc(proj.client||proj.name)}</td>
+      <td style="position:sticky;left:${LABEL_W}px;z-index:2;background:var(--bg2);font-size:11px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:${CLIENT_W}px;padding:0 8px" title="${r.isChamado?esc(r.label):esc(proj?.client||proj?.name||'')}">${r.isChamado?esc(r.label):esc(proj?.client||proj?.name||'')}</td>
       <td style="font-size:11px;color:var(--mid);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 8px">${esc(execStr)}</td>
       <td style="font-size:10px;color:var(--accent);text-align:center;white-space:nowrap;padding:0 4px">${timeStr}</td>
       ${cells}
@@ -2977,6 +3024,29 @@ function onChProjChange(projId){
   } else {
     clienteEl.style.background = '';
     clienteEl.title = '';
+  }
+}
+
+function updateChAgendStatus(val){
+  const el=document.getElementById('ch-agend-status');
+  if(!el)return;
+  if(!val){el.innerHTML='<span style="color:var(--dim)">— Preencha a data agendada —</span>';return;}
+  const agd=new Date(val);
+  const now=new Date();
+  const diff=(agd-now)/3600000; // hours
+  if(diff<0){
+    const ago=Math.abs(diff);
+    const d=Math.floor(ago/24),h=Math.floor(ago%24),m=Math.round((ago%1)*60);
+    const str=d>0?d+'d '+h+'h':h+'h '+m+'min';
+    el.innerHTML=`<span style="color:var(--red)">🔴 Agendamento passado há ${str}</span>`;
+  } else if(diff<2){
+    const h=Math.floor(diff),m=Math.round((diff-h)*60);
+    el.innerHTML=`<span style="color:var(--amber)">⚠️ Em ${h}h${m>0?' '+m+'min':''} — Atenção!</span>`;
+  } else if(diff<24){
+    el.innerHTML=`<span style="color:var(--accent)">🔵 Hoje — ${agd.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</span>`;
+  } else {
+    const d=Math.floor(diff/24);
+    el.innerHTML=`<span style="color:var(--green)">✅ Em ${d} dia${d!==1?'s':''} — ${agd.toLocaleDateString('pt-BR')}</span>`;
   }
 }
 
@@ -3043,6 +3113,9 @@ function openChamadoModal(id=null){
   document.getElementById('ch-fone').value=ch?.fone||'';
   document.getElementById('ch-status').value=ch?.status||'Aberto';
   document.getElementById('ch-tipo').value=ch?.tipo||'Suporte';
+  document.getElementById('ch-agendamento').value=ch?.agendamento||'';
+  document.getElementById('ch-prazo-conclusao').value=ch?.prazoConclusao||'';
+  updateChAgendStatus(ch?.agendamento||'');
   document.getElementById('ch-inicio').value=ch?.inicio||'';
   document.getElementById('ch-fim').value=ch?.fim||'';
   document.getElementById('ch-tempo').value=ch?.tempo||'';
@@ -3109,6 +3182,8 @@ function saveChamado(){
     status:document.getElementById('ch-status').value,
     tipo:document.getElementById('ch-tipo').value,
     slaId,slaHoras:slaCfg?.horas||0,slaNome:slaCfg?.name||'',
+    agendamento:document.getElementById('ch-agendamento')?.value||'',
+    prazoConclusao:document.getElementById('ch-prazo-conclusao')?.value||'',
     inicio:document.getElementById('ch-inicio').value,
     fim:document.getElementById('ch-fim').value,
     tempo:document.getElementById('ch-tempo').value,
@@ -3195,6 +3270,7 @@ function renderChamados(){
             ${c.consultor?`<span>👤 ${esc(c.consultor)}</span>`:''}
             ${c.contato?`<span>🤝 ${esc(c.contato)}${c.fone?' · '+esc(c.fone):''}${c.email?' · <a href="mailto:'+esc(c.email)+'" style="color:var(--accent)">'+esc(c.email)+'</a>':''}</span>`:''}
             ${c.produto?`<span>📦 ${esc(c.produto)}${c.versao?' v'+esc(c.versao):''}</span>`:''}
+            ${c.agendamento?`<span style="color:${isAgendPassado(c)?'var(--red)':isAgendHoje(c)?'var(--accent)':'var(--mid)'}">📅 Agend: ${fmtDT(c.agendamento)}</span>`:''}
             ${c.inicio?`<span>🕐 ${fmtDT(c.inicio)}${c.fim?' → '+fmtDT(c.fim):''}</span>`:''}
             ${c.tempo?`<span style="color:var(--green);font-weight:700">⏱ ${esc(c.tempo)}</span>`:''}
             ${c.slaHoras?`<span>SLA: ${esc(c.slaNome)} (${c.slaHoras}h)</span>`:''}
@@ -3210,6 +3286,9 @@ function renderChamados(){
     </div>`;
   }).join('');
 }
+
+function isAgendPassado(c){return c.agendamento&&new Date(c.agendamento)<new Date()&&!['Resolvido','Fechado','Cancelado'].includes(c.status);}
+function isAgendHoje(c){if(!c.agendamento)return false;const a=new Date(c.agendamento);const n=new Date();return a.toDateString()===n.toDateString();}
 
 function fmtDT(dt){
   if(!dt)return'—';
