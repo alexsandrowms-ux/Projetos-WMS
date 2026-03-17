@@ -1369,24 +1369,26 @@ function stats(proj){
   const pl=roots.reduce((s,x)=>s+h(x),0);
   // Realizadas = soma das hoursReal efetivamente preenchidas nas sub-etapas
   const subs=a.filter(x=>x.parentId);
-  const _dnRaw = subs.length > 0
-    ? subs.reduce((s,k)=>s+(parseFloat(k.hoursReal)||0), 0)
-    : roots.filter(r=>r.status==='Concluído').reduce((s,r)=>s+(parseFloat(r.hoursReal)||0), 0);
-  const dn = Math.round(_dnRaw * 10) / 10;
+  // Sum in minutes to avoid decimal rounding (ex: 4h10min = 4.1666... decimal)
+  const _dnMinutes = subs.length > 0
+    ? subs.reduce((s,k)=>s+Math.round((parseFloat(k.hoursReal)||0)*60), 0)
+    : roots.filter(r=>r.status==='Concluído').reduce((s,r)=>s+Math.round((parseFloat(r.hoursReal)||0)*60), 0);
+  const dn = _dnMinutes / 60; // keep full precision
   const fap=parseFloat(proj.totalHours)||0;
   const base=fap>0?fap:pl;
   // Soma das horas das sub-etapas por etapa raiz (consumo planejado)
   const rootStats=roots.map(r=>{
     const kids=a.filter(s=>s.parentId===r.id);
     const budget=h(r);
-    const consumed=kids.length>0?kids.reduce((s,k)=>s+h(k),0):h(r);
-    const remaining=budget-consumed;
-    return{id:r.id,budget,consumed,remaining,over:remaining<0};
+    // consumed = sum of realized hours from subs (subs have no planned hours)
+    const consumed=Math.round(kids.reduce((a,k)=>a+Math.round((parseFloat(k.hoursReal)||0)*60),0))/60;
+    const remaining=Math.max(0, budget-consumed);
+    return{id:r.id,budget,consumed,remaining,over:consumed>budget};
   });
   const totalRootBudget=roots.reduce((s,r)=>s+h(r),0);
   const projBudget=parseFloat(proj.totalHours)||0;
   const projDiff=projBudget>0?totalRootBudget-projBudget:0;
-  const _rem=Math.round(Math.max(0,base-dn)*10)/10;
+  const _rem=Math.max(0,base-dn); // keep full precision
   return{pl,dn,rem:_rem,pct:base>0?Math.round(dn/base*100):0,rootStats,totalRootBudget,projBudget,projDiff};
 }
 
@@ -1822,13 +1824,18 @@ function renderStages(){
     const col=PCOLS[ri%PCOLS.length];
     const kids=stages.filter(s=>s.parentId===root.id);
     const budget=(+root.hours||0);
-    const consumed=kids.length>0?kids.reduce((a,k)=>a+(+k.hours||0),0):budget;
-    const remaining=budget-consumed;
+    const consumed=kids.length>0?Math.round(kids.reduce((a,k)=>a+Math.round((parseFloat(k.hoursReal)||0)*60),0))/60:0;
+    const remaining=Math.max(0, budget-consumed);
+    const overBudget=consumed>budget;
     const pctUsed=budget>0?Math.min(100,Math.round(consumed/budget*100)):0;
-    const overBudget=remaining<0;
     const barCls=overBudget?'hbudget-over':pctUsed>=90?'hbudget-warn':'hbudget-ok';
     const lastKidIdx=kids.length-1;
-    const realizado=Math.round(kids.reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)*10)/10;
+    // Sum in exact minutes to avoid decimal rounding errors
+    const _realizadoMin=kids.reduce((a,k)=>{
+      const v=parseFloat(k.hoursReal)||0;
+      return a+Math.round(v*60); // convert to minutes
+    },0);
+    const realizado=_realizadoMin/60; // keep full precision for display
     const ps=prazoStatus(root);
     return`<div class="stage-section">
       <div class="sroot" style="border-left:3px solid ${col}${root.bgColor?`;background:${root.bgColor}`:''}">
@@ -1840,7 +1847,7 @@ function renderStages(){
             <div class="sr-pills">
               <span class="badge ${SB[root.status]||'badge-gray'}" style="font-size:9px">${SE[root.status]||''} ${root.status}</span>
               <span class="ps-badge ${ps.cls}" style="font-size:9px">${ps.icon} ${ps.label}</span>
-              ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}" style="font-size:9px">${overBudget?'⚠️ +'+Math.abs(remaining)+'h':remaining===0?'✅ Exato':'💚 '+remaining+'h livre'}</span>`:''}
+              ${kids.length>0?`<span class="${overBudget?'badge-over':remaining===0?'badge-exact':'badge-left'}" style="font-size:9px">${overBudget?'⚠️ +'+decHToHHMM(Math.abs(budget-consumed)):remaining===0?'✅ Exato':'💚 '+(decHToHHMM(remaining)||remaining+'h')+' livre'}</span>`:''}
               ${kids.length>0?`<span style="font-size:9px;color:var(--dim)">${kids.length} sub</span>`:''}
             </div>
           </div>
@@ -1858,8 +1865,7 @@ function renderStages(){
           <div class="sri"><span class="sri-l">Término Plan.</span><span class="sri-v">${fDS(root.dateEnd)||'—'}</span></div>
           ${root.dateReal?`<div class="sri"><span class="sri-l">Conclusão</span><span class="sri-v" style="color:var(--green)">${fDS(root.dateReal)}</span></div>`:''}
           <div class="sri"><span class="sri-l">Orçamento</span><span class="sri-v" style="color:var(--amber)">${budget}h</span></div>
-          <div class="sri"><span class="sri-l">Consumido</span><span class="sri-v">${consumed}h</span></div>
-          <div class="sri"><span class="sri-l">Realizado</span><span class="sri-v" style="color:var(--green)">${decHToHHMM(realizado)||realizado+'h'}</span></div>
+          <div class="sri"><span class="sri-l">Realizado</span><span class="sri-v" style="color:var(--green);font-weight:700">${decHToHHMM(realizado)||realizado+'h'}</span></div>
           ${kids.length>0?`<div class="sri sri-bar">
             <span class="sri-l">${pctUsed}% do orçamento</span>
             <div class="hbudget" style="margin-top:3px">
