@@ -1229,8 +1229,22 @@ datalist{display:none}
       <!-- IDs e Números -->
       <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Identificação</div>
       <div class="frow">
-        <div class="fg"><label class="fl">Nº OS / Tkt Snk</label><input class="fc" id="ch-os-snk" placeholder="Ex: 626245"></div>
-        <div class="fg"><label class="fl">Nº OS Panice</label><input class="fc" id="ch-os-panice" placeholder="Ex: PAL-00123"></div>
+        <div class="fg">
+          <label class="fl">Nº OS / Tkt Sankhya <span style="color:var(--dim);font-weight:400">(múltiplos)</span></label>
+          <div style="display:flex;gap:6px;margin-bottom:4px">
+            <input class="fc" id="ch-os-snk-input" placeholder="Ex: 626245" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addOsTag('snk');}">
+            <button class="btn btn-ghost btn-xs" onclick="addOsTag('snk')">+ Add</button>
+          </div>
+          <div id="ch-os-snk-tags" style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px"></div>
+        </div>
+        <div class="fg">
+          <label class="fl">Nº OS Panice <span style="color:var(--dim);font-weight:400">(múltiplos)</span></label>
+          <div style="display:flex;gap:6px;margin-bottom:4px">
+            <input class="fc" id="ch-os-panice-input" placeholder="Ex: PAL-00123" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addOsTag('panice');}">
+            <button class="btn btn-ghost btn-xs" onclick="addOsTag('panice')">+ Add</button>
+          </div>
+          <div id="ch-os-panice-tags" style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px"></div>
+        </div>
         <div class="fg"><label class="fl">Projeto Vinculado</label>
           <select class="fc" id="ch-proj-id" onchange="onChProjChange(this.value)">
             <option value="">— Sem projeto —</option>
@@ -1261,9 +1275,9 @@ datalist{display:none}
       <!-- Status e SLA -->
       <div class="frow">
         <div class="fg"><label class="fl">Status</label>
-          <select class="fc" id="ch-status">
+          <select class="fc" id="ch-status" onchange="onChStatusChange(this.value)">
             <option>Aberto</option><option>Em Atendimento</option><option>Aguardando Cliente</option>
-            <option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
+            <option>Pausado</option><option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
           </select>
         </div>
         <div class="fg"><label class="fl">Nível SLA</label>
@@ -1301,6 +1315,21 @@ datalist{display:none}
           <span id="ch-tempo-info" style="font-size:10px;color:var(--accent);margin-top:3px;display:block"></span>
         </div>
       </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">☕ Intervalo (pausa)</label>
+          <input class="fc" type="time" id="ch-intervalo" placeholder="01:00" onchange="calcChamadoTempo()" title="Tempo de intervalo/pausa a ser descontado">
+          <span style="font-size:10px;color:var(--dim);margin-top:3px;display:block">Será descontado do tempo total</span>
+        </div>
+        <div class="fg"></div>
+        <div class="fg"></div>
+      </div>
+
+      <!-- Pausa -->
+      <div class="frow" id="ch-row-pausa" style="display:none">
+        <div class="fg"><label class="fl" style="color:var(--amber)">⏸ Motivo da Pausa</label>
+          <input class="fc" id="ch-motivo-pausa" placeholder="Ex: Aguardando retorno do cliente, ambiente indisponível...">
+        </div>
+      </div>
 
       <!-- Descrição -->
       <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Detalhes</div>
@@ -1318,12 +1347,17 @@ datalist{display:none}
       <!-- Evidências / Logs -->
       <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Evidências e Logs</div>
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px">
-        <div style="display:flex;gap:8px;margin-bottom:8px">
-          <input class="fc" id="ch-ev-desc" placeholder="Descrição da evidência / log" style="flex:1;font-size:12px">
-          <input class="fc" id="ch-ev-url" placeholder="Link ou caminho do arquivo" style="flex:1;font-size:12px">
+        <div style="display:flex;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+          <input class="fc" id="ch-ev-desc" placeholder="Descrição da evidência / log" style="flex:2;min-width:150px;font-size:12px">
+          <input class="fc" id="ch-ev-url" placeholder="Link / URL (opcional)" style="flex:2;min-width:120px;font-size:12px">
+          <label class="btn btn-ghost btn-xs" style="cursor:pointer;align-items:center" title="Anexar arquivo">
+            📎 Arquivo
+            <input type="file" id="ch-ev-file" style="display:none" onchange="onChEvFile(this)">
+          </label>
           <button class="btn btn-ghost btn-xs" onclick="addChamadoEvidencia()">+ Adicionar</button>
         </div>
-        <div id="ch-ev-list" style="max-height:120px;overflow-y:auto"></div>
+        <div id="ch-ev-file-preview" style="font-size:11px;color:var(--accent);margin-bottom:6px;display:none"></div>
+        <div id="ch-ev-list" style="max-height:160px;overflow-y:auto"></div>
       </div>
 
     </div>
@@ -2998,8 +3032,11 @@ function renderCGantt(){
 // MÓDULO: ATENDIMENTOS / CHAMADOS
 // ════════════════════════════════════════════════
 
-let _eChamadoId = null;
-let _chEvList   = [];
+let _eChamadoId  = null;
+let _chEvList    = [];
+let _chOsSnkList = [];
+let _chOsPaniceList = [];
+let _chEvFileData = null; // {name, data, type} base64 file
 
 function getChamados(){ return S.chamados||[]; }
 function getSlaConfigs(){ return S.slaConfigs||[]; }
@@ -3063,9 +3100,13 @@ function calcChamadoTempo(){
   if(!s||!e){if(tEl)tEl.value='';return;}
   const diff=(new Date(e)-new Date(s))/3600000;
   if(diff<=0){if(tEl){tEl.value='';tEl.style.color='var(--red)';}if(iEl)iEl.textContent='⚠️ Fim anterior ao início';return;}
-  const hhmm=decHToHHMM(diff);
+  // Subtract interval
+  const intv=timeToDecH(document.getElementById('ch-intervalo')?.value||'');
+  const net=Math.max(0, diff-intv);
+  const hhmm=decHToHHMM(net);
   if(tEl){tEl.value=hhmm;tEl.style.color='var(--green)';}
-  if(iEl)iEl.textContent='⚡ '+hhmm+' de atendimento';
+  const brkTxt=intv>0?` − ${decHToHHMM(intv)} intervalo = `:'';
+  if(iEl)iEl.textContent=`⚡ ${decHToHHMM(diff)}${brkTxt}${intv>0?hhmm:''}${intv>0?' líquido':''}`;
 }
 
 function openSlaModal(){
@@ -3104,6 +3145,62 @@ function deleteSlaConfig(id){
   saveS();renderSlaList();
 }
 
+
+// ── OS Tag helpers ──
+function renderOsTags(type){
+  const list = type==='snk' ? _chOsSnkList : _chOsPaniceList;
+  const el = document.getElementById('ch-os-'+type+'-tags');
+  if(!el) return;
+  el.innerHTML = list.map((v,i) => `
+    <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(14,165,233,.12);color:var(--accent);border:1px solid rgba(14,165,233,.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700">
+      ${esc(v)}
+      <span onclick="_ch${type==='snk'?'OsSnk':'OsPanice'}List.splice(${i},1);renderOsTags('${type}')" style="cursor:pointer;color:var(--dim);font-size:13px;line-height:1">×</span>
+    </span>`).join('');
+}
+
+function addOsTag(type){
+  const inp = document.getElementById('ch-os-'+type+'-input');
+  if(!inp) return;
+  const v = inp.value.trim();
+  if(!v) return;
+  if(type==='snk') _chOsSnkList.push(v);
+  else _chOsPaniceList.push(v);
+  inp.value = '';
+  renderOsTags(type);
+}
+
+// ── File attachment ──
+function onChEvFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const preview = document.getElementById('ch-ev-file-preview');
+  // Limit 5MB
+  if(file.size > 5*1024*1024){
+    toast('Arquivo muito grande (máx 5MB)','err');
+    input.value='';_chEvFileData=null;
+    if(preview){preview.style.display='none';}
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    _chEvFileData = {name: file.name, type: file.type, data: e.target.result};
+    if(preview){
+      preview.textContent = '📎 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
+      preview.style.display = 'block';
+    }
+    // Auto-fill description if empty
+    const desc = document.getElementById('ch-ev-desc');
+    if(desc && !desc.value) desc.value = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Status change — show/hide pause reason ──
+function onChStatusChange(val){
+  const row = document.getElementById('ch-row-pausa');
+  if(row) row.style.display = val==='Pausado' ? '' : 'none';
+}
+
 function openChamadoModal(id=null){
   _eChamadoId=id;_chEvList=[];
   const ch=id?chamadoById(id):null;
@@ -3140,8 +3237,19 @@ function openChamadoModal(id=null){
   const slaSel=document.getElementById('ch-sla-nivel');
   slaSel.innerHTML='<option value="">— Sem SLA —</option>'+getSlaConfigs().map(c=>`<option value="${c.id}" ${ch?.slaId===c.id?'selected':''}>${esc(c.name)} (${c.horas}h)</option>`).join('');
   _chEvList=ch?.evidencias?[...ch.evidencias]:[];
+  _chOsSnkList=ch?.osSnkList?[...ch.osSnkList]:(ch?.osSnk?[ch.osSnk]:[]);
+  _chOsPaniceList=ch?.osPaniceList?[...ch.osPaniceList]:(ch?.osPanice?[ch.osPanice]:[]);
+  _chEvFileData=null;
   renderChEvList();
+  renderOsTags('snk');
+  renderOsTags('panice');
+  document.getElementById('ch-intervalo').value=ch?.intervalo||'';
+  document.getElementById('ch-motivo-pausa').value=ch?.motivoPausa||'';
+  onChStatusChange(ch?.status||'Aberto');
   if(ch?.inicio&&ch?.fim)calcChamadoTempo();
+  // Clear file input
+  const fi=document.getElementById('ch-ev-file');if(fi)fi.value='';
+  const fp=document.getElementById('ch-ev-file-preview');if(fp)fp.style.display='none';
   openModal('modal-chamado');
 }
 
@@ -3149,9 +3257,14 @@ function addChamadoEvidencia(){
   const desc=document.getElementById('ch-ev-desc').value.trim();
   const url=document.getElementById('ch-ev-url').value.trim();
   if(!desc){toast('Informe a descrição da evidência','err');return;}
-  _chEvList.push({id:uid(),desc,url,date:new Date().toLocaleDateString('pt-BR')});
+  const ev={id:uid(),desc,url,date:new Date().toLocaleDateString('pt-BR')};
+  if(_chEvFileData){ev.fileName=_chEvFileData.name;ev.fileType=_chEvFileData.type;ev.fileData=_chEvFileData.data;}
+  _chEvList.push(ev);
   document.getElementById('ch-ev-desc').value='';
   document.getElementById('ch-ev-url').value='';
+  const fi=document.getElementById('ch-ev-file');if(fi)fi.value='';
+  const fp=document.getElementById('ch-ev-file-preview');if(fp)fp.style.display='none';
+  _chEvFileData=null;
   renderChEvList();
 }
 
@@ -3159,9 +3272,11 @@ function renderChEvList(){
   const el=document.getElementById('ch-ev-list');if(!el)return;
   if(!_chEvList.length){el.innerHTML='<div style="font-size:11px;color:var(--dim);padding:4px 0">Nenhuma evidência adicionada.</div>';return;}
   el.innerHTML=_chEvList.map((e,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:11px;color:var(--text);flex:1">📎 ${esc(e.desc)}</span>
-      ${e.url?`<a href="${esc(e.url)}" target="_blank" style="font-size:10px;color:var(--accent)">🔗 Link</a>`:''}
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px">${e.fileData?'📄':'📎'}</span>
+      <span style="font-size:11px;color:var(--text);flex:1">${esc(e.desc)}${e.fileName?` <span style="color:var(--dim);font-size:10px">(${esc(e.fileName)})</span>`:''}</span>
+      ${e.fileData?`<a href="${e.fileData}" download="${esc(e.fileName||e.desc)}" style="font-size:10px;color:var(--green);font-weight:700">⬇ Baixar</a>`:''}
+      ${e.url&&!e.fileData?`<a href="${esc(e.url)}" target="_blank" style="font-size:10px;color:var(--accent)">🔗 Link</a>`:''}
       <span style="font-size:10px;color:var(--dim)">${e.date}</span>
       <button class="btn btn-ghost btn-xs" onclick="_chEvList.splice(${i},1);renderChEvList()">✕</button>
     </div>`).join('');
@@ -3175,7 +3290,10 @@ function saveChamado(){
   const slaCfg=getSlaConfigs().find(c=>c.id===slaId);
   const ch={
     id:_eChamadoId||uid(),
-    osSnk,osPanice:document.getElementById('ch-os-panice').value.trim(),
+    osSnk:_chOsSnkList.join(', '),
+    osSnkList:[..._chOsSnkList],
+    osPanice:_chOsPaniceList.join(', '),
+    osPaniceList:[..._chOsPaniceList],
     projId:document.getElementById('ch-proj-id').value,
     cliente:document.getElementById('ch-cliente')?.value.trim()||'',
     consultor:document.getElementById('ch-consultor').value.trim(),
@@ -3193,6 +3311,8 @@ function saveChamado(){
     fim:document.getElementById('ch-fim').value,
     tempo:document.getElementById('ch-tempo').value,
     descricao,solucao:document.getElementById('ch-solucao').value.trim(),
+    intervalo:document.getElementById('ch-intervalo')?.value||'',
+    motivoPausa:document.getElementById('ch-motivo-pausa')?.value.trim()||'',
     evidencias:[..._chEvList],
     createdAt:_eChamadoId?chamadoById(_eChamadoId)?.createdAt:(new Date().toISOString()),
     updatedAt:new Date().toISOString(),
@@ -3263,8 +3383,8 @@ function renderChamados(){
       <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-            ${c.osSnk?`<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(14,165,233,.1);padding:2px 8px;border-radius:4px">SNK: ${esc(c.osSnk)}</span>`:''}
-            ${c.osPanice?`<span style="font-size:11px;font-weight:700;color:var(--purple);background:rgba(167,139,250,.1);padding:2px 8px;border-radius:4px">PAN: ${esc(c.osPanice)}</span>`:''}
+            ${(c.osSnkList||[c.osSnk]).filter(Boolean).map(v=>`<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(14,165,233,.1);padding:2px 8px;border-radius:4px">SNK: ${esc(v)}</span>`).join('')}
+            ${(c.osPaniceList||[c.osPanice]).filter(Boolean).map(v=>`<span style="font-size:11px;font-weight:700;color:var(--purple);background:rgba(167,139,250,.1);padding:2px 8px;border-radius:4px">PAN: ${esc(v)}</span>`).join('')}
             <span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;background:${sc}18;color:${sc};border:1px solid ${sc}30">${c.status}</span>
             <span style="font-size:10px;color:var(--dim);background:var(--bg4);padding:2px 7px;border-radius:10px">${c.tipo||'Suporte'}</span>
             ${sla?`<span style="font-size:10px;font-weight:700;color:${sla.color}">${sla.icon} SLA: ${sla.label}</span>`:''}
