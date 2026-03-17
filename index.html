@@ -2415,7 +2415,7 @@ function renderCostTab(){
           <tr style="background:var(--bg3);border-top:2px solid var(--border)">
             <td style="padding:9px 10px;font-weight:700;font-size:12px">TOTAL</td>
             <td style="text-align:center;padding:9px 6px;font-size:12px;font-weight:700">${stages.reduce((a,s)=>a+(parseFloat(s.hours)||0),0)}h</td>
-            <td style="text-align:center;padding:9px 6px;font-size:12px;font-weight:700">${stages.reduce((a,s)=>a+(parseFloat(s.hoursReal)||0),0)}h</td>
+            <td style="text-align:center;padding:9px 6px;font-size:12px;font-weight:700">${(()=>{const m=Math.round(stages.reduce((a,s)=>a+Math.round((parseFloat(s.hoursReal)||0)*60),0));return decHToHHMM(m/60)||(m/60)+'h';})()}</td>
             <td></td>
             <td style="text-align:right;padding:9px 8px;font-size:12px;font-weight:700;color:var(--amber)">${fCur(e.BAC)}</td>
             <td style="text-align:right;padding:9px 8px;font-size:12px;font-weight:700;color:var(--purple)">${fCur(e.AC)}</td>
