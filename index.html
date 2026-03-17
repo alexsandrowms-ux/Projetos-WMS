@@ -1870,7 +1870,7 @@ function renderStages(){
             <span class="sri-l">${pctUsed}% do orçamento</span>
             <div class="hbudget" style="margin-top:3px">
               <div class="hbudget-bar-wrap"><div class="hbudget-bar ${barCls}" style="width:${pctUsed}%"></div></div>
-              <span style="font-size:10px;font-weight:700;white-space:nowrap;color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'}">${consumed}/${budget}h</span>
+              <span style="font-size:10px;font-weight:700;white-space:nowrap;color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'}">${decHToHHMM(consumed)||consumed+"h"}/${budget}hpan>
             </div>
           </div>`:''}
         </div>
