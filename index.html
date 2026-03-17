@@ -548,6 +548,7 @@ datalist{display:none}
         <div class="sb-item on" id="snav-dash" onclick="showPage('dashboard')"><span class="sb-icon">📊</span>Dashboard</div>
         <div class="sb-item" id="snav-proj" onclick="showPage('projects')"><span class="sb-icon">📁</span>Projetos</div>
         <div class="sb-item" id="snav-cgantt" onclick="showPage('cgantt')"><span class="sb-icon">🗓️</span>Agenda Consolidada</div>
+        <div class="sb-item" id="snav-chamados" onclick="showPage('chamados')"><span class="sb-icon">🎧</span>Atendimentos</div>
         <div class="sb-sep"></div>
 <div class="sb-item" id="snav-users" style="display:none" onclick="showPage('users')"><span class="sb-icon">👥</span>Usuários</div>
       </div>
@@ -723,6 +724,51 @@ datalist{display:none}
           <div style="overflow-x:auto;overflow-y:auto;max-height:calc(100vh - 220px)">
             <div id="cg-box"><div class="loading"><span class="spin">⟳</span> Carregando agenda...</div></div>
           </div>
+        </div>
+      </div>
+
+
+      <!-- ATENDIMENTOS -->
+      <div class="page" id="page-chamados">
+        <!-- TOOLBAR -->
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">🎧 Atendimentos / Sustentação</div>
+            <div style="font-size:12px;color:var(--mid)" id="ch-info">Controle de chamados e SLA</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="showChamadosTab('lista')">📋 Chamados</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="showChamadosTab('dash')">📊 Dashboard</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="openSlaModal()">⚙️ Config. SLA</button>
+            <button class="btn btn-primary" style="font-size:12px" onclick="openChamadoModal()">+ Novo Chamado</button>
+          </div>
+        </div>
+
+        <!-- FILTROS -->
+        <div id="ch-filtros" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+          <input class="fc" id="ch-search" placeholder="🔍 Buscar chamado, OS, consultor..." style="max-width:280px;padding:7px 10px;font-size:12px" oninput="renderChamados()">
+          <select class="fc" id="ch-filter-status" onchange="renderChamados()" style="width:140px;font-size:12px;padding:7px 8px">
+            <option value="">Todos os status</option>
+            <option>Aberto</option><option>Em Atendimento</option><option>Aguardando Cliente</option>
+            <option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
+          </select>
+          <select class="fc" id="ch-filter-proj" onchange="renderChamados()" style="width:180px;font-size:12px;padding:7px 8px">
+            <option value="">Todos os projetos</option>
+          </select>
+          <select class="fc" id="ch-filter-sla" onchange="renderChamados()" style="width:130px;font-size:12px;padding:7px 8px">
+            <option value="">Todos SLA</option>
+            <option value="ok">✅ Dentro SLA</option>
+            <option value="risco">⚠️ Em Risco</option>
+            <option value="violado">🔴 Violado</option>
+          </select>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div id="ch-tab-lista">
+          <div id="ch-list-wrap"></div>
+        </div>
+        <div id="ch-tab-dash" style="display:none">
+          <div id="ch-dash-wrap"></div>
         </div>
       </div>
 
@@ -1140,6 +1186,125 @@ datalist{display:none}
 </div>
 
 
+
+<!-- ══ MODAL: SLA CONFIG ══ -->
+<div class="overlay" id="modal-sla">
+  <div class="modal" style="max-width:500px">
+    <div class="mhdr"><div class="mtitle">⚙️ Configuração de SLA</div><button class="mclose" onclick="closeModal('modal-sla')">×</button></div>
+    <div class="mbody" style="padding:20px">
+      <div style="font-size:12px;color:var(--mid);margin-bottom:14px">Defina os prazos de SLA conforme o contrato do cliente.</div>
+      <div id="sla-list" style="margin-bottom:14px"></div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:14px">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px">+ Novo nível de SLA</div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Nome do nível</label><input class="fc" id="sla-name" placeholder="Ex: Crítico, Alta, Normal"></div>
+          <div class="fg"><label class="fl">Prazo (horas)</label><input class="fc" type="number" id="sla-horas" placeholder="Ex: 4" min="1"></div>
+        </div>
+        <div class="frow">
+          <div class="fg"><label class="fl">Cor</label>
+            <select class="fc" id="sla-cor">
+              <option value="#ef4444">🔴 Crítico</option>
+              <option value="#f59e0b">🟡 Alta</option>
+              <option value="#22c55e">🟢 Normal</option>
+              <option value="#0ea5e9">🔵 Baixa</option>
+              <option value="#a78bfa">🟣 Informação</option>
+            </select>
+          </div>
+          <div class="fg" style="display:flex;align-items:flex-end">
+            <button class="btn btn-primary" style="width:100%" onclick="addSlaConfig()">+ Adicionar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mfooter"><button class="btn btn-ghost" onclick="closeModal('modal-sla')">Fechar</button></div>
+  </div>
+</div>
+
+<!-- ══ MODAL: CHAMADO ══ -->
+<div class="overlay" id="modal-chamado">
+  <div class="modal" style="max-width:760px">
+    <div class="mhdr"><div class="mtitle" id="ch-modal-title">🎧 Novo Chamado</div><button class="mclose" onclick="closeModal('modal-chamado')">×</button></div>
+    <div class="mbody" style="padding:20px">
+
+      <!-- IDs e Números -->
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Identificação</div>
+      <div class="frow">
+        <div class="fg"><label class="fl">Nº OS / Tkt Snk</label><input class="fc" id="ch-os-snk" placeholder="Ex: 626245"></div>
+        <div class="fg"><label class="fl">Nº OS Panice</label><input class="fc" id="ch-os-panice" placeholder="Ex: PAL-00123"></div>
+        <div class="fg"><label class="fl">Projeto / Cliente</label>
+          <select class="fc" id="ch-proj-id"><option value="">— Selecione —</option></select>
+        </div>
+      </div>
+
+      <!-- Consultor e Produto -->
+      <div class="frow">
+        <div class="fg"><label class="fl">Consultor</label><input class="fc" id="ch-consultor" placeholder="Nome do consultor"></div>
+        <div class="fg"><label class="fl">Produto Atendido</label><input class="fc" id="ch-produto" placeholder="Ex: WMS Sankhya, ERP..."></div>
+        <div class="fg"><label class="fl">Versão Utilizada</label><input class="fc" id="ch-versao" placeholder="Ex: 4.15.2, SB22..."></div>
+      </div>
+
+      <!-- Status e SLA -->
+      <div class="frow">
+        <div class="fg"><label class="fl">Status</label>
+          <select class="fc" id="ch-status">
+            <option>Aberto</option><option>Em Atendimento</option><option>Aguardando Cliente</option>
+            <option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Nível SLA</label>
+          <select class="fc" id="ch-sla-nivel"><option value="">— Sem SLA —</option></select>
+        </div>
+        <div class="fg"><label class="fl">Tipo de Atendimento</label>
+          <select class="fc" id="ch-tipo">
+            <option>Suporte</option><option>Consultoria</option><option>Bug / Erro</option>
+            <option>Dúvida</option><option>Melhoria</option><option>Treinamento</option><option>Implantação</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Datas e Horas -->
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Tempo de Atendimento</div>
+      <div class="frow">
+        <div class="fg"><label class="fl">▶️ Início Atendimento</label><input class="fc" type="datetime-local" id="ch-inicio" onchange="calcChamadoTempo()"></div>
+        <div class="fg"><label class="fl">✅ Fim Atendimento</label><input class="fc" type="datetime-local" id="ch-fim" onchange="calcChamadoTempo()"></div>
+        <div class="fg"><label class="fl">⏱ Tempo Gasto</label>
+          <input class="fc" id="ch-tempo" placeholder="Calculado automaticamente" readonly style="background:rgba(34,197,94,.06);color:var(--green);font-weight:700">
+          <span id="ch-tempo-info" style="font-size:10px;color:var(--accent);margin-top:3px;display:block"></span>
+        </div>
+      </div>
+
+      <!-- Descrição -->
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Detalhes</div>
+      <div class="frow cols1">
+        <div class="fg"><label class="fl">Descrição do Problema</label>
+          <textarea class="fc" id="ch-descricao" rows="3" placeholder="Descreva o problema relatado pelo cliente..."></textarea>
+        </div>
+      </div>
+      <div class="frow cols1">
+        <div class="fg"><label class="fl">Solução / Resolução</label>
+          <textarea class="fc" id="ch-solucao" rows="2" placeholder="Descreva a solução aplicada..."></textarea>
+        </div>
+      </div>
+
+      <!-- Evidências / Logs -->
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Evidências e Logs</div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:12px">
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input class="fc" id="ch-ev-desc" placeholder="Descrição da evidência / log" style="flex:1;font-size:12px">
+          <input class="fc" id="ch-ev-url" placeholder="Link ou caminho do arquivo" style="flex:1;font-size:12px">
+          <button class="btn btn-ghost btn-xs" onclick="addChamadoEvidencia()">+ Adicionar</button>
+        </div>
+        <div id="ch-ev-list" style="max-height:120px;overflow-y:auto"></div>
+      </div>
+
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('modal-chamado')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveChamado()">💾 Salvar Chamado</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 
@@ -1157,7 +1322,7 @@ const STORE   = 'axl_wms_v1';
 const USTORE  = 'axl_users_v1';
 const SSTORE  = 'axl_sess_v1';
 
-let S   = {initialized:false,projects:[],cur:null};
+let S   = {initialized:false,projects:[],chamados:[],slaConfigs:[],cur:null};
 let IMP = {step:1,rawData:[],headers:[],colMap:{},forDetail:false};
 let CU  = null; // current user
 let _eProjId=null, _eStageId=null, _defParent=null, _eUserId=null;
@@ -1691,6 +1856,10 @@ function showPage(page,pid=null){
     document.getElementById('page-cgantt').classList.add('on');
     document.getElementById('snav-cgantt').classList.add('on');
     renderCGantt();
+  } else if(page==='chamados'){
+    document.getElementById('page-chamados').classList.add('on');
+    document.getElementById('snav-chamados').classList.add('on');
+    renderChamados();
   }
 }
 
@@ -1870,7 +2039,7 @@ function renderStages(){
             <span class="sri-l">${pctUsed}% do orçamento</span>
             <div class="hbudget" style="margin-top:3px">
               <div class="hbudget-bar-wrap"><div class="hbudget-bar ${barCls}" style="width:${pctUsed}%"></div></div>
-              <span style="font-size:10px;font-weight:700;white-space:nowrap;color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'}">${decHToHHMM(consumed)||consumed+"h"}/${budget}hpan>
+              <span style="font-size:10px;font-weight:700;white-space:nowrap;color:${overBudget?'#ef4444':pctUsed>=90?'var(--amber)':'var(--green)'}">${decHToHHMM(consumed)||consumed+"h"}/${budget}h</span>
             </div>
           </div>`:''}
         </div>
@@ -2741,6 +2910,289 @@ function renderCGantt(){
 
   h += `</tbody></table>`;
   el.innerHTML = h;
+}
+
+
+// ════════════════════════════════════════════════
+// MÓDULO: ATENDIMENTOS / CHAMADOS
+// ════════════════════════════════════════════════
+
+let _eChamadoId = null;
+let _chEvList   = [];
+
+function getChamados(){ return S.chamados||[]; }
+function getSlaConfigs(){ return S.slaConfigs||[]; }
+function chamadoById(id){ return getChamados().find(c=>c.id===id); }
+
+function slaStatus(chamado){
+  if(!chamado.slaHoras||!chamado.inicio)return null;
+  const start=new Date(chamado.inicio);
+  const deadline=new Date(start.getTime()+chamado.slaHoras*3600000);
+  const ref=chamado.fim?new Date(chamado.fim):new Date();
+  const diff=(deadline-ref)/3600000;
+  if(diff<0)return{cls:'violado',icon:'🔴',label:'Violado',color:'#ef4444'};
+  if(diff<2)return{cls:'risco',icon:'⚠️',label:'Em Risco',color:'#f59e0b'};
+  return{cls:'ok',icon:'✅',label:'Dentro SLA',color:'#22c55e'};
+}
+
+function calcChamadoTempo(){
+  const s=document.getElementById('ch-inicio')?.value;
+  const e=document.getElementById('ch-fim')?.value;
+  const tEl=document.getElementById('ch-tempo');
+  const iEl=document.getElementById('ch-tempo-info');
+  if(!s||!e){if(tEl)tEl.value='';return;}
+  const diff=(new Date(e)-new Date(s))/3600000;
+  if(diff<=0){if(tEl){tEl.value='';tEl.style.color='var(--red)';}if(iEl)iEl.textContent='⚠️ Fim anterior ao início';return;}
+  const hhmm=decHToHHMM(diff);
+  if(tEl){tEl.value=hhmm;tEl.style.color='var(--green)';}
+  if(iEl)iEl.textContent='⚡ '+hhmm+' de atendimento';
+}
+
+function openSlaModal(){
+  renderSlaList();
+  openModal('modal-sla');
+}
+
+function renderSlaList(){
+  const el=document.getElementById('sla-list');if(!el)return;
+  const cfgs=getSlaConfigs();
+  if(!cfgs.length){el.innerHTML='<div style="font-size:12px;color:var(--dim);padding:8px 0">Nenhum SLA configurado.</div>';return;}
+  el.innerHTML=cfgs.map(c=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
+      <span style="width:10px;height:10px;border-radius:50%;background:${c.color||'#0ea5e9'};flex-shrink:0;display:inline-block"></span>
+      <span style="font-size:13px;font-weight:600;flex:1">${esc(c.name)}</span>
+      <span style="font-size:12px;color:var(--mid)">${c.horas}h SLA</span>
+      <button class="btn btn-ghost btn-xs" onclick="deleteSlaConfig('${c.id}')">🗑</button>
+    </div>`).join('');
+}
+
+function addSlaConfig(){
+  const name=document.getElementById('sla-name').value.trim();
+  const horas=parseFloat(document.getElementById('sla-horas').value);
+  const color=document.getElementById('sla-cor').value;
+  if(!name||!horas){toast('Preencha nome e prazo do SLA','err');return;}
+  if(!S.slaConfigs)S.slaConfigs=[];
+  S.slaConfigs.push({id:uid(),name,horas,color});
+  document.getElementById('sla-name').value='';
+  document.getElementById('sla-horas').value='';
+  saveS();renderSlaList();
+  toast('SLA configurado','ok');
+}
+
+function deleteSlaConfig(id){
+  S.slaConfigs=(S.slaConfigs||[]).filter(c=>c.id!==id);
+  saveS();renderSlaList();
+}
+
+function openChamadoModal(id=null){
+  _eChamadoId=id;_chEvList=[];
+  const ch=id?chamadoById(id):null;
+  document.getElementById('ch-modal-title').textContent=ch?'✏️ Editar Chamado':'🎧 Novo Chamado';
+  document.getElementById('ch-os-snk').value=ch?.osSnk||'';
+  document.getElementById('ch-os-panice').value=ch?.osPanice||'';
+  document.getElementById('ch-consultor').value=ch?.consultor||'';
+  document.getElementById('ch-produto').value=ch?.produto||'';
+  document.getElementById('ch-versao').value=ch?.versao||'';
+  document.getElementById('ch-status').value=ch?.status||'Aberto';
+  document.getElementById('ch-tipo').value=ch?.tipo||'Suporte';
+  document.getElementById('ch-inicio').value=ch?.inicio||'';
+  document.getElementById('ch-fim').value=ch?.fim||'';
+  document.getElementById('ch-tempo').value=ch?.tempo||'';
+  document.getElementById('ch-descricao').value=ch?.descricao||'';
+  document.getElementById('ch-solucao').value=ch?.solucao||'';
+  const projSel=document.getElementById('ch-proj-id');
+  projSel.innerHTML='<option value="">— Selecione —</option>'+(S.projects||[]).map(p=>`<option value="${p.id}" ${ch?.projId===p.id?'selected':''}>${esc(p.name)} · ${esc(p.client||'')}</option>`).join('');
+  const slaSel=document.getElementById('ch-sla-nivel');
+  slaSel.innerHTML='<option value="">— Sem SLA —</option>'+getSlaConfigs().map(c=>`<option value="${c.id}" ${ch?.slaId===c.id?'selected':''}>${esc(c.name)} (${c.horas}h)</option>`).join('');
+  _chEvList=ch?.evidencias?[...ch.evidencias]:[];
+  renderChEvList();
+  if(ch?.inicio&&ch?.fim)calcChamadoTempo();
+  openModal('modal-chamado');
+}
+
+function addChamadoEvidencia(){
+  const desc=document.getElementById('ch-ev-desc').value.trim();
+  const url=document.getElementById('ch-ev-url').value.trim();
+  if(!desc){toast('Informe a descrição da evidência','err');return;}
+  _chEvList.push({id:uid(),desc,url,date:new Date().toLocaleDateString('pt-BR')});
+  document.getElementById('ch-ev-desc').value='';
+  document.getElementById('ch-ev-url').value='';
+  renderChEvList();
+}
+
+function renderChEvList(){
+  const el=document.getElementById('ch-ev-list');if(!el)return;
+  if(!_chEvList.length){el.innerHTML='<div style="font-size:11px;color:var(--dim);padding:4px 0">Nenhuma evidência adicionada.</div>';return;}
+  el.innerHTML=_chEvList.map((e,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--text);flex:1">📎 ${esc(e.desc)}</span>
+      ${e.url?`<a href="${esc(e.url)}" target="_blank" style="font-size:10px;color:var(--accent)">🔗 Link</a>`:''}
+      <span style="font-size:10px;color:var(--dim)">${e.date}</span>
+      <button class="btn btn-ghost btn-xs" onclick="_chEvList.splice(${i},1);renderChEvList()">✕</button>
+    </div>`).join('');
+}
+
+function saveChamado(){
+  const osSnk=document.getElementById('ch-os-snk').value.trim();
+  const descricao=document.getElementById('ch-descricao').value.trim();
+  if(!osSnk&&!descricao){toast('Informe ao menos o Nº OS ou a descrição','err');return;}
+  const slaId=document.getElementById('ch-sla-nivel').value;
+  const slaCfg=getSlaConfigs().find(c=>c.id===slaId);
+  const ch={
+    id:_eChamadoId||uid(),
+    osSnk,osPanice:document.getElementById('ch-os-panice').value.trim(),
+    projId:document.getElementById('ch-proj-id').value,
+    consultor:document.getElementById('ch-consultor').value.trim(),
+    produto:document.getElementById('ch-produto').value.trim(),
+    versao:document.getElementById('ch-versao').value.trim(),
+    status:document.getElementById('ch-status').value,
+    tipo:document.getElementById('ch-tipo').value,
+    slaId,slaHoras:slaCfg?.horas||0,slaNome:slaCfg?.name||'',
+    inicio:document.getElementById('ch-inicio').value,
+    fim:document.getElementById('ch-fim').value,
+    tempo:document.getElementById('ch-tempo').value,
+    descricao,solucao:document.getElementById('ch-solucao').value.trim(),
+    evidencias:[..._chEvList],
+    createdAt:_eChamadoId?chamadoById(_eChamadoId)?.createdAt:(new Date().toISOString()),
+    updatedAt:new Date().toISOString(),
+  };
+  if(!S.chamados)S.chamados=[];
+  const idx=S.chamados.findIndex(c=>c.id===ch.id);
+  if(idx>=0)S.chamados[idx]=ch;else S.chamados.push(ch);
+  saveS();closeModal('modal-chamado');
+  toast((ch.osSnk||'Chamado')+(_eChamadoId?' atualizado':' criado')+' ✓','ok');
+  renderChamados();
+}
+
+function deleteChamado(id){
+  document.getElementById('mc-icon').textContent='🗑️';
+  document.getElementById('mc-title').textContent='Excluir Chamado';
+  const ch=chamadoById(id);
+  document.getElementById('mc-msg').innerHTML=`Excluir o chamado <span class="confirm-name">"${esc(ch?.osSnk||ch?.descricao||'?')}"</span>?`;
+  document.getElementById('mc-btn').onclick=()=>{
+    S.chamados=(S.chamados||[]).filter(c=>c.id!==id);
+    saveS();closeModal('modal-confirm');renderChamados();
+    toast('Chamado excluído','warn');
+  };
+  openModal('modal-confirm');
+}
+
+function showChamadosTab(tab){
+  document.getElementById('ch-tab-lista').style.display=tab==='lista'?'':'none';
+  document.getElementById('ch-tab-dash').style.display=tab==='dash'?'':'none';
+  if(tab==='dash')renderChamadosDash();
+}
+
+function renderChamados(){
+  const pSel=document.getElementById('ch-filter-proj');
+  if(pSel){
+    const cur=pSel.value;
+    pSel.innerHTML='<option value="">Todos os projetos</option>'+(S.projects||[]).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    pSel.value=cur;
+  }
+  const el=document.getElementById('ch-list-wrap');if(!el)return;
+  let chs=[...(S.chamados||[])];
+  const search=(document.getElementById('ch-search')?.value||'').toLowerCase();
+  const fStatus=document.getElementById('ch-filter-status')?.value||'';
+  const fProj=document.getElementById('ch-filter-proj')?.value||'';
+  const fSla=document.getElementById('ch-filter-sla')?.value||'';
+  if(search)chs=chs.filter(c=>[(c.osSnk||''),(c.osPanice||''),(c.consultor||''),(c.descricao||''),(c.produto||'')].some(v=>v.toLowerCase().includes(search)));
+  if(fStatus)chs=chs.filter(c=>c.status===fStatus);
+  if(fProj)chs=chs.filter(c=>c.projId===fProj);
+  if(fSla)chs=chs.filter(c=>{const s=slaStatus(c);return s&&s.cls===fSla;});
+  chs.sort((a,b)=>{
+    const ord=['Em Atendimento','Aberto','Aguardando Cliente','Resolvido','Fechado','Cancelado'];
+    const oa=ord.indexOf(a.status),ob=ord.indexOf(b.status);
+    if(oa!==ob)return oa-ob;
+    return(b.createdAt||'').localeCompare(a.createdAt||'');
+  });
+  const infoEl=document.getElementById('ch-info');
+  if(infoEl)infoEl.textContent=chs.length+' chamado'+(chs.length!==1?'s':'')+' encontrado'+(chs.length!==1?'s':'');
+  if(!chs.length){
+    el.innerHTML='<div class="empty" style="padding:40px"><span style="font-size:32px;display:block;margin-bottom:10px">🎧</span><div>Nenhum chamado encontrado.</div><div style="font-size:12px;color:var(--dim);margin-top:6px">Clique em &ldquo;+ Novo Chamado&rdquo; para registrar.</div></div>';
+    return;
+  }
+  const SC={'Aberto':'#0ea5e9','Em Atendimento':'#f59e0b','Aguardando Cliente':'#a78bfa','Resolvido':'#22c55e','Fechado':'#64748b','Cancelado':'#ef4444'};
+  el.innerHTML=chs.map(c=>{
+    const proj=(S.projects||[]).find(p=>p.id===c.projId);
+    const sla=slaStatus(c);
+    const sc=SC[c.status]||'#64748b';
+    const evCount=(c.evidencias||[]).length;
+    return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;border-left:3px solid ${sc}">
+      <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
+            ${c.osSnk?`<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(14,165,233,.1);padding:2px 8px;border-radius:4px">SNK: ${esc(c.osSnk)}</span>`:''}
+            ${c.osPanice?`<span style="font-size:11px;font-weight:700;color:var(--purple);background:rgba(167,139,250,.1);padding:2px 8px;border-radius:4px">PAN: ${esc(c.osPanice)}</span>`:''}
+            <span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;background:${sc}18;color:${sc};border:1px solid ${sc}30">${c.status}</span>
+            <span style="font-size:10px;color:var(--dim);background:var(--bg4);padding:2px 7px;border-radius:10px">${c.tipo||'Suporte'}</span>
+            ${sla?`<span style="font-size:10px;font-weight:700;color:${sla.color}">${sla.icon} SLA: ${sla.label}</span>`:''}
+          </div>
+          <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px">${esc(c.descricao||'Sem descrição')}</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--mid)">
+            ${proj?`<span>📁 ${esc(proj.name)} · ${esc(proj.client||'')}</span>`:''}
+            ${c.consultor?`<span>👤 ${esc(c.consultor)}</span>`:''}
+            ${c.produto?`<span>📦 ${esc(c.produto)}${c.versao?' v'+esc(c.versao):''}</span>`:''}
+            ${c.inicio?`<span>🕐 ${fmtDT(c.inicio)}${c.fim?' → '+fmtDT(c.fim):''}</span>`:''}
+            ${c.tempo?`<span style="color:var(--green);font-weight:700">⏱ ${esc(c.tempo)}</span>`:''}
+            ${c.slaHoras?`<span>SLA: ${esc(c.slaNome)} (${c.slaHoras}h)</span>`:''}
+            ${evCount?`<span>📎 ${evCount} evidência${evCount!==1?'s':''}</span>`:''}
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn btn-ghost btn-xs" onclick="openChamadoModal('${c.id}')">✏️ Editar</button>
+          <button class="btn btn-ghost btn-xs" onclick="deleteChamado('${c.id}')" style="color:var(--red)">🗑</button>
+        </div>
+      </div>
+      ${c.solucao?`<div style="padding:8px 14px;background:rgba(34,197,94,.04);border-top:1px solid var(--border);font-size:11.5px;color:var(--mid)">✅ <strong style="color:var(--green)">Solução:</strong> ${esc(c.solucao)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function fmtDT(dt){
+  if(!dt)return'—';
+  const[d,t]=(dt+'T').split('T');
+  const p=d.split('-');
+  return p[2]+'/'+p[1]+(t&&t.length>=5?' '+t.slice(0,5):'');
+}
+
+function renderChamadosDash(){
+  const el=document.getElementById('ch-dash-wrap');if(!el)return;
+  const chs=getChamados();
+  const total=chs.length;
+  const abertos=chs.filter(c=>['Aberto','Em Atendimento','Aguardando Cliente'].includes(c.status)).length;
+  const resolvidos=chs.filter(c=>['Resolvido','Fechado'].includes(c.status)).length;
+  const violados=chs.filter(c=>{const s=slaStatus(c);return s&&s.cls==='violado';}).length;
+  const emRisco=chs.filter(c=>{const s=slaStatus(c);return s&&s.cls==='risco';}).length;
+  const comTempo=chs.filter(c=>c.tempo&&c.tempo.includes(':'));
+  const avgMin=comTempo.length?comTempo.reduce((a,c)=>{const[h,m]=c.tempo.split(':').map(Number);return a+h*60+m;},0)/comTempo.length:0;
+  const avgHHMM=avgMin>0?decHToHHMM(avgMin/60):'—';
+  const byType={};chs.forEach(c=>{const t=c.tipo||'Suporte';byType[t]=(byType[t]||0)+1;});
+  const byCons={};chs.forEach(c=>{if(c.consultor)byCons[c.consultor]=(byCons[c.consultor]||0)+1;});
+  const typeRows=Object.entries(byType).sort((a,b)=>b[1]-a[1]).map(([t,n])=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;flex:1">${t}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--accent)">${n}</span>
+      <div style="width:80px;background:var(--bg4);border-radius:4px;height:6px;overflow:hidden"><div style="width:${total?Math.round(n/total*100):0}%;background:var(--accent);height:100%;border-radius:4px"></div></div>
+    </div>`).join('');
+  const consRows=Object.entries(byCons).sort((a,b)=>b[1]-a[1]).slice(0,6).map(([n,c])=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:12px;flex:1">👤 ${n}</span>
+      <span style="font-size:12px;font-weight:700;color:var(--purple)">${c}</span>
+    </div>`).join('');
+  el.innerHTML=`
+    <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
+      <div class="kpi"><div class="kpi-l">Total</div><div class="kpi-v">${total}</div></div>
+      <div class="kpi"><div class="kpi-l">Em Aberto</div><div class="kpi-v" style="color:var(--accent)">${abertos}</div></div>
+      <div class="kpi"><div class="kpi-l">Resolvidos</div><div class="kpi-v" style="color:var(--green)">${resolvidos}</div></div>
+      <div class="kpi"><div class="kpi-l">SLA Violado</div><div class="kpi-v" style="color:var(--red)">${violados}</div></div>
+      <div class="kpi"><div class="kpi-l">SLA Risco</div><div class="kpi-v" style="color:var(--amber)">${emRisco}</div></div>
+      <div class="kpi"><div class="kpi-l">Tempo Médio</div><div class="kpi-v" style="font-size:16px">${avgHHMM}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="card" style="padding:16px"><div style="font-size:12px;font-weight:700;margin-bottom:10px">Por Tipo</div>${typeRows||'<div style="color:var(--dim);font-size:12px">Sem dados</div>'}</div>
+      <div class="card" style="padding:16px"><div style="font-size:12px;font-weight:700;margin-bottom:10px">Por Consultor</div>${consRows||'<div style="color:var(--dim);font-size:12px">Sem dados</div>'}</div>
+    </div>`;
 }
 
 // ════════════════════════════════════
@@ -3867,23 +4319,25 @@ function renderPerfTab(){
   const subs=stages.filter(s=>s.parentId);
   const defRate=parseFloat(proj.defaultRate)||0;
 
-  // Status
+  // Status — conta apenas sub-etapas (as raízes são containers)
   const stMap={Pendente:0,'Em Andamento':0,'Concluído':0,'Bloqueado':0};
-  stages.forEach(s=>{if(stMap[s.status]!==undefined)stMap[s.status]++;});
+  const countStages = subs.length > 0 ? subs : roots; // usa subs se existirem
+  countStages.forEach(s=>{if(stMap[s.status]!==undefined)stMap[s.status]++;});
 
-  // Prazo
+  // Prazo — conta apenas sub-etapas
   const pzMap={'Finalizada':0,'Dentro do Prazo':0,'Em Risco':0,'Atrasada':0,'Não Iniciada':0,'Sem prazo':0};
-  stages.forEach(s=>{const p=prazoStatus(s);const k=Object.keys(pzMap).find(k=>p.label.startsWith(k))||'Sem prazo';pzMap[k]++;});
+  countStages.forEach(s=>{const p=prazoStatus(s);const k=Object.keys(pzMap).find(k=>p.label.startsWith(k))||'Sem prazo';pzMap[k]++;});
 
   // Hours per root
   const rLabels=roots.map(r=>(r.num?r.num+' ':'')+r.name.substring(0,16));
   const rBudget=roots.map(r=>parseFloat(r.hours)||0);
-  const rConsumed=roots.map(r=>{const k=stages.filter(s=>s.parentId===r.id);return k.length>0?k.reduce((a,s)=>a+(parseFloat(s.hours)||0),0):parseFloat(r.hours)||0;});
-  const rReal=roots.map(r=>Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)*10)/10);
+  // Consumed = realized hours from subs (subs have no planned hours)
+  const rConsumed=roots.map(r=>Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+Math.round((parseFloat(k.hoursReal)||0)*60),0))/60);
+  const rReal=roots.map(r=>Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+Math.round((parseFloat(k.hoursReal)||0)*60),0))/60);
 
   // Cost per root
   const rCostPlan=roots.map(r=>Math.round((parseFloat(r.hours)||0)*(r.hourRate||defRate)*100)/100);
-  const rCostReal=roots.map(r=>{const rate=r.hourRate||defRate;return Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+(parseFloat(k.hoursReal)||0),0)*rate*100)/100;});
+  const rCostReal=roots.map(r=>{const rate=r.hourRate||defRate;const hrs=Math.round(stages.filter(s=>s.parentId===r.id).reduce((a,k)=>a+Math.round((parseFloat(k.hoursReal)||0)*60),0))/60;return Math.round(hrs*rate*100)/100;});
   const hasCost=rCostPlan.some(v=>v>0);
 
   // Burndown
@@ -3891,7 +4345,7 @@ function renderPerfTab(){
   const totalH=roots.reduce((a,r)=>a+(parseFloat(r.hours)||0),0);
   let acc=0;
   const bLabels=['Início',...done.map(s=>fDS(s.dateReal))];
-  const bData=[totalH,...done.map(s=>{acc+=Math.round((parseFloat(s.hoursReal)||0)*100)/100;return Math.round(Math.max(0,totalH-acc)*100)/100;})];
+  const bData=[totalH,...done.map(s=>{acc+=Math.round((parseFloat(s.hoursReal)||0)*60)/60;return Math.round(Math.max(0,totalH-acc)*100)/100;})];
   const bIdeal=bLabels.map((_,i)=>Math.round(totalH*(1-i/Math.max(bLabels.length-1,1))*100)/100);
 
   el.innerHTML=`
