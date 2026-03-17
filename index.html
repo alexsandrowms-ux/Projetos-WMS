@@ -2307,14 +2307,14 @@ function renderCostTab(){
     const all   = [r,...kids];
     const rRate = r.hourRate || defRate;
     const rHP   = parseFloat(r.hours)||0;
-    const rHR   = parseFloat(r.hoursReal)||0;
+    const rHR   = Math.round((parseFloat(r.hoursReal)||0)*60)/60;
     const rPlan = rHP * rRate;
     const rAC   = rHR * rRate;
     const rDiff = rPlan - rAC;
     const rootRow = `<tr style="background:rgba(251,146,60,.06)">
       <td style="font-weight:700;color:${col};padding:7px 10px">${esc(r.num)||'—'} ${esc(r.name)}</td>
       <td style="text-align:center;padding:7px 6px;font-size:11px">${rHP}h</td>
-      <td style="text-align:center;padding:7px 6px;font-size:11px">${rHR}h</td>
+      <td style="text-align:center;padding:7px 6px;font-size:11px">${decHToHHMM(rHR)||rHR+"h"}</td>
       <td style="text-align:center;padding:7px 6px;font-size:11px">${rRate>0?fCur(rRate):'<span style="color:var(--dim)">—</span>'}</td>
       <td style="text-align:right;padding:7px 8px;font-size:11px;color:var(--amber)">${rRate>0?fCur(rPlan):'—'}</td>
       <td style="text-align:right;padding:7px 8px;font-size:11px">${rRate>0?fCur(rAC):'—'}</td>
@@ -2324,14 +2324,14 @@ function renderCostTab(){
     const kidRows = kids.map(k=>{
       const kRate = k.hourRate || defRate;
       const kHP   = parseFloat(k.hours)||0; // será 0 pois sub não tem horas planejadas
-      const kHR   = parseFloat(k.hoursReal)||0;
+      const kHR   = Math.round((parseFloat(k.hoursReal)||0)*60)/60;
       const kPlan = kHP * kRate;
       const kAC   = kHR * kRate;
       const kDiff = kPlan - kAC;
       return `<tr>
         <td style="padding:5px 10px;font-size:11px;color:var(--mid)">└ ${esc(k.num)||'—'} ${esc(k.name)}</td>
         <td style="text-align:center;padding:5px 6px;font-size:11px;color:var(--dim)">—</td>
-        <td style="text-align:center;padding:5px 6px;font-size:11px">${kHR}h</td>
+        <td style="text-align:center;padding:5px 6px;font-size:11px">${decHToHHMM(kHR)||kHR+"h"}</td>
         <td style="text-align:center;padding:5px 6px;font-size:11px">${kRate>0?fCur(kRate):'<span style="color:var(--dim)">—</span>'}</td>
         <td style="text-align:right;padding:5px 8px;font-size:11px;color:var(--amber)">${kRate>0?fCur(kPlan):'—'}</td>
         <td style="text-align:right;padding:5px 8px;font-size:11px">${kRate>0?fCur(kAC):'—'}</td>
@@ -3995,7 +3995,7 @@ function exportHTML(projs){
       return`<tfoot><tr style="background:#f1f5f9;font-weight:800;border-top:2px solid #cbd5e1">
         <td colspan="9" style="padding:8px 10px;font-size:12px;color:#475569">TOTAL DO PROJETO</td>
         <td style="padding:8px 6px;text-align:center;font-size:12px;color:#b45309">${totHP}h</td>
-        <td style="padding:8px 6px;text-align:center;font-size:12px;font-weight:800;color:#16a34a">${decHToHHMM(Math.round(totHR*100)/100)||Math.round(totHR*100)/100+"h"}</td>
+        <td style="padding:8px 6px;text-align:center;font-size:12px;font-weight:800;color:#16a34a">${decHToHHMM(Math.round(totHR*60)/60)||Math.round(totHR*60)/60+"h"}</td>
         <td style="padding:8px 8px;text-align:right;font-size:12px;color:#b45309">${totCP>0?cur(totCP):'—'}</td>
         <td style="padding:8px 8px;text-align:right;font-size:12px;color:#7c3aed">${totCR>0?cur(totCR):'—'}</td>
         <td style="padding:8px 8px;text-align:right;font-size:12px;color:${totV>=0?'#16a34a':'#dc2626'}">${totCP>0?(totV>=0?'+':'')+cur(totV):'—'}</td>
