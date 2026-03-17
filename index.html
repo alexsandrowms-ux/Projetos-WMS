@@ -793,7 +793,7 @@ datalist{display:none}
         <div class="fg"><label>Executante</label><input class="fc" id="fs-executor" placeholder="Nome do responsável"></div>
         <div class="fg"><label>Horas Planejadas</label><input class="fc" type="number" id="fs-hours" placeholder="Ex: 8" min="0"></div>
       </div>
-      <div class="frow">
+      <div class="frow" id="fs-row-execution">
         <div class="fg">
           <label>☕ Intervalo</label>
           <input class="fc" type="time" id="fs-break" onchange="calcModalHours();calcRealHours();" placeholder="01:30" title="Intervalo (ex: 01:30)">
@@ -808,7 +808,7 @@ datalist{display:none}
         <div class="fg"><label>📅 Início Planejado</label><input class="fc" type="datetime-local" id="fs-date" onchange="calcModalHours()"></div>
         <div class="fg"><label>🏁 Término Planejado</label><input class="fc" type="datetime-local" id="fs-dateend" onchange="calcModalHours()"></div>
       </div>
-      <div class="frow">
+      <div class="frow" id="fs-row-realdates">
         <div class="fg"><label>▶️ Início Real</label><input class="fc" type="datetime-local" id="fs-datestartreal" onchange="calcRealHours()" title="Data/hora que a tarefa foi efetivamente iniciada"></div>
         <div class="fg"><label>✅ Término Real</label><input class="fc" type="datetime-local" id="fs-datereal" onchange="calcRealHours()" placeholder="Preencher ao concluir"></div>
         <div class="fg" id="fg-reschedule" style="display:none">
@@ -824,7 +824,7 @@ datalist{display:none}
       </div>
       <div class="frow">
         <div class="fg"><label>É sub-etapa de (etapa pai)</label>
-          <select class="fc" id="fs-parent"><option value="">— Etapa raiz (sem pai) —</option></select>
+          <select class="fc" id="fs-parent" onchange="toggleSubFields(!!this.value)"><option value="">— Etapa raiz (sem pai) —</option></select>
         </div>
         <div class="fg"><label>🎨 Cor de fundo</label>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px" id="fs-bgcolors">
@@ -2740,6 +2740,16 @@ function renderCGantt(){
 // ════════════════════════════════════
 // MODAL: ETAPA
 // ════════════════════════════════════
+
+function toggleSubFields(isSub){
+  const rowExec = document.getElementById('fs-row-execution');
+  const rowReal = document.getElementById('fs-row-realdates');
+  const fgRe    = document.getElementById('fg-reschedule');
+  if(rowExec) rowExec.style.display = isSub ? '' : 'none';
+  if(rowReal) rowReal.style.display = isSub ? '' : 'none';
+  if(fgRe)    fgRe.style.display    = isSub ? '' : 'none';
+}
+
 function openStageModal(isNew=true,editId=null,defParent=null){
   _eStageId=isNew?null:editId; _defParent=defParent;
   const proj=getP(S.cur),stage=editId?proj?.stages?.find(s=>s.id===editId):null;
@@ -2803,6 +2813,22 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   if(_fgRe)_fgRe.style.display=_isSub?'':'none';
   if(document.getElementById('fs-datereschedule'))
     document.getElementById('fs-datereschedule').value=stage?.dateReschedule||'';
+
+  // Campos exclusivos de sub-etapa: Intervalo, Horas Realizadas, Início/Término Real
+  const _rowExec  = document.getElementById('fs-row-execution');
+  const _rowReal  = document.getElementById('fs-row-realdates');
+  if(_rowExec) _rowExec.style.display = _isSub ? '' : 'none';
+  if(_rowReal) _rowReal.style.display = _isSub ? '' : 'none';
+
+  // Label de Horas Planejadas muda conforme contexto
+  const _hoursLabel = document.querySelector('label[for-hours-label]') ||
+    document.getElementById('fs-hours')?.closest('.fg')?.querySelector('label');
+  if(_hoursLabel){
+    _hoursLabel.textContent = _isSub
+      ? '⏱ Horas Planejadas (sub-etapa)'
+      : '📋 Horas Orçadas (total da etapa)';
+  }
+
   openModal('modal-stage');
 }
 function applyPillar(){
