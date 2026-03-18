@@ -755,6 +755,7 @@ datalist{display:none}
             <button class="btn btn-ghost" style="font-size:12px" onclick="showChamadosTab('lista')">📋 Chamados</button>
             <button class="btn btn-ghost" style="font-size:12px" onclick="showChamadosTab('dash')">📊 Dashboard</button>
             <button class="btn btn-ghost" style="font-size:12px" onclick="openSlaModal()">⚙️ Config. SLA</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="exportRelatorioAtendimento()">📄 Relatório</button>
             <button class="btn btn-primary" style="font-size:12px" onclick="openChamadoModal()">+ Novo Chamado</button>
           </div>
         </div>
@@ -1335,8 +1336,12 @@ datalist{display:none}
           <input class="fc" type="time" id="ch-intervalo" placeholder="01:00" onchange="calcChamadoTempo()" title="Tempo de intervalo/pausa a ser descontado">
           <span style="font-size:10px;color:var(--dim);margin-top:3px;display:block">Será descontado do tempo total</span>
         </div>
-        <div class="fg"></div>
-        <div class="fg"></div>
+        <div class="fg"><label class="fl">💰 Valor/hora (R$)</label>
+          <input class="fc" type="number" id="ch-valor-hora" placeholder="Ex: 150.00" min="0" step="0.01" oninput="calcChamadoCusto()">
+        </div>
+        <div class="fg"><label class="fl">💵 Custo Total</label>
+          <input class="fc" id="ch-custo-total" placeholder="Calculado automaticamente" readonly style="background:rgba(34,197,94,.06);color:var(--green);font-weight:700">
+        </div>
       </div>
 
       <!-- Pausa -->
@@ -3259,6 +3264,8 @@ function openChamadoModal(id=null){
   document.getElementById('ch-consultor').value=ch?.consultor||'';
   document.getElementById('ch-produto').value=ch?.produto||'';
   document.getElementById('ch-versao').value=ch?.versao||'';
+  document.getElementById('ch-valor-hora').value=ch?.valorHora||'';
+  document.getElementById('ch-custo-total').value=ch?.custoTotal||'';
   document.getElementById('ch-contato').value=ch?.contato||'';
   document.getElementById('ch-email').value=ch?.email||'';
   document.getElementById('ch-fone').value=ch?.fone||'';
@@ -3354,6 +3361,8 @@ function saveChamado(){
     consultor:document.getElementById('ch-consultor').value.trim(),
     produto:document.getElementById('ch-produto').value.trim(),
     versao:document.getElementById('ch-versao').value.trim(),
+    valorHora:parseFloat(document.getElementById('ch-valor-hora')?.value)||0,
+    custoTotal:document.getElementById('ch-custo-total')?.value||'',
     contato:document.getElementById('ch-contato')?.value.trim()||'',
     email:document.getElementById('ch-email')?.value.trim()||'',
     fone:document.getElementById('ch-fone')?.value.trim()||'',
@@ -3399,6 +3408,180 @@ function showChamadosTab(tab){
   if(tab==='dash')renderChamadosDash();
 }
 
+
+
+// ── Custo do chamado ──
+function calcChamadoCusto(){
+  const tempo=document.getElementById('ch-tempo')?.value||'';
+  const vh=parseFloat(document.getElementById('ch-valor-hora')?.value)||0;
+  const el=document.getElementById('ch-custo-total');
+  if(!tempo||!vh||!tempo.includes(':')){if(el)el.value='';return;}
+  const[h,m]=tempo.split(':').map(Number);
+  const decH=h+(m/60);
+  const custo=Math.round(decH*vh*100)/100;
+  if(el)el.value='R$ '+custo.toLocaleString('pt-BR',{minimumFractionDigits:2});
+}
+
+// ── Relatório de Atendimento ──
+function exportRelatorioAtendimento(){
+  const chs=getChamados();
+  if(!chs.length){toast('Nenhum chamado para exportar','warn');return;}
+  const now=new Date();
+  const dtStr=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  // KPIs
+  const total=chs.length;
+  const abertos=chs.filter(c=>['Aberto','Em Atendimento','Aguardando Cliente','Pausado'].includes(c.status)).length;
+  const resolvidos=chs.filter(c=>['Resolvido','Fechado'].includes(c.status)).length;
+  const violados=chs.filter(c=>{const s=slaStatus(c);return s&&s.cls==='violado';}).length;
+  const comTempo=chs.filter(c=>c.tempo&&c.tempo.includes(':'));
+  const avgMin=comTempo.length?comTempo.reduce((a,c)=>{const[h,m]=c.tempo.split(':').map(Number);return a+h*60+m;},0)/comTempo.length:0;
+  const avgHHMM=avgMin>0?decHToHHMM(avgMin/60):'—';
+  const totalMin=chs.reduce((a,c)=>{if(!c.tempo||!c.tempo.includes(':'))return a;const[h,m]=c.tempo.split(':').map(Number);return a+h*60+m;},0);
+  const totalHHMM=decHToHHMM(totalMin/60)||'—';
+  const totalCusto=chs.reduce((a,c)=>{
+    if(!c.tempo||!c.valorHora)return a;
+    const[h,m]=(c.tempo+':0').split(':').map(Number);
+    return a+(h+(m/60))*c.valorHora;
+  },0);
+
+  // By cliente
+  const byCliente={};
+  chs.forEach(c=>{
+    const proj=(S.projects||[]).find(p=>p.id===c.projId);
+    const cl=proj?.client||c.cliente||'Não identificado';
+    if(!byCliente[cl])byCliente[cl]={count:0,min:0,custo:0};
+    byCliente[cl].count++;
+    if(c.tempo&&c.tempo.includes(':')){const[h,m]=c.tempo.split(':').map(Number);byCliente[cl].min+=h*60+m;}
+    if(c.tempo&&c.valorHora){const[h,m]=(c.tempo+':0').split(':').map(Number);byCliente[cl].custo+=(h+(m/60))*c.valorHora;}
+  });
+  const clienteRows=Object.entries(byCliente).sort((a,b)=>b[1].count-a[1].count).map(([cl,v])=>
+    `<tr><td>${esc(cl)}</td><td style="text-align:center">${v.count}</td>`+
+    `<td style="text-align:center">${decHToHHMM(v.min/60)||'—'}</td>`+
+    `<td style="text-align:right">${v.custo>0?'R$ '+v.custo.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td></tr>`
+  ).join('');
+
+  // By consultor
+  const byCons={};
+  chs.forEach(c=>{const k=c.consultor||'Não informado';if(!byCons[k])byCons[k]={count:0,min:0};byCons[k].count++;if(c.tempo&&c.tempo.includes(':')){const[h,m]=c.tempo.split(':').map(Number);byCons[k].min+=h*60+m;}});
+  const consRows=Object.entries(byCons).sort((a,b)=>b[1].count-a[1].count).map(([cn,v])=>
+    `<tr><td>${esc(cn)}</td><td style="text-align:center">${v.count}</td><td style="text-align:center">${decHToHHMM(v.min/60)||'—'}</td></tr>`
+  ).join('');
+
+  // Chamados table
+  const SC={'Aberto':'#0ea5e9','Em Atendimento':'#f59e0b','Aguardando Cliente':'#a78bfa','Pausado':'#f97316','Resolvido':'#22c55e','Fechado':'#64748b','Cancelado':'#ef4444'};
+  const chamRows=chs.map(c=>{
+    const proj=(S.projects||[]).find(p=>p.id===c.projId);
+    const cl=proj?.client||c.cliente||'—';
+    const sc=SC[c.status]||'#64748b';
+    const sla=slaStatus(c);
+    const slaStr=sla?sla.icon+' '+sla.label:'—';
+    const custo=c.tempo&&c.valorHora?(()=>{const[h,m]=(c.tempo+':0').split(':').map(Number);return'R$ '+((h+(m/60))*c.valorHora).toLocaleString('pt-BR',{minimumFractionDigits:2});})():'—';
+    const osStr=[(c.osSnkList||[c.osSnk]).filter(Boolean).map(v=>'SNK:'+v).join(', '),(c.osPaniceList||[c.osPanice]).filter(Boolean).map(v=>'PAN:'+v).join(', ')].filter(Boolean).join(' | ')||'—';
+    const evCount=(c.evidencias||[]).length;
+    return`<tr>
+      <td style="font-size:10px;color:#64748b">${osStr}</td>
+      <td>${esc(cl)}</td>
+      <td>${esc(c.contato||'—')}</td>
+      <td>${esc(c.consultor||'—')}</td>
+      <td>${esc(c.tipo||'Suporte')}</td>
+      <td>${esc(c.produto||'—')}${c.versao?' v'+esc(c.versao):''}</td>
+      <td>${c.agendamento?fmtDT(c.agendamento):'—'}</td>
+      <td>${c.inicio?fmtDT(c.inicio):'—'}</td>
+      <td>${c.fim?fmtDT(c.fim):'—'}</td>
+      <td style="text-align:center;font-weight:700;color:#16a34a">${c.tempo||'—'}</td>
+      <td style="text-align:center">${c.valorHora?'R$ '+c.valorHora.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</td>
+      <td style="text-align:right;font-weight:700;color:#16a34a">${custo}</td>
+      <td><span style="background:${sc}18;color:${sc};padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700">${c.status}</span></td>
+      <td style="font-size:10px">${slaStr}</td>
+      <td style="font-size:10px;max-width:200px">${esc(c.descricao||'—')}</td>
+      <td style="font-size:10px">${c.solucao?esc(c.solucao.slice(0,80))+(c.solucao.length>80?'...':''):'—'}</td>
+      <td style="text-align:center">${evCount>0?evCount+' 📎':'—'}</td>
+      <td style="font-size:10px;color:#64748b">${c.motivoPausa?esc(c.motivoPausa):'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Relatório de Atendimentos — AXL IntraLog</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:#f0f4f8;color:#1e293b;font-size:12px;line-height:1.5}
+.w{max-width:1400px;margin:0 auto;padding:28px 20px}
+.rh{background:#fff;border-radius:10px;border:1px solid #e2e8f0;padding:22px 26px;margin-bottom:20px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.logo{font-family:'Outfit',sans-serif;font-size:26px;font-weight:900;letter-spacing:-1px}
+.logo .ax{color:#f59e0b}.logo .il{color:#0ea5e9}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.kv{font-family:'Outfit',sans-serif;font-size:26px;font-weight:800;line-height:1.1;margin-bottom:3px}
+.kl{font-size:10px;color:#94a3b8;text-transform:uppercase;letter-spacing:.06em}
+.sec{background:#fff;border:1px solid #e2e8f0;border-radius:10px;margin-bottom:18px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.sth{padding:12px 18px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-family:'Outfit',sans-serif;font-size:14px;font-weight:700}
+table{width:100%;border-collapse:collapse}
+th{background:#1e293b;color:#fff;padding:8px 10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;text-align:left;white-space:nowrap}
+td{border-bottom:1px solid #f1f5f9;padding:7px 10px;vertical-align:top}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#f8fafc}
+.ft{text-align:center;padding:16px;color:#94a3b8;font-size:11px;margin-top:12px;border-top:1px solid #e2e8f0}
+@media print{body{background:#fff}.w{padding:12px}table{font-size:10px}th,td{padding:5px 7px}}
+</style></head><body><div class="w">
+
+<div class="rh">
+  <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:2px solid #e2e8f0">
+    <div class="logo"><span class="ax">AXL</span><span class="il">IntraLog</span></div>
+    <div style="width:1px;height:40px;background:#e2e8f0"></div>
+    <div>
+      <div style="font-family:'Outfit',sans-serif;font-size:17px;font-weight:800">Relatório de Atendimentos / Sustentação</div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:2px">Gerado em ${dtStr} · ${total} chamado${total!==1?'s':''}</div>
+    </div>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="kv">${total}</div><div class="kl">Total Chamados</div></div>
+  <div class="kpi"><div class="kv" style="color:#0ea5e9">${abertos}</div><div class="kl">Em Aberto</div></div>
+  <div class="kpi"><div class="kv" style="color:#22c55e">${resolvidos}</div><div class="kl">Resolvidos</div></div>
+  <div class="kpi"><div class="kv" style="color:#ef4444">${violados}</div><div class="kl">SLA Violado</div></div>
+  <div class="kpi"><div class="kv" style="font-size:18px">${avgHHMM}</div><div class="kl">Tempo Médio</div></div>
+  <div class="kpi"><div class="kv" style="font-size:18px">${totalHHMM}</div><div class="kl">Tempo Total</div></div>
+  <div class="kpi"><div class="kv" style="color:#22c55e;font-size:16px">${totalCusto>0?'R$ '+totalCusto.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</div><div class="kl">Custo Total</div></div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px">
+  <div class="sec">
+    <div class="sth">📁 Por Cliente / Parceiro</div>
+    <table><thead><tr><th>Cliente</th><th style="text-align:center">Chamados</th><th style="text-align:center">Tempo Total</th><th style="text-align:right">Custo</th></tr></thead>
+    <tbody>${clienteRows||'<tr><td colspan="4" style="color:#94a3b8;text-align:center">Sem dados</td></tr>'}</tbody></table>
+  </div>
+  <div class="sec">
+    <div class="sth">👤 Por Consultor</div>
+    <table><thead><tr><th>Consultor</th><th style="text-align:center">Chamados</th><th style="text-align:center">Tempo Total</th></tr></thead>
+    <tbody>${consRows||'<tr><td colspan="3" style="color:#94a3b8;text-align:center">Sem dados</td></tr>'}</tbody></table>
+  </div>
+</div>
+
+<div class="sec">
+  <div class="sth">📋 Detalhamento de Chamados</div>
+  <div style="overflow-x:auto">
+  <table style="min-width:1300px"><thead><tr>
+    <th>OS / Ticket</th><th>Cliente</th><th>Contato</th><th>Consultor</th><th>Tipo</th><th>Produto/Versão</th>
+    <th>Agendamento</th><th>Início</th><th>Fim</th><th style="text-align:center">Tempo</th>
+    <th>Valor/h</th><th style="text-align:right">Custo</th><th>Status</th><th>SLA</th>
+    <th>Descrição</th><th>Solução</th><th style="text-align:center">Ev.</th><th>Motivo Pausa</th>
+  </tr></thead><tbody>${chamRows}</tbody></table>
+  </div>
+</div>
+
+<div class="ft">AXL IntraLog — Relatório de Atendimentos gerado em ${dtStr}</div>
+</div></body></html>`;
+
+  const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='Relatorio_Atendimentos_'+now.toISOString().split('T')[0]+'.html';
+  a.click();
+  toast('📄 Relatório exportado com sucesso!','ok');
+}
 
 function buildChamadoCard(c){
   const proj=(S.projects||[]).find(p=>p.id===c.projId);
@@ -3525,6 +3708,12 @@ function renderChamadosDash(){
       <span style="font-size:12px;flex:1">👤 ${n}</span>
       <span style="font-size:12px;font-weight:700;color:var(--purple)">${c}</span>
     </div>`).join('');
+  // Cost KPIs
+  const totalMin2=chs.reduce((a,c)=>{if(!c.tempo||!c.tempo.includes(':'))return a;const[h,m]=c.tempo.split(':').map(Number);return a+h*60+m;},0);
+  const totalHHMM=decHToHHMM(totalMin2/60)||'—';
+  const totalCusto=chs.reduce((a,c)=>{if(!c.tempo||!c.valorHora)return a;const[h,m]=(c.tempo+':0').split(':').map(Number);return a+(h+(m/60))*c.valorHora;},0);
+  const maiParceiro=Object.entries(byType).length?Object.entries(byCons).sort((a,b)=>b[1]-a[1])[0]?.[0]||'—':'—';
+
   el.innerHTML=`
     <div class="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">
       <div class="kpi"><div class="kpi-l">Total</div><div class="kpi-v">${total}</div></div>
@@ -3533,6 +3722,8 @@ function renderChamadosDash(){
       <div class="kpi"><div class="kpi-l">SLA Violado</div><div class="kpi-v" style="color:var(--red)">${violados}</div></div>
       <div class="kpi"><div class="kpi-l">SLA Risco</div><div class="kpi-v" style="color:var(--amber)">${emRisco}</div></div>
       <div class="kpi"><div class="kpi-l">Tempo Médio</div><div class="kpi-v" style="font-size:16px">${avgHHMM}</div></div>
+      <div class="kpi"><div class="kpi-l">Tempo Total</div><div class="kpi-v" style="font-size:16px">${totalHHMM}</div></div>
+      <div class="kpi"><div class="kpi-l">Custo Total</div><div class="kpi-v" style="font-size:14px;color:var(--green)">${totalCusto>0?'R$'+totalCusto.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—'}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
       <div class="card" style="padding:16px"><div style="font-size:12px;font-weight:700;margin-bottom:10px">Por Tipo</div>${typeRows||'<div style="color:var(--dim);font-size:12px">Sem dados</div>'}</div>
