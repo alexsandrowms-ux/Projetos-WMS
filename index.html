@@ -3212,8 +3212,7 @@ function openChamadoModal(id=null){
   _eChamadoId=id;_chEvList=[];
   const ch=id?chamadoById(id):null;
   document.getElementById('ch-modal-title').textContent=ch?'✏️ Editar Chamado':'🎧 Novo Chamado';
-  document.getElementById('ch-os-snk').value=ch?.osSnk||'';
-  document.getElementById('ch-os-panice').value=ch?.osPanice||'';
+  // osSnk/osPanice now handled via _chOsSnkList/_chOsPaniceList arrays below
   document.getElementById('ch-consultor').value=ch?.consultor||'';
   document.getElementById('ch-produto').value=ch?.produto||'';
   document.getElementById('ch-versao').value=ch?.versao||'';
@@ -3296,7 +3295,7 @@ function renderChEvList(){
 }
 
 function saveChamado(){
-  const osSnk=document.getElementById('ch-os-snk').value.trim();
+  const osSnk=_chOsSnkList.join(', ');
   const descricao=document.getElementById('ch-descricao').value.trim();
   if(!osSnk&&!descricao){toast('Informe ao menos o Nº OS ou a descrição','err');return;}
   const slaId=document.getElementById('ch-sla-nivel').value;
