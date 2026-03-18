@@ -79,7 +79,16 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);overflow:hid
 /* ── BUTTONS ── */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;border:none;font-family:var(--sans);white-space:nowrap;line-height:1}
 .btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent2)}
-.btn-ghost{background:transparent;color:var(--mid);border:1px solid var(--border)}.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+.btn-ghost{background:transparent;color:var(--mid);border:1px solid var(--border)}
+.btn-nav{background:rgba(14,165,233,.12);color:var(--accent);border:1px solid rgba(14,165,233,.25);font-weight:600}
+.btn-nav:hover{background:rgba(14,165,233,.22);color:var(--accent2)}
+.btn-nav.active{background:rgba(14,165,233,.2);color:var(--accent2);border-color:var(--accent)}
+.btn-nav-green{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.25);font-weight:600}
+.btn-nav-green:hover{background:rgba(34,197,94,.2)}
+.btn-nav-amber{background:rgba(245,158,11,.1);color:var(--amber);border:1px solid rgba(245,158,11,.25);font-weight:600}
+.btn-nav-amber:hover{background:rgba(245,158,11,.2)}
+.btn-nav-purple{background:rgba(167,139,250,.1);color:var(--purple);border:1px solid rgba(167,139,250,.25);font-weight:600}
+.btn-nav-purple:hover{background:rgba(167,139,250,.2)}.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
 .btn-danger{background:rgba(239,68,68,.12);color:#f87171;border:1px solid rgba(239,68,68,.22)}.btn-danger:hover{background:rgba(239,68,68,.2)}
 .btn-success{background:rgba(34,197,94,.1);color:var(--green);border:1px solid rgba(34,197,94,.22)}.btn-success:hover{background:rgba(34,197,94,.2)}
 .btn-purple{background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.22)}.btn-purple:hover{background:rgba(167,139,250,.22)}
@@ -537,7 +546,7 @@ datalist{display:none}
   <div class="topbar">
     <div class="logo"><span class="ax">AXL</span><span class="il">IntraLog</span></div>
     <div class="topbar-right">
-      <button class="btn btn-ghost btn-sm" onclick="openImport()">📥 Importar</button>
+      <button class="btn btn-nav-purple btn-sm" onclick="openImport()">📥 Importar</button>
       <button class="btn btn-purple btn-sm" onclick="openExport()">📤 Exportar</button>
       <button class="btn btn-primary btn-sm" onclick="openProjModal()">+ Novo Projeto</button>
     </div>
@@ -606,7 +615,7 @@ datalist{display:none}
       <!-- DETALHE -->
       <div class="page" id="page-detail">
         <div style="margin-bottom:12px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" onclick="showPage('projects')">← Voltar</button>
+          <button class="btn btn-nav btn-sm" onclick="showPage('projects')">← Voltar</button>
         </div>
         <div class="det-hdr">
           <div style="min-width:0">
@@ -615,7 +624,7 @@ datalist{display:none}
             <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap" id="det-badges"></div>
           </div>
           <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start">
-            <button class="btn btn-ghost btn-sm" onclick="openProjModal(true)">✏️ Editar</button>
+            <button class="btn btn-nav btn-sm" onclick="openProjModal(true)">✏️ Editar</button>
             <button class="btn btn-danger btn-sm" onclick="askDeleteProject()">🗑 Excluir</button>
           </div>
         </div>
@@ -623,10 +632,10 @@ datalist{display:none}
         <div class="hours-grid" id="det-hours"></div>
         <div class="tabs">
 
-          <div class="dtab" id="dtab-stages" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
-          <div class="dtab" id="dtab-gantt"  onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
-          <div class="dtab" id="dtab-cost"   onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
-          <div class="dtab" id="dtab-perf"   onclick="switchTab(this,'tab-perf');renderPerfTab()">📈 Análise de Performance</div>
+          <div class="dtab" id="dtab-stages" class="dtab-btn btn-nav" onclick="switchTab(this,'tab-stages')">📋 Etapas FAP</div>
+          <div class="dtab" id="dtab-gantt" class="dtab-btn btn-nav" onclick="switchTab(this,'tab-gantt')">📊 Gantt</div>
+          <div class="dtab" id="dtab-cost" class="dtab-btn btn-nav-amber" onclick="switchTab(this,'tab-cost');renderCostTab()">💰 Custos</div>
+          <div class="dtab" id="dtab-perf" class="dtab-btn btn-nav-green" onclick="switchTab(this,'tab-perf');renderPerfTab()">📈 Análise de Performance</div>
         </div>
         <div id="tab-stages">
           <div id="stages-list"></div>
@@ -667,7 +676,7 @@ datalist{display:none}
             <span id="gantt-period-info" style="font-size:11px;color:var(--dim)"></span>
           </div>
           <div style="margin-bottom:8px">
-            <button class="gantt-add-btn" onclick="openStageModal()"><span style="font-size:15px;color:var(--accent)">+</span> Adicionar Etapa</button>
+            <button class="gantt-add-btn btn-nav" onclick="openStageModal()"><span style="font-size:15px;color:var(--accent)">+</span> Adicionar Etapa</button>
           </div>
           <div class="card" style="padding:12px"><div class="gantt-wrap" id="gantt-box"></div></div>
           <!-- Legenda -->
@@ -728,9 +737,9 @@ datalist{display:none}
             <input class="fc" type="date" id="cg-start" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
             <label style="font-size:11px;color:var(--mid);font-weight:600">ATÉ</label>
             <input class="fc" type="date" id="cg-end" onchange="renderCGantt()" style="width:130px;padding:6px 8px;font-size:12px">
-            <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(7)">7d</button>
-            <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(30)">30d</button>
-            <button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(90)">3m</button>
+            <button class="btn btn-nav" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(7)">7d</button>
+            <button class="btn btn-nav" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(30)">30d</button>
+            <button class="btn btn-nav" style="font-size:11px;padding:6px 10px" onclick="cgSetPeriod(90)">3m</button>
             <button class="btn btn-primary" style="font-size:11px;padding:6px 12px" onclick="renderCGantt()">🔄 Atualizar</button>
           </div>
         </div>
@@ -752,10 +761,10 @@ datalist{display:none}
             <div style="font-size:12px;color:var(--mid)" id="ch-info">Controle de chamados e SLA</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <button class="btn btn-ghost" style="font-size:12px" onclick="showChamadosTab('lista')">📋 Chamados</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="showChamadosTab('dash')">📊 Dashboard</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="openSlaModal()">⚙️ Config. SLA</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="exportRelatorioAtendimento()">📄 Relatório</button>
+            <button class="btn btn-nav" style="font-size:12px" onclick="showChamadosTab('lista')">📋 Chamados</button>
+            <button class="btn btn-nav" style="font-size:12px" onclick="showChamadosTab('dash')">📊 Dashboard</button>
+            <button class="btn btn-nav-amber" style="font-size:12px" onclick="openSlaModal()">⚙️ Config. SLA</button>
+            <button class="btn btn-nav-green" style="font-size:12px" onclick="exportRelatorioAtendimento()">📄 Relatório</button>
             <button class="btn btn-primary" style="font-size:12px" onclick="openChamadoModal()">+ Novo Chamado</button>
           </div>
         </div>
@@ -5182,7 +5191,7 @@ function renderPerfTab(){
     <div class="card" style="padding:0;overflow:hidden">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--bg3);border-bottom:1px solid var(--border)">
         <div style="font-size:13px;font-weight:700" id="perf-drill-title">Tarefas</div>
-        <button class="btn btn-ghost btn-xs" onclick="closePerfDrill()">✕ Fechar</button>
+        <button class="btn btn-nav btn-xs" onclick="closePerfDrill()">✕ Fechar</button>
       </div>
       <div id="perf-drill-list" style="max-height:400px;overflow-y:auto;padding:12px 16px"></div>
     </div>`;
