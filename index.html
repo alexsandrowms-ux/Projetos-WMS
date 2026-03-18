@@ -212,6 +212,21 @@ textarea.fc{resize:vertical;min-height:60px}
 .collapse-btn:hover{background:var(--border2);color:var(--text);border-color:var(--accent)}
 .collapse-btn.open{background:rgba(14,165,233,.12);color:var(--accent);border-color:rgba(14,165,233,.3)}
 .substages-wrap{transition:none}
+
+/* ── GANTT TOOLTIP ── */
+.cg-bar-wrap{position:relative;height:16px}
+.cg-bar-wrap:hover .cg-tip{display:block}
+.cg-tip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);
+  background:var(--bg2);border:1px solid var(--border2);border-radius:7px;
+  padding:8px 12px;font-size:11.5px;color:var(--text);white-space:nowrap;
+  z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.5);pointer-events:none;
+  min-width:200px;max-width:320px;line-height:1.6}
+.cg-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:5px solid transparent;border-top-color:var(--border2)}
+.cg-tip .tip-name{font-weight:700;color:var(--accent);margin-bottom:4px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:290px;display:block}
+.cg-tip .tip-row{display:flex;align-items:center;gap:6px;color:var(--mid);font-size:11px}
+.cg-tip .tip-val{color:var(--text)}
 .add-sub-btn{display:flex;align-items:center;gap:8px;padding:6px 13px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--dim);font-size:12px;transition:all .15s;margin-top:3px}
 .add-sub-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(14,165,233,.05)}
 .add-root-btn{display:flex;align-items:center;gap:10px;padding:12px 15px;border:1.5px dashed var(--border);border-radius:var(--r);cursor:pointer;color:var(--dim);font-size:13px;font-weight:500;transition:all .15s;margin-top:8px}
@@ -2788,6 +2803,31 @@ function cgSetPeriod(days){
   renderCGantt();
 }
 
+
+function cgTooltip(r, stage){
+  const proj = r.proj;
+  const cliente = r.isChamado ? (r.label||'—') : (proj?.client||proj?.name||'—');
+  const projNome = !r.isChamado && proj ? proj.name : '';
+  const nome = stage.name || '—';
+  const inicio = r.startD ? r.startD.split('-').reverse().join('/') : '—';
+  const fim = r.endD && r.endD !== r.startD ? r.endD.split('-').reverse().join('/') : '';
+  const datas = fim ? (inicio + ' → ' + fim) : inicio;
+  const horario = (stage.timeStart && stage.timeEnd)
+    ? (stage.timeStart + ' → ' + stage.timeEnd) : '';
+  const exec = stage.executor || '';
+  const status = stage.status || '';
+  const STC={'Concluído':'var(--green)','Resolvido':'var(--green)','Em Andamento':'var(--accent)','Pausado':'var(--amber)','Pendente':'var(--dim)','Fechado':'var(--dim)'};
+  const statusColor = STC[status]||'var(--mid)';
+
+  let html = '<span class="tip-name">'+esc(nome)+'</span>';
+  html += '<div class="tip-row">📁 <span class="tip-val">'+esc(cliente)+(projNome&&projNome!==cliente?' · '+esc(projNome):'')+'</span></div>';
+  html += '<div class="tip-row">📅 <span class="tip-val">'+datas+'</span></div>';
+  if(horario) html += '<div class="tip-row">🕐 <span class="tip-val">'+horario+'</span></div>';
+  if(exec)    html += '<div class="tip-row">👤 <span class="tip-val">'+esc(exec)+'</span></div>';
+  if(status)  html += '<div class="tip-row">● <span style="color:'+statusColor+';font-weight:700">'+esc(status)+'</span></div>';
+  return html;
+}
+
 function renderCGantt(){
   const el = document.getElementById('cg-box');
   if(!el) return;
@@ -2995,7 +3035,10 @@ function renderCGantt(){
         const radius = isStart && isEnd ? '4px' : isStart ? '4px 0 0 4px' : isEnd ? '0 4px 4px 0' : '0';
         const opacity = isDone ? '0.6' : isActive ? '1' : '0.75';
         return `<td style="${bg};padding:2px 1px">
-          <div style="height:16px;background:${barCol};border-radius:${radius};opacity:${opacity};min-width:4px"></div>
+          <div class="cg-bar-wrap">
+            <div style="height:16px;background:${barCol};border-radius:${radius};opacity:${opacity};min-width:4px"></div>
+            <div class="cg-tip">${cgTooltip(r, stage)}</div>
+          </div>
         </td>`;
       }
       return `<td style="${bg}"></td>`;
