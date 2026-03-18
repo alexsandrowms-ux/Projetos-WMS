@@ -3147,15 +3147,22 @@ function deleteSlaConfig(id){
 
 
 // ── OS Tag helpers ──
+function removeOsTag(type,i){
+  if(type==='snk')_chOsSnkList.splice(i,1);
+  else _chOsPaniceList.splice(i,1);
+  renderOsTags(type);
+}
 function renderOsTags(type){
   const list = type==='snk' ? _chOsSnkList : _chOsPaniceList;
   const el = document.getElementById('ch-os-'+type+'-tags');
   if(!el) return;
-  el.innerHTML = list.map((v,i) => `
-    <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(14,165,233,.12);color:var(--accent);border:1px solid rgba(14,165,233,.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700">
-      ${esc(v)}
-      <span onclick="_ch${type==='snk'?'OsSnk':'OsPanice'}List.splice(${i},1);renderOsTags('${type}')" style="cursor:pointer;color:var(--dim);font-size:13px;line-height:1">×</span>
-    </span>`).join('');
+  const q = type==='snk' ? 'snk' : 'panice';
+  el.innerHTML = list.map((v,i) =>
+    '<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(14,165,233,.12);color:var(--accent);border:1px solid rgba(14,165,233,.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700">'+
+    esc(v)+
+    '<span data-type="'+q+'" data-idx="'+i+'" onclick="removeOsTag(this.dataset.type,+this.dataset.idx)" style="cursor:pointer;color:var(--dim);font-size:13px;line-height:1;margin-left:4px">×</span>'+
+    '</span>'
+  ).join('');
 }
 
 function addOsTag(type){
@@ -3253,6 +3260,8 @@ function openChamadoModal(id=null){
   openModal('modal-chamado');
 }
 
+function removeEvTag(i){_chEvList.splice(i,1);renderChEvList();}
+
 function addChamadoEvidencia(){
   const desc=document.getElementById('ch-ev-desc').value.trim();
   const url=document.getElementById('ch-ev-url').value.trim();
@@ -3271,15 +3280,19 @@ function addChamadoEvidencia(){
 function renderChEvList(){
   const el=document.getElementById('ch-ev-list');if(!el)return;
   if(!_chEvList.length){el.innerHTML='<div style="font-size:11px;color:var(--dim);padding:4px 0">Nenhuma evidência adicionada.</div>';return;}
-  el.innerHTML=_chEvList.map((e,i)=>`
-    <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
-      <span style="font-size:13px">${e.fileData?'📄':'📎'}</span>
-      <span style="font-size:11px;color:var(--text);flex:1">${esc(e.desc)}${e.fileName?` <span style="color:var(--dim);font-size:10px">(${esc(e.fileName)})</span>`:''}</span>
-      ${e.fileData?`<a href="${e.fileData}" download="${esc(e.fileName||e.desc)}" style="font-size:10px;color:var(--green);font-weight:700">⬇ Baixar</a>`:''}
-      ${e.url&&!e.fileData?`<a href="${esc(e.url)}" target="_blank" style="font-size:10px;color:var(--accent)">🔗 Link</a>`:''}
-      <span style="font-size:10px;color:var(--dim)">${e.date}</span>
-      <button class="btn btn-ghost btn-xs" onclick="_chEvList.splice(${i},1);renderChEvList()">✕</button>
-    </div>`).join('');
+  el.innerHTML=_chEvList.map((e,i)=>{
+    const icon=e.fileData?'📄':'📎';
+    const namePart=e.fileName?(' <span style="color:var(--dim);font-size:10px">('+esc(e.fileName)+')</span>'):'';
+    const dlLink=e.fileData?('<a href="'+e.fileData+'" download="'+esc(e.fileName||e.desc)+'" style="font-size:10px;color:var(--green);font-weight:700">⬇ Baixar</a>'):'';
+    const urlLink=e.url&&!e.fileData?('<a href="'+esc(e.url)+'" target="_blank" style="font-size:10px;color:var(--accent)">🔗 Link</a>'):'';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">'+
+      '<span style="font-size:13px">'+icon+'</span>'+
+      '<span style="font-size:11px;color:var(--text);flex:1">'+esc(e.desc)+namePart+'</span>'+
+      dlLink+urlLink+
+      '<span style="font-size:10px;color:var(--dim)">'+e.date+'</span>'+
+      '<button class="btn btn-ghost btn-xs" onclick="removeEvTag('+i+')">✕</button>'+
+      '</div>';
+  }).join('');
 }
 
 function saveChamado(){
@@ -3383,8 +3396,8 @@ function renderChamados(){
       <div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">
-            ${(c.osSnkList||[c.osSnk]).filter(Boolean).map(v=>`<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(14,165,233,.1);padding:2px 8px;border-radius:4px">SNK: ${esc(v)}</span>`).join('')}
-            ${(c.osPaniceList||[c.osPanice]).filter(Boolean).map(v=>`<span style="font-size:11px;font-weight:700;color:var(--purple);background:rgba(167,139,250,.1);padding:2px 8px;border-radius:4px">PAN: ${esc(v)}</span>`).join('')}
+            ${(c.osSnkList||[c.osSnk]).filter(Boolean).map(v=>'<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(14,165,233,.1);padding:2px 8px;border-radius:4px">SNK: '+esc(v)+'</span>').join('')}
+            ${(c.osPaniceList||[c.osPanice]).filter(Boolean).map(v=>'<span style="font-size:11px;font-weight:700;color:var(--purple);background:rgba(167,139,250,.1);padding:2px 8px;border-radius:4px">PAN: '+esc(v)+'</span>').join('')}
             <span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;background:${sc}18;color:${sc};border:1px solid ${sc}30">${c.status}</span>
             <span style="font-size:10px;color:var(--dim);background:var(--bg4);padding:2px 7px;border-radius:10px">${c.tipo||'Suporte'}</span>
             ${sla?`<span style="font-size:10px;font-weight:700;color:${sla.color}">${sla.icon} SLA: ${sla.label}</span>`:''}
@@ -3395,7 +3408,7 @@ function renderChamados(){
             ${c.consultor?`<span>👤 ${esc(c.consultor)}</span>`:''}
             ${c.contato?`<span>🤝 ${esc(c.contato)}${c.fone?' · '+esc(c.fone):''}${c.email?' · <a href="mailto:'+esc(c.email)+'" style="color:var(--accent)">'+esc(c.email)+'</a>':''}</span>`:''}
             ${c.produto?`<span>📦 ${esc(c.produto)}${c.versao?' v'+esc(c.versao):''}</span>`:''}
-            ${c.agendamento?`<span style="color:${isAgendPassado(c)?'var(--red)':isAgendHoje(c)?'var(--accent)':'var(--mid)'}">📅 Agend: ${fmtDT(c.agendamento)}</span>`:''}
+            ${c.agendamento?('<span style="color:'+(isAgendPassado(c)?'var(--red)':isAgendHoje(c)?'var(--accent)':'var(--mid)')+'">📅 Agend: '+fmtDT(c.agendamento)+'</span>'):''}
             ${c.inicio?`<span>🕐 ${fmtDT(c.inicio)}${c.fim?' → '+fmtDT(c.fim):''}</span>`:''}
             ${c.tempo?`<span style="color:var(--green);font-weight:700">⏱ ${esc(c.tempo)}</span>`:''}
             ${c.slaHoras?`<span>SLA: ${esc(c.slaNome)} (${c.slaHoras}h)</span>`:''}
