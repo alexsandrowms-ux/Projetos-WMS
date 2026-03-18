@@ -761,15 +761,21 @@ datalist{display:none}
         </div>
 
         <!-- FILTROS -->
-        <div id="ch-filtros" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-          <input class="fc" id="ch-search" placeholder="🔍 Buscar chamado, OS, consultor..." style="max-width:280px;padding:7px 10px;font-size:12px" oninput="renderChamados()">
-          <select class="fc" id="ch-filter-status" onchange="renderChamados()" style="width:140px;font-size:12px;padding:7px 8px">
+        <div id="ch-filtros" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+          <input class="fc" id="ch-search" placeholder="🔍 Buscar chamado, OS, descrição..." style="max-width:240px;padding:7px 10px;font-size:12px" oninput="renderChamados()">
+          <select class="fc" id="ch-filter-status" onchange="renderChamados()" style="width:150px;font-size:12px;padding:7px 8px">
             <option value="">Todos os status</option>
             <option>Aberto</option><option>Em Atendimento</option><option>Aguardando Cliente</option>
-            <option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
+            <option>Pausado</option><option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
           </select>
-          <select class="fc" id="ch-filter-proj" onchange="renderChamados()" style="width:180px;font-size:12px;padding:7px 8px">
-            <option value="">Todos os projetos</option>
+          <select class="fc" id="ch-filter-cliente" onchange="renderChamados()" style="width:170px;font-size:12px;padding:7px 8px">
+            <option value="">Todos os clientes</option>
+          </select>
+          <select class="fc" id="ch-filter-consultor" onchange="renderChamados()" style="width:150px;font-size:12px;padding:7px 8px">
+            <option value="">Todos consultores</option>
+          </select>
+          <select class="fc" id="ch-filter-produto" onchange="renderChamados()" style="width:140px;font-size:12px;padding:7px 8px">
+            <option value="">Todos produtos</option>
           </select>
           <select class="fc" id="ch-filter-sla" onchange="renderChamados()" style="width:130px;font-size:12px;padding:7px 8px">
             <option value="">Todos SLA</option>
@@ -777,6 +783,13 @@ datalist{display:none}
             <option value="risco">⚠️ Em Risco</option>
             <option value="violado">🔴 Violado</option>
           </select>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+          <label style="font-size:11px;color:var(--dim);font-weight:600">📅 Período:</label>
+          <input class="fc" type="date" id="ch-filter-de" onchange="renderChamados()" style="width:140px;font-size:12px;padding:6px 8px" placeholder="De">
+          <input class="fc" type="date" id="ch-filter-ate" onchange="renderChamados()" style="width:140px;font-size:12px;padding:6px 8px" placeholder="Até">
+          <button class="btn btn-ghost btn-xs" onclick="clearChFiltros()">✕ Limpar filtros</button>
+          <span id="ch-filtros-ativos" style="font-size:11px;color:var(--accent)"></span>
         </div>
 
         <!-- CONTENT AREA -->
@@ -3424,8 +3437,37 @@ function calcChamadoCusto(){
 
 // ── Relatório de Atendimento ──
 function exportRelatorioAtendimento(){
-  const chs=getChamados();
-  if(!chs.length){toast('Nenhum chamado para exportar','warn');return;}
+  // Apply same filters as current view
+  let all=[...(S.chamados||[])];
+  const search=(document.getElementById('ch-search')?.value||'').toLowerCase();
+  const fStatus=document.getElementById('ch-filter-status')?.value||'';
+  const fCliente=document.getElementById('ch-filter-cliente')?.value||'';
+  const fConsultor=document.getElementById('ch-filter-consultor')?.value||'';
+  const fProduto=document.getElementById('ch-filter-produto')?.value||'';
+  const fSla=document.getElementById('ch-filter-sla')?.value||'';
+  const fDe=document.getElementById('ch-filter-de')?.value||'';
+  const fAte=document.getElementById('ch-filter-ate')?.value||'';
+  if(search)all=all.filter(c=>[(c.osSnk||''),(c.consultor||''),(c.descricao||''),(c.produto||''),(getChCliente(c))].some(v=>v.toLowerCase().includes(search)));
+  if(fStatus)all=all.filter(c=>c.status===fStatus);
+  if(fCliente)all=all.filter(c=>getChCliente(c)===fCliente);
+  if(fConsultor)all=all.filter(c=>c.consultor===fConsultor);
+  if(fProduto)all=all.filter(c=>c.produto===fProduto);
+  if(fSla)all=all.filter(c=>{const s=slaStatus(c);return s&&s.cls===fSla;});
+  if(fDe)all=all.filter(c=>{const d=c.agendamento||c.inicio||c.createdAt||'';return d>=fDe;});
+  if(fAte)all=all.filter(c=>{const d=c.agendamento||c.inicio||c.createdAt||'';return !d||d<=fAte+'T23:59';});
+  const chs=all;
+  if(!chs.length){toast('Nenhum chamado com os filtros atuais','warn');return;}
+
+  // Build filter description for report header
+  const filtrosDesc=[
+    fStatus?'Status: '+fStatus:'',
+    fCliente?'Cliente: '+fCliente:'',
+    fConsultor?'Consultor: '+fConsultor:'',
+    fProduto?'Produto: '+fProduto:'',
+    fSla?'SLA: '+fSla:'',
+    fDe?'De: '+fDe.split('-').reverse().join('/'):'',
+    fAte?'Até: '+fAte.split('-').reverse().join('/'):'',
+  ].filter(Boolean).join(' · ');
   const now=new Date();
   const dtStr=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 
@@ -3532,7 +3574,7 @@ tr:hover td{background:#f8fafc}
     <div style="width:1px;height:40px;background:#e2e8f0"></div>
     <div>
       <div style="font-family:'Outfit',sans-serif;font-size:17px;font-weight:800">Relatório de Atendimentos / Sustentação</div>
-      <div style="font-size:11.5px;color:#64748b;margin-top:2px">Gerado em ${dtStr} · ${total} chamado${total!==1?'s':''}</div>
+      <div style="font-size:11.5px;color:#64748b;margin-top:2px">Gerado em ${dtStr} · ${total} chamado${total!==1?'s':''}</div>${filtrosDesc?`<div style="font-size:11px;color:#0ea5e9;margin-top:4px;font-weight:600">🔍 Filtros: ${filtrosDesc}</div>`:''}
     </div>
   </div>
 </div>
@@ -3641,23 +3683,61 @@ function buildChamadoCard(c){
   +'</div>';
 }
 
+function clearChFiltros(){
+  ['ch-search','ch-filter-status','ch-filter-cliente','ch-filter-consultor','ch-filter-produto','ch-filter-sla','ch-filter-de','ch-filter-ate'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  renderChamados();
+}
+
+function getChCliente(c){
+  const proj=(S.projects||[]).find(p=>p.id===c.projId);
+  return proj?.client||c.cliente||'';
+}
+
 function renderChamados(){
-  const pSel=document.getElementById('ch-filter-proj');
-  if(pSel){
-    const cur=pSel.value;
-    pSel.innerHTML='<option value="">Todos os projetos</option>'+(S.projects||[]).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
-    pSel.value=cur;
-  }
   const el=document.getElementById('ch-list-wrap');if(!el)return;
-  let chs=[...(S.chamados||[])];
+  let all=[...(S.chamados||[])];
+
+  // Build dynamic filter options
+  const clientes=[...new Set(all.map(c=>getChCliente(c)).filter(Boolean))].sort();
+  const consultores=[...new Set(all.map(c=>c.consultor||'').filter(Boolean))].sort();
+  const produtos=[...new Set(all.map(c=>c.produto||'').filter(Boolean))].sort();
+
+  const populate=(id,opts,cur)=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    const prev=cur||sel.value;
+    const label={'ch-filter-cliente':'Todos os clientes','ch-filter-consultor':'Todos consultores','ch-filter-produto':'Todos produtos'}[id]||'Todos';
+    sel.innerHTML=`<option value="">${label}</option>`+opts.map(o=>`<option value="${esc(o)}" ${prev===o?'selected':''}>${esc(o)}</option>`).join('');
+  };
+  populate('ch-filter-cliente',clientes);
+  populate('ch-filter-consultor',consultores);
+  populate('ch-filter-produto',produtos);
+
+  // Read filters
   const search=(document.getElementById('ch-search')?.value||'').toLowerCase();
   const fStatus=document.getElementById('ch-filter-status')?.value||'';
-  const fProj=document.getElementById('ch-filter-proj')?.value||'';
+  const fCliente=document.getElementById('ch-filter-cliente')?.value||'';
+  const fConsultor=document.getElementById('ch-filter-consultor')?.value||'';
+  const fProduto=document.getElementById('ch-filter-produto')?.value||'';
   const fSla=document.getElementById('ch-filter-sla')?.value||'';
-  if(search)chs=chs.filter(c=>[(c.osSnk||''),(c.osPanice||''),(c.consultor||''),(c.descricao||''),(c.produto||''),(c.cliente||'')].some(v=>v.toLowerCase().includes(search)));
+  const fDe=document.getElementById('ch-filter-de')?.value||'';
+  const fAte=document.getElementById('ch-filter-ate')?.value||'';
+
+  let chs=[...all];
+  if(search)chs=chs.filter(c=>[(c.osSnk||''),(c.osPanice||''),(c.consultor||''),(c.descricao||''),(c.produto||''),(c.cliente||''),(getChCliente(c))].some(v=>v.toLowerCase().includes(search)));
   if(fStatus)chs=chs.filter(c=>c.status===fStatus);
-  if(fProj)chs=chs.filter(c=>c.projId===fProj);
+  if(fCliente)chs=chs.filter(c=>getChCliente(c)===fCliente);
+  if(fConsultor)chs=chs.filter(c=>c.consultor===fConsultor);
+  if(fProduto)chs=chs.filter(c=>c.produto===fProduto);
   if(fSla)chs=chs.filter(c=>{const s=slaStatus(c);return s&&s.cls===fSla;});
+  if(fDe)chs=chs.filter(c=>{const d=c.agendamento||c.inicio||c.createdAt||'';return d>=fDe;});
+  if(fAte)chs=chs.filter(c=>{const d=c.agendamento||c.inicio||c.createdAt||'';return !d||d<=fAte+'T23:59';});
+
+  // Show active filters indicator
+  const ativos=[fStatus,fCliente,fConsultor,fProduto,fSla,fDe,fAte].filter(Boolean).length;
+  const ativosEl=document.getElementById('ch-filtros-ativos');
+  if(ativosEl)ativosEl.textContent=ativos>0?`${ativos} filtro${ativos>1?'s':''} ativo${ativos>1?'s':''}`:'';
   chs.sort((a,b)=>{
     const ord=['Em Atendimento','Aberto','Aguardando Cliente','Resolvido','Fechado','Cancelado'];
     const oa=ord.indexOf(a.status),ob=ord.indexOf(b.status);
