@@ -3550,6 +3550,63 @@ function renderChEvList(){
   }).join('');
 }
 
+
+function openChamadoModal(id=null){
+  _eChamadoId=id;_chEvList=[];
+  const ch=id?chamadoById(id):null;
+  document.getElementById('ch-modal-title').textContent=ch?'✏️ Editar Chamado':'🎧 Novo Chamado';
+  // ossnk/panice now comment (handled via _chOsSnkList/_chOsPaniceList arrays below)
+  document.getElementById('ch-consultor').value=ch?.consultor||'';
+  document.getElementById('ch-produto').value=ch?.produto||'';
+  document.getElementById('ch-versao').value=ch?.versao||'';
+  document.getElementById('ch-contato').value=ch?.contato||'';
+  document.getElementById('ch-email').value=ch?.email||'';
+  document.getElementById('ch-fone').value=ch?.fone||'';
+  document.getElementById('ch-status').value=ch?.status||'Aberto';
+  document.getElementById('ch-tipo').value=ch?.tipo||'Suporte';
+  document.getElementById('ch-agendamento').value=ch?.agendamento||'';
+  document.getElementById('ch-prazo-conclusao').value=ch?.prazoConclusao||'';
+  updateChAgendStatus(ch?.agendamento||'');
+  document.getElementById('ch-inicio').value=ch?.inicio||'';
+  document.getElementById('ch-fim').value=ch?.fim||'';
+  document.getElementById('ch-tempo').value=ch?.tempo||'';
+  document.getElementById('ch-descricao').value=ch?.descricao||'';
+  document.getElementById('ch-solucao').value=ch?.solucao||'';
+  document.getElementById('ch-valor-hora').value=ch?.valorHora||'';
+  document.getElementById('ch-custo-total').value=ch?.custoTotal||'';
+  const projSel=document.getElementById('ch-proj-id');
+  projSel.innerHTML='<option value="">— Sem projeto —</option>'+(S.projects||[]).map(p=>`<option value="${p.id}" ${ch?.projId===p.id?'selected':''}>${esc(p.name)} · ${esc(p.client||'')}</option>`).join('');
+  const clienteEl=document.getElementById('ch-cliente');
+  if(clienteEl){
+    clienteEl.value=ch?.cliente||'';
+    if(ch?.projId&&!ch?.cliente){
+      const proj=(S.projects||[]).find(p=>p.id===ch.projId);
+      if(proj?.client){clienteEl.value=proj.client;clienteEl.style.background='rgba(14,165,233,.06)';}
+    }
+  }
+  const slaSel=document.getElementById('ch-sla-nivel');
+  slaSel.innerHTML='<option value="">— Sem SLA —</option>'+getSlaConfigs().map(c=>`<option value="${c.id}" ${ch?.slaId===c.id?'selected':''}>${esc(c.name)} (${c.horas}h)</option>`).join('');
+  _chEvList=ch?.evidencias?[...ch.evidencias]:[];
+  _chOsSnkList=ch?.osSnkList?[...ch.osSnkList]:(ch?.osSnk?[{num:ch.osSnk,status:''}]:[]);
+  _chOsPaniceList=ch?.osPaniceList?[...ch.osPaniceList]:(ch?.osPanice?[ch.osPanice]:[]);
+  _chEvFileData=null;
+  renderChEvList();
+  renderOsTags('snk');
+  renderOsTags('panice');
+  document.getElementById('ch-intervalo').value=ch?.intervalo||'';
+  document.getElementById('ch-motivo-pausa').value=ch?.motivoPausa||'';
+  const impCheck=document.getElementById('ch-tem-impedimento');
+  if(impCheck){impCheck.checked=ch?.temImpedimento||false;}
+  document.getElementById('ch-motivo-impedimento').value=ch?.motivoImpedimento||'';
+  onChImpedimentoChange(ch?.temImpedimento||false);
+  onChStatusChange(ch?.status||'Aberto');
+  if(ch?.inicio&&ch?.fim)calcChamadoTempo();
+  calcChamadoCusto();
+  const fi=document.getElementById('ch-ev-file');if(fi)fi.value='';
+  const fp=document.getElementById('ch-ev-file-preview');if(fp)fp.style.display='none';
+  openModal('modal-chamado');
+}
+
 function saveChamado(){
   const osSnk=_chOsSnkList.join(', ');
   const descricao=document.getElementById('ch-descricao').value.trim();
@@ -3567,7 +3624,6 @@ function saveChamado(){
     consultor:document.getElementById('ch-consultor').value.trim(),
     produto:document.getElementById('ch-produto').value.trim(),
     versao:document.getElementById('ch-versao').value.trim(),
-    situacaoSnk:document.getElementById('ch-situacao-snk')?.value||'',
     valorHora:parseFloat(document.getElementById('ch-valor-hora')?.value)||0,
     custoTotal:document.getElementById('ch-custo-total')?.value||'',
     contato:document.getElementById('ch-contato')?.value.trim()||'',
