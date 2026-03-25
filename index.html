@@ -152,6 +152,12 @@ textarea.fc{resize:vertical;min-height:60px}
 
 /* Root */
 .sroot{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;transition:border-color .15s,box-shadow .15s}
+.drag-handle{display:flex;align-items:center;justify-content:center;width:22px;cursor:grab;color:var(--dim);font-size:14px;flex-shrink:0;opacity:.4;transition:opacity .15s;user-select:none;padding:0 2px}
+.drag-handle:hover{opacity:1;color:var(--accent)}
+.drag-handle:active{cursor:grabbing}
+.stage-section.drag-over{opacity:.5;border:2px dashed var(--accent);border-radius:var(--r)}
+.stage-section.dragging{opacity:.3;transform:scale(.98)}
+.ssrow .drag-handle{width:18px;font-size:12px}
 .sroot:hover{border-color:var(--border2);box-shadow:0 2px 10px rgba(0,0,0,.15)}
 .sroot-body{display:flex;align-items:center;gap:10px;padding:11px 14px;flex:1;min-width:0;cursor:pointer}
 .sroot-acts{display:flex;align-items:center;gap:4px;padding:8px 10px;border-left:1px solid var(--border);flex-shrink:0;background:rgba(0,0,0,.1)}
@@ -1292,6 +1298,21 @@ datalist{display:none}
           <input class="fc" id="ch-cliente" placeholder="Nome do cliente">
         </div>
       </div>
+      <div class="frow">
+        <div class="fg"><label class="fl">📋 Situação da OS Sankhya</label>
+          <select class="fc" id="ch-situacao-snk">
+            <option value="">— Sem OS / Não se aplica —</option>
+            <option>Em Análise no Service Desk</option>
+            <option>OS Em Análise no Desenvolvimento</option>
+            <option>OS Em Correção</option>
+            <option>OS Aguardando Teste de Saída</option>
+            <option>Correção Disponibilizada</option>
+            <option>Correção Validada pela Panice/Ramada</option>
+          </select>
+        </div>
+        <div class="fg"></div>
+        <div class="fg"></div>
+      </div>
 
       <!-- Consultor e Produto -->
       <div class="frow">
@@ -2140,9 +2161,10 @@ function renderStages(){
     },0);
     const realizado=_realizadoMin/60; // keep full precision for display
     const ps=prazoStatus(root);
-    return`<div class="stage-section">
+    return`<div class="stage-section" data-root-id="${root.id}" draggable="false">
       <div class="sroot" style="border-left:3px solid ${col}${root.bgColor?`;background:${root.bgColor}`:''}">
         <div style="display:flex;align-items:stretch">
+          <div class="drag-handle" draggable="false" title="Arrastar para reordenar" onmousedown="startRootDrag(event,'${root.id}')">⠿</div>
           <div class="sroot-body" onclick="toggleKids('${root.id}')">
             ${kids.length>0?`<span class="collapse-btn" id="chev_${root.id}" title="${kids.length} sub-etapa(s)">−</span>`:'<span style="width:26px;flex-shrink:0"></span>'}
             <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40">${esc(root.num)||'–'}</span>
@@ -2180,8 +2202,9 @@ function renderStages(){
       </div>
       <div class="substages-wrap" id="kids_${root.id}">
         ${kids.map((k,ki)=>{const kps=prazoStatus(k);return`
-        <div class="ssrow" style="${k.bgColor?`background:${k.bgColor}`:''}">
+        <div class="ssrow" style="${k.bgColor?`background:${k.bgColor}`:''}" data-kid-id="${k.id}" data-root-id="${root.id}">
           <div class="ssrow-bar" style="background:${col}"></div>
+          <div class="drag-handle" title="Arrastar para reordenar" onmousedown="startKidDrag(event,'${k.id}','${root.id}')">⠿</div>
           <div class="ssrow-body">
             <div class="ss-name">
               <span class="ss-num" style="color:${col}">${esc(k.num)||'–'}</span>
@@ -2370,6 +2393,176 @@ function toggleKids(id){
   el.style.display=hide?'none':'';
   if(ch){ch.textContent=hide?'+':'−';ch.classList.toggle('open',!hide);}
 }
+
+// ════════════════════════════════════════════════
+// DRAG & DROP — Reordenar Etapas e Sub-etapas
+// ════════════════════════════════════════════════
+let _dragState = null;
+
+function startRootDrag(e, rootId){
+  e.stopPropagation();
+  const proj = getP(S.cur); if(!proj) return;
+  const el = e.currentTarget.closest('.stage-section');
+  if(!el) return;
+
+  _dragState = { type:'root', id:rootId, el, startY:e.clientY, clone:null };
+
+  // Create ghost
+  const clone = el.cloneNode(true);
+  clone.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;opacity:.85;transform:scale(1.01);box-shadow:0 8px 30px rgba(0,0,0,.4);width:'+el.offsetWidth+'px;left:'+el.getBoundingClientRect().left+'px;top:'+el.getBoundingClientRect().top+'px;transition:none';
+  document.body.appendChild(clone);
+  _dragState.clone = clone;
+  _dragState.origTop = el.getBoundingClientRect().top;
+
+  el.classList.add('dragging');
+
+  document.addEventListener('mousemove', onRootDragMove);
+  document.addEventListener('mouseup',   onRootDragEnd);
+  e.preventDefault();
+}
+
+function onRootDragMove(e){
+  if(!_dragState) return;
+  const dy = e.clientY - _dragState.startY;
+  _dragState.clone.style.top = (_dragState.origTop + dy) + 'px';
+
+  // Find element under cursor (excluding clone)
+  _dragState.clone.style.display = 'none';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  _dragState.clone.style.display = '';
+
+  // Find nearest stage-section
+  const targetSection = under?.closest('.stage-section');
+  document.querySelectorAll('.stage-section').forEach(s=>s.classList.remove('drag-over'));
+  if(targetSection && targetSection !== _dragState.el){
+    targetSection.classList.add('drag-over');
+    _dragState.targetId = targetSection.dataset.rootId;
+  } else {
+    _dragState.targetId = null;
+  }
+}
+
+function onRootDragEnd(e){
+  document.removeEventListener('mousemove', onRootDragMove);
+  document.removeEventListener('mouseup',   onRootDragEnd);
+  if(!_dragState) return;
+
+  _dragState.clone?.remove();
+  _dragState.el.classList.remove('dragging');
+  document.querySelectorAll('.stage-section').forEach(s=>s.classList.remove('drag-over'));
+
+  if(_dragState.targetId && _dragState.targetId !== _dragState.id){
+    reorderRoot(_dragState.id, _dragState.targetId);
+  }
+  _dragState = null;
+}
+
+function reorderRoot(dragId, targetId){
+  const proj = getP(S.cur); if(!proj) return;
+  const stages = proj.stages || [];
+  const roots = stages.filter(s=>!s.parentId);
+  const fromIdx = roots.findIndex(r=>r.id===dragId);
+  const toIdx   = roots.findIndex(r=>r.id===targetId);
+  if(fromIdx<0||toIdx<0) return;
+
+  // Reorder: move dragId to before/after targetId
+  roots.splice(toIdx, 0, roots.splice(fromIdx, 1)[0]);
+
+  // Rebuild stages array preserving kids order
+  const kids = stages.filter(s=>s.parentId);
+  proj.stages = [];
+  roots.forEach((r,ri)=>{
+    r.num = String(ri+1);
+    proj.stages.push(r);
+    const ks = kids.filter(k=>k.parentId===r.id);
+    ks.forEach((k,ki)=>{ k.num=r.num+'.'+(ki+1); proj.stages.push(k); });
+  });
+
+  saveS();
+  renderStages();
+  toast('Etapas reordenadas ✓','ok');
+}
+
+// ── Sub-etapa drag ──
+function startKidDrag(e, kidId, rootId){
+  e.stopPropagation();
+  const proj = getP(S.cur); if(!proj) return;
+  const el = e.currentTarget.closest('.ssrow');
+  if(!el) return;
+
+  _dragState = { type:'kid', id:kidId, rootId, el, startY:e.clientY, clone:null };
+
+  const clone = el.cloneNode(true);
+  clone.style.cssText = 'position:fixed;pointer-events:none;z-index:9999;opacity:.85;transform:scale(1.01);box-shadow:0 4px 20px rgba(0,0,0,.4);width:'+el.offsetWidth+'px;left:'+el.getBoundingClientRect().left+'px;top:'+el.getBoundingClientRect().top+'px;transition:none';
+  document.body.appendChild(clone);
+  _dragState.clone = clone;
+  _dragState.origTop = el.getBoundingClientRect().top;
+
+  el.style.opacity = '0.3';
+  document.addEventListener('mousemove', onKidDragMove);
+  document.addEventListener('mouseup',   onKidDragEnd);
+  e.preventDefault();
+}
+
+function onKidDragMove(e){
+  if(!_dragState||_dragState.type!=='kid') return;
+  const dy = e.clientY - _dragState.startY;
+  _dragState.clone.style.top = (_dragState.origTop + dy) + 'px';
+
+  _dragState.clone.style.display = 'none';
+  const under = document.elementFromPoint(e.clientX, e.clientY);
+  _dragState.clone.style.display = '';
+
+  const targetRow = under?.closest('.ssrow');
+  document.querySelectorAll('.ssrow').forEach(r=>r.classList.remove('drag-over'));
+  if(targetRow && targetRow !== _dragState.el && targetRow.dataset.rootId === _dragState.rootId){
+    targetRow.classList.add('drag-over');
+    _dragState.targetKidId = targetRow.dataset.kidId;
+  } else {
+    _dragState.targetKidId = null;
+  }
+}
+
+function onKidDragEnd(e){
+  document.removeEventListener('mousemove', onKidDragMove);
+  document.removeEventListener('mouseup',   onKidDragEnd);
+  if(!_dragState||_dragState.type!=='kid') return;
+
+  _dragState.clone?.remove();
+  _dragState.el.style.opacity = '';
+  document.querySelectorAll('.ssrow').forEach(r=>r.classList.remove('drag-over'));
+
+  if(_dragState.targetKidId && _dragState.targetKidId !== _dragState.id){
+    reorderKid(_dragState.id, _dragState.targetKidId, _dragState.rootId);
+  }
+  _dragState = null;
+}
+
+function reorderKid(dragId, targetId, rootId){
+  const proj = getP(S.cur); if(!proj) return;
+  const stages = proj.stages || [];
+  const kids = stages.filter(s=>s.parentId===rootId);
+  const fromIdx = kids.findIndex(k=>k.id===dragId);
+  const toIdx   = kids.findIndex(k=>k.id===targetId);
+  if(fromIdx<0||toIdx<0) return;
+
+  kids.splice(toIdx, 0, kids.splice(fromIdx, 1)[0]);
+
+  // Find root num and update kid nums
+  const root = stages.find(s=>s.id===rootId);
+  const rootNum = root?.num||'';
+  kids.forEach((k,i)=>{ k.num = rootNum+'.'+(i+1); });
+
+  // Rebuild preserving order
+  const otherStages = stages.filter(s=>s.parentId!==rootId||s.id===rootId);
+  const rootIdx = otherStages.findIndex(s=>s.id===rootId);
+  proj.stages = [...otherStages.slice(0,rootIdx+1), ...kids, ...otherStages.slice(rootIdx+1)];
+
+  saveS();
+  renderStages();
+  toast('Sub-etapas reordenadas ✓','ok');
+}
+
 function toggleAllKids(collapse){
   const proj=getP(S.cur);if(!proj)return;
   (proj.stages||[]).filter(s=>!s.parentId).forEach(r=>{
@@ -3351,6 +3544,7 @@ function openChamadoModal(id=null){
   document.getElementById('ch-consultor').value=ch?.consultor||'';
   document.getElementById('ch-produto').value=ch?.produto||'';
   document.getElementById('ch-versao').value=ch?.versao||'';
+  document.getElementById('ch-situacao-snk').value=ch?.situacaoSnk||'';
   document.getElementById('ch-valor-hora').value=ch?.valorHora||'';
   document.getElementById('ch-custo-total').value=ch?.custoTotal||'';
   document.getElementById('ch-contato').value=ch?.contato||'';
@@ -3452,6 +3646,7 @@ function saveChamado(){
     consultor:document.getElementById('ch-consultor').value.trim(),
     produto:document.getElementById('ch-produto').value.trim(),
     versao:document.getElementById('ch-versao').value.trim(),
+    situacaoSnk:document.getElementById('ch-situacao-snk')?.value||'',
     valorHora:parseFloat(document.getElementById('ch-valor-hora')?.value)||0,
     custoTotal:document.getElementById('ch-custo-total')?.value||'',
     contato:document.getElementById('ch-contato')?.value.trim()||'',
@@ -3726,6 +3921,7 @@ function buildChamadoCard(c){
   // Status badge
   const statusBadge='<span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'30">'+c.status+'</span>';
   const tipoBadge='<span style="font-size:10px;color:var(--dim);background:var(--bg4);padding:2px 7px;border-radius:10px">'+(c.tipo||'Suporte')+'</span>';
+  const snkSitBadge=c.situacaoSnk?('<span style="font-size:10px;font-weight:700;color:var(--amber);background:rgba(245,158,11,.1);padding:2px 8px;border-radius:10px;border:1px solid rgba(245,158,11,.2)">📋 '+esc(c.situacaoSnk)+'</span>'):'';
 
   // Info line
   const projSpan=proj?('<span>📁 '+esc(proj.name)+' · '+esc(proj.client||c.cliente||'')+'</span>'):c.cliente?('<span>👤 '+esc(c.cliente)+'</span>'):'';
@@ -3748,7 +3944,7 @@ function buildChamadoCard(c){
     +'<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap">'
       +'<div style="flex:1;min-width:0">'
         +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">'
-          +snkTags+panTags+statusBadge+tipoBadge+slaBadge+(c.temImpedimento?'<span style="font-size:11px;font-weight:700;color:var(--red);background:rgba(239,68,68,.12);padding:2px 9px;border-radius:10px;border:1px solid rgba(239,68,68,.3)">🚫 Impedimento</span>':'')
+          +snkTags+panTags+statusBadge+tipoBadge+snkSitBadge+slaBadge+(c.temImpedimento?'<span style="font-size:11px;font-weight:700;color:var(--red);background:rgba(239,68,68,.12);padding:2px 9px;border-radius:10px;border:1px solid rgba(239,68,68,.3)">🚫 Impedimento</span>':'')
         +'</div>'
         +'<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px">'+esc(c.descricao||'Sem descrição')+'</div>'
         +'<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--mid)">'
