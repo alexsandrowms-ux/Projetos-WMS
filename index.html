@@ -3551,6 +3551,48 @@ function renderChEvList(){
 }
 
 
+
+function onChStatusChange(val){
+  const row = document.getElementById('ch-row-pausa');
+  if(row) row.style.display = val==='Pausado' ? '' : 'none';
+}
+
+function onChImpedimentoChange(checked){
+  const row = document.getElementById('ch-row-impedimento');
+  if(row) row.style.display = checked ? '' : 'none';
+  const stEl = document.getElementById('ch-status');
+  if(stEl){
+    if(checked && !['Bloqueado','Resolvido','Fechado','Cancelado'].includes(stEl.value)){
+      stEl.value='Bloqueado';
+    } else if(!checked && stEl.value==='Bloqueado'){
+      stEl.value='Em Atendimento';
+    }
+  }
+}
+
+function onChEvFile(input){
+  const file = input.files[0];
+  if(!file) return;
+  const preview = document.getElementById('ch-ev-file-preview');
+  if(file.size > 5*1024*1024){
+    toast('Arquivo muito grande (máx 5MB)','err');
+    input.value='';_chEvFileData=null;
+    if(preview){preview.style.display='none';}
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    _chEvFileData = {name:file.name, type:file.type, data:e.target.result};
+    if(preview){
+      preview.textContent='📎 '+file.name+' ('+(file.size/1024).toFixed(1)+' KB)';
+      preview.style.display='block';
+    }
+    const desc = document.getElementById('ch-ev-desc');
+    if(desc && !desc.value) desc.value = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
 function openChamadoModal(id=null){
   _eChamadoId=id;_chEvList=[];
   const ch=id?chamadoById(id):null;
