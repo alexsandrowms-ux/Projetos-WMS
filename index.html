@@ -1273,13 +1273,22 @@ datalist{display:none}
       <!-- IDs e Números -->
       <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px">Identificação</div>
       <div class="frow">
-        <div class="fg">
-          <label class="fl">Nº OS / Tkt Sankhya <span style="color:var(--dim);font-weight:400">(múltiplos)</span></label>
-          <div style="display:flex;gap:6px;margin-bottom:4px">
-            <input class="fc" id="ch-os-snk-input" placeholder="Ex: 626245" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addOsTag('snk');}">
-            <button class="btn btn-ghost btn-xs" onclick="addOsTag('snk')">+ Add</button>
+        <div class="fg span2" style="grid-column:span 2">
+          <label class="fl">Nº OS / Tkt Sankhya <span style="color:var(--dim);font-weight:400">(adicione um por um com situação)</span></label>
+          <div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">
+            <input class="fc" id="ch-os-snk-input" placeholder="Nº OS ex: 626245" style="flex:2;min-width:120px" onkeydown="if(event.key==='Enter'){event.preventDefault();addOsSnk();}">
+            <select class="fc" id="ch-os-snk-status" style="flex:3;min-width:180px">
+              <option value="">— Situação —</option>
+              <option>Em Análise no Service Desk</option>
+              <option>OS Em Análise no Desenvolvimento</option>
+              <option>OS Em Correção</option>
+              <option>OS Aguardando Teste de Saída</option>
+              <option>Correção Disponibilizada</option>
+              <option>Correção Validada pela Panice/Ramada</option>
+            </select>
+            <button class="btn btn-ghost btn-xs" onclick="addOsSnk()">+ Add</button>
           </div>
-          <div id="ch-os-snk-tags" style="display:flex;flex-wrap:wrap;gap:5px;min-height:24px"></div>
+          <div id="ch-os-snk-tags" style="display:flex;flex-direction:column;gap:5px;min-height:24px"></div>
         </div>
         <div class="fg">
           <label class="fl">Nº OS Panice <span style="color:var(--dim);font-weight:400">(múltiplos)</span></label>
@@ -1298,21 +1307,7 @@ datalist{display:none}
           <input class="fc" id="ch-cliente" placeholder="Nome do cliente">
         </div>
       </div>
-      <div class="frow">
-        <div class="fg"><label class="fl">📋 Situação da OS Sankhya</label>
-          <select class="fc" id="ch-situacao-snk">
-            <option value="">— Sem OS / Não se aplica —</option>
-            <option>Em Análise no Service Desk</option>
-            <option>OS Em Análise no Desenvolvimento</option>
-            <option>OS Em Correção</option>
-            <option>OS Aguardando Teste de Saída</option>
-            <option>Correção Disponibilizada</option>
-            <option>Correção Validada pela Panice/Ramada</option>
-          </select>
-        </div>
-        <div class="fg"></div>
-        <div class="fg"></div>
-      </div>
+
 
       <!-- Consultor e Produto -->
       <div class="frow">
@@ -2166,7 +2161,7 @@ function renderStages(){
         <div style="display:flex;align-items:stretch">
           <div class="drag-handle" draggable="false" title="Arrastar para reordenar" onmousedown="startRootDrag(event,'${root.id}')">⠿</div>
           <div class="sroot-body" onclick="toggleKids('${root.id}')">
-            ${kids.length>0?`<span class="collapse-btn" id="chev_${root.id}" title="${kids.length} sub-etapa(s)">−</span>`:'<span style="width:26px;flex-shrink:0"></span>'}
+            ${kids.length>0?`<span class="collapse-btn" id="chev_${root.id}" title="${kids.length} sub-etapa(s)">+</span>`:'<span style="width:26px;flex-shrink:0"></span>'}
             <span class="snum" style="background:${col}20;color:${col};border:1px solid ${col}40">${esc(root.num)||'–'}</span>
             <span class="sname">${esc(root.name)}</span>
             <div class="sr-pills">
@@ -2200,7 +2195,7 @@ function renderStages(){
           </div>`:''}
         </div>
       </div>
-      <div class="substages-wrap" id="kids_${root.id}">
+      <div class="substages-wrap" id="kids_${root.id}" style="display:none">
         ${kids.map((k,ki)=>{const kps=prazoStatus(k);return`
         <div class="ssrow" style="${k.bgColor?`background:${k.bgColor}`:''}" data-kid-id="${k.id}" data-root-id="${root.id}">
           <div class="ssrow-bar" style="background:${col}"></div>
@@ -3464,17 +3459,53 @@ function removeOsTag(type,i){
   else _chOsPaniceList.splice(i,1);
   renderOsTags(type);
 }
+
+const SNK_STATUS_COLOR={
+  'Em Análise no Service Desk':'#0ea5e9',
+  'OS Em Análise no Desenvolvimento':'#a78bfa',
+  'OS Em Correção':'#f59e0b',
+  'OS Aguardando Teste de Saída':'#38bdf8',
+  'Correção Disponibilizada':'#22c55e',
+  'Correção Validada pela Panice/Ramada':'#4ade80',
+};
+
 function renderOsTags(type){
-  const list = type==='snk' ? _chOsSnkList : _chOsPaniceList;
   const el = document.getElementById('ch-os-'+type+'-tags');
   if(!el) return;
-  const q = type==='snk' ? 'snk' : 'panice';
-  el.innerHTML = list.map((v,i) =>
-    '<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(14,165,233,.12);color:var(--accent);border:1px solid rgba(14,165,233,.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700">'+
-    esc(v)+
-    '<span data-type="'+q+'" data-idx="'+i+'" onclick="removeOsTag(this.dataset.type,+this.dataset.idx)" style="cursor:pointer;color:var(--dim);font-size:13px;line-height:1;margin-left:4px">×</span>'+
-    '</span>'
-  ).join('');
+  if(type==='snk'){
+    if(!_chOsSnkList.length){el.innerHTML='<div style="font-size:11px;color:var(--dim)">Nenhuma OS adicionada.</div>';return;}
+    el.innerHTML = _chOsSnkList.map((item,i) => {
+      const num = typeof item==='object'?item.num:item;
+      const st  = typeof item==='object'?item.status:'';
+      const col = SNK_STATUS_COLOR[st]||'var(--accent)';
+      return '<div style="display:flex;align-items:center;gap:8px;background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:6px 10px;margin-bottom:3px">'+
+        '<span style="font-size:12px;font-weight:700;color:var(--accent);min-width:80px">OS: '+esc(num)+'</span>'+
+        (st?'<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:'+col+'20;color:'+col+';border:1px solid '+col+'40">'+esc(st)+'</span>':'<span style="font-size:10px;color:var(--dim)">Sem situação</span>')+
+        '<span onclick="removeOsTag(&quot;snk&quot;,'+i+')" title="Remover" style="cursor:pointer;color:var(--dim);font-size:15px;line-height:1;margin-left:auto;padding:0 4px">×</span>'+
+      '</div>';
+    }).join('');
+  } else {
+    const list = _chOsPaniceList;
+    if(!list.length){el.innerHTML='<div style="font-size:11px;color:var(--dim)">Nenhuma OS adicionada.</div>';return;}
+    el.innerHTML = list.map((v,i) =>
+      '<span style="display:inline-flex;align-items:center;gap:5px;background:rgba(167,139,250,.12);color:var(--purple);border:1px solid rgba(167,139,250,.25);border-radius:20px;padding:2px 10px;font-size:11px;font-weight:700">'+
+      esc(v)+
+      '<span onclick="removeOsTag(&quot;panice&quot;,'+i+')" style="cursor:pointer;color:var(--dim);font-size:13px;line-height:1;margin-left:4px">×</span>'+
+      '</span>'
+    ).join('');
+  }
+}
+
+function addOsSnk(){
+  const inp = document.getElementById('ch-os-snk-input');
+  const sel = document.getElementById('ch-os-snk-status');
+  if(!inp) return;
+  const num = inp.value.trim();
+  if(!num){ toast('Informe o número da OS','err'); return; }
+  _chOsSnkList.push({ num, status: sel?.value||'' });
+  inp.value = '';
+  if(sel) sel.value = '';
+  renderOsTags('snk');
 }
 
 function addOsTag(type){
@@ -3482,120 +3513,10 @@ function addOsTag(type){
   if(!inp) return;
   const v = inp.value.trim();
   if(!v) return;
-  if(type==='snk') _chOsSnkList.push(v);
-  else _chOsPaniceList.push(v);
+  if(type==='snk'){ _chOsSnkList.push({num:v,status:''}); renderOsTags('snk'); }
+  else { _chOsPaniceList.push(v); renderOsTags('panice'); }
   inp.value = '';
-  renderOsTags(type);
 }
-
-// ── File attachment ──
-function onChEvFile(input){
-  const file = input.files[0];
-  if(!file) return;
-  const preview = document.getElementById('ch-ev-file-preview');
-  // Limit 5MB
-  if(file.size > 5*1024*1024){
-    toast('Arquivo muito grande (máx 5MB)','err');
-    input.value='';_chEvFileData=null;
-    if(preview){preview.style.display='none';}
-    return;
-  }
-  const reader = new FileReader();
-  reader.onload = e => {
-    _chEvFileData = {name: file.name, type: file.type, data: e.target.result};
-    if(preview){
-      preview.textContent = '📎 ' + file.name + ' (' + (file.size/1024).toFixed(1) + ' KB)';
-      preview.style.display = 'block';
-    }
-    // Auto-fill description if empty
-    const desc = document.getElementById('ch-ev-desc');
-    if(desc && !desc.value) desc.value = file.name;
-  };
-  reader.readAsDataURL(file);
-}
-
-// ── Status change — show/hide pause reason ──
-function onChStatusChange(val){
-  const row = document.getElementById('ch-row-pausa');
-  if(row) row.style.display = val==='Pausado' ? '' : 'none';
-}
-
-function onChImpedimentoChange(checked){
-  const row = document.getElementById('ch-row-impedimento');
-  if(row) row.style.display = checked ? '' : 'none';
-  // Auto-set status to Bloqueado when impedimento checked, clear when unchecked
-  const stEl = document.getElementById('ch-status');
-  if(!stEl) return;
-  if(checked){
-    stEl.value = 'Bloqueado';
-    onChStatusChange('Bloqueado');
-  } else {
-    // Restore to Em Atendimento if previously Bloqueado
-    if(stEl.value === 'Bloqueado') stEl.value = 'Em Atendimento';
-    onChStatusChange(stEl.value);
-  }
-}
-
-function openChamadoModal(id=null){
-  _eChamadoId=id;_chEvList=[];
-  const ch=id?chamadoById(id):null;
-  document.getElementById('ch-modal-title').textContent=ch?'✏️ Editar Chamado':'🎧 Novo Chamado';
-  // osSnk/osPanice now handled via _chOsSnkList/_chOsPaniceList arrays below
-  document.getElementById('ch-consultor').value=ch?.consultor||'';
-  document.getElementById('ch-produto').value=ch?.produto||'';
-  document.getElementById('ch-versao').value=ch?.versao||'';
-  document.getElementById('ch-situacao-snk').value=ch?.situacaoSnk||'';
-  document.getElementById('ch-valor-hora').value=ch?.valorHora||'';
-  document.getElementById('ch-custo-total').value=ch?.custoTotal||'';
-  document.getElementById('ch-contato').value=ch?.contato||'';
-  document.getElementById('ch-email').value=ch?.email||'';
-  document.getElementById('ch-fone').value=ch?.fone||'';
-  document.getElementById('ch-status').value=ch?.status||'Aberto';
-  document.getElementById('ch-tipo').value=ch?.tipo||'Suporte';
-  document.getElementById('ch-agendamento').value=ch?.agendamento||'';
-  document.getElementById('ch-prazo-conclusao').value=ch?.prazoConclusao||'';
-  updateChAgendStatus(ch?.agendamento||'');
-  document.getElementById('ch-inicio').value=ch?.inicio||'';
-  document.getElementById('ch-fim').value=ch?.fim||'';
-  document.getElementById('ch-tempo').value=ch?.tempo||'';
-  document.getElementById('ch-descricao').value=ch?.descricao||'';
-  document.getElementById('ch-solucao').value=ch?.solucao||'';
-  const projSel=document.getElementById('ch-proj-id');
-  projSel.innerHTML='<option value="">— Sem projeto —</option>'+(S.projects||[]).map(p=>`<option value="${p.id}" ${ch?.projId===p.id?'selected':''}>${esc(p.name)} · ${esc(p.client||'')}</option>`).join('');
-  // Populate client field
-  const clienteEl=document.getElementById('ch-cliente');
-  if(clienteEl){
-    clienteEl.value=ch?.cliente||'';
-    if(ch?.projId && !ch?.cliente){
-      const proj=(S.projects||[]).find(p=>p.id===ch.projId);
-      if(proj?.client){ clienteEl.value=proj.client; clienteEl.style.background='rgba(14,165,233,.06)'; }
-    }
-  }
-  const slaSel=document.getElementById('ch-sla-nivel');
-  slaSel.innerHTML='<option value="">— Sem SLA —</option>'+getSlaConfigs().map(c=>`<option value="${c.id}" ${ch?.slaId===c.id?'selected':''}>${esc(c.name)} (${c.horas}h)</option>`).join('');
-  _chEvList=ch?.evidencias?[...ch.evidencias]:[];
-  _chOsSnkList=ch?.osSnkList?[...ch.osSnkList]:(ch?.osSnk?[ch.osSnk]:[]);
-  _chOsPaniceList=ch?.osPaniceList?[...ch.osPaniceList]:(ch?.osPanice?[ch.osPanice]:[]);
-  _chEvFileData=null;
-  renderChEvList();
-  renderOsTags('snk');
-  renderOsTags('panice');
-  document.getElementById('ch-intervalo').value=ch?.intervalo||'';
-  document.getElementById('ch-motivo-pausa').value=ch?.motivoPausa||'';
-  const impCheck=document.getElementById('ch-tem-impedimento');
-  if(impCheck){impCheck.checked=ch?.temImpedimento||false;}
-  document.getElementById('ch-motivo-impedimento').value=ch?.motivoImpedimento||'';
-  onChImpedimentoChange(ch?.temImpedimento||false);
-  onChStatusChange(ch?.status||'Aberto');
-  if(ch?.inicio&&ch?.fim)calcChamadoTempo();
-  // Clear file input
-  const fi=document.getElementById('ch-ev-file');if(fi)fi.value='';
-  const fp=document.getElementById('ch-ev-file-preview');if(fp)fp.style.display='none';
-  openModal('modal-chamado');
-}
-
-function removeEvTag(i){_chEvList.splice(i,1);renderChEvList();}
-
 function addChamadoEvidencia(){
   const desc=document.getElementById('ch-ev-desc').value.trim();
   const url=document.getElementById('ch-ev-url').value.trim();
@@ -3637,7 +3558,7 @@ function saveChamado(){
   const slaCfg=getSlaConfigs().find(c=>c.id===slaId);
   const ch={
     id:_eChamadoId||uid(),
-    osSnk:_chOsSnkList.join(', '),
+    osSnk:_chOsSnkList.map(i=>typeof i==='object'?i.num:i).join(', '),
     osSnkList:[..._chOsSnkList],
     osPanice:_chOsPaniceList.join(', '),
     osPaniceList:[..._chOsPaniceList],
@@ -3908,9 +3829,12 @@ function buildChamadoCard(c){
   const evCount=(c.evidencias||[]).length;
 
   // Build OS tags
-  const snkTags=(c.osSnkList||[c.osSnk]).filter(Boolean).map(v=>
-    '<span style="font-size:11px;font-weight:700;color:var(--accent);background:rgba(14,165,233,.1);padding:2px 8px;border-radius:4px">SNK: '+esc(v)+'</span>'
-  ).join('');
+  const snkTags=(c.osSnkList||[c.osSnk?{num:c.osSnk,status:''}:null]).filter(Boolean).map(item=>{
+    const num=typeof item==='object'?item.num:item;
+    const st=typeof item==='object'?item.status:'';
+    const col=(SNK_STATUS_COLOR&&SNK_STATUS_COLOR[st])||'var(--accent)';
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--accent);background:rgba(14,165,233,.1);padding:2px 8px;border-radius:4px">SNK: '+esc(num)+(st?'<span style="font-size:9px;color:'+col+';margin-left:2px">· '+esc(st)+'</span>':'')+'</span>';
+  }).join('');
   const panTags=(c.osPaniceList||[c.osPanice]).filter(Boolean).map(v=>
     '<span style="font-size:11px;font-weight:700;color:var(--purple);background:rgba(167,139,250,.1);padding:2px 8px;border-radius:4px">PAN: '+esc(v)+'</span>'
   ).join('');
