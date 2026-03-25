@@ -3813,10 +3813,23 @@ function exportRelatorioAtendimento(){
     const sla=slaStatus(c);
     const slaStr=sla?sla.icon+' '+sla.label:'—';
     const custo=c.tempo&&c.valorHora?(()=>{const[h,m]=(c.tempo+':0').split(':').map(Number);return'R$ '+((h+(m/60))*c.valorHora).toLocaleString('pt-BR',{minimumFractionDigits:2});})():'—';
-    const osStr=[(c.osSnkList||[c.osSnk]).filter(Boolean).map(v=>'SNK:'+v).join(', '),(c.osPaniceList||[c.osPanice]).filter(Boolean).map(v=>'PAN:'+v).join(', ')].filter(Boolean).join(' | ')||'—';
+    // OS SNK with per-ticket status
+    const snkItems=(c.osSnkList||[c.osSnk?{num:c.osSnk,status:''}:null]).filter(Boolean);
+    const snkCells=snkItems.map(item=>{
+      const num=typeof item==='object'?item.num:item;
+      const st=typeof item==='object'?item.status:'';
+      const stColors={'Em Análise no Service Desk':'#0ea5e9','OS Em Análise no Desenvolvimento':'#8b5cf6','OS Em Correção':'#d97706','OS Aguardando Teste de Saída':'#0284c7','Correção Disponibilizada':'#16a34a','Correção Validada pela Panice/Ramada':'#15803d'};
+      const col=stColors[st]||'#64748b';
+      return '<div style="margin-bottom:3px"><span style="font-weight:700;color:#0ea5e9">'+num+'</span>'+
+        (st?' <span style="font-size:9px;padding:1px 6px;border-radius:8px;background:'+col+'18;color:'+col+';border:1px solid '+col+'30;font-weight:700">'+esc(st)+'</span>':'<span style="font-size:9px;color:#94a3b8"> — Sem situação</span>')+'</div>';
+    }).join('');
+    const snkHtml=snkCells||'<span style="color:#94a3b8">—</span>';
+    const panStr=(c.osPaniceList||[c.osPanice]).filter(Boolean).map(v=>typeof v==='string'?v:v).join(', ')||'—';
+    const osStr=snkItems.map(i=>typeof i==='object'?i.num:i).join(', ')||'—';
     const evCount=(c.evidencias||[]).length;
     return`<tr>
-      <td style="font-size:10px;color:#64748b">${osStr}</td>
+      <td style="font-size:10px;min-width:190px">${snkHtml}</td>
+      <td style="font-size:10px;color:#8b5cf6">${panStr}</td>
       <td>${esc(cl)}</td>
       <td>${esc(c.contato||'—')}</td>
       <td>${esc(c.consultor||'—')}</td>
@@ -3899,8 +3912,8 @@ tr:hover td{background:#f8fafc}
 <div class="sec">
   <div class="sth">📋 Detalhamento de Chamados</div>
   <div style="overflow-x:auto">
-  <table style="min-width:1300px"><thead><tr>
-    <th>OS / Ticket</th><th>Cliente</th><th>Contato</th><th>Consultor</th><th>Tipo</th><th>Produto/Versão</th>
+  <table style="min-width:1400px"><thead><tr>
+    <th style="min-width:200px">OS Sankhya / Situação</th><th>OS Panice</th><th>Cliente</th><th>Contato</th><th>Consultor</th><th>Tipo</th><th>Produto/Versão</th>
     <th>Agendamento</th><th>Início</th><th>Fim</th><th style="text-align:center">Tempo</th>
     <th>Valor/h</th><th style="text-align:right">Custo</th><th>Status</th><th>SLA</th>
     <th>Descrição</th><th>Solução</th><th style="text-align:center">Ev.</th><th>Motivo Pausa</th>
