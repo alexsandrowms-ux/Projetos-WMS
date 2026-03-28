@@ -2470,6 +2470,7 @@ function renderStages(){
 // ════════════════════════════════════
 // Returns effective hoursReal: for root = sum of kids, for sub = own value
 function getHoursReal(stage, allStages){
+  if(!stage) return 0;
   // Uses apontamentos for accumulated time
   const aps = stage.apontamentos||[];
   if(aps.length>0){
@@ -5097,7 +5098,7 @@ function openStageModal(isNew=true,editId=null,defParent=null){
     if(!isNew && stage && !stage.parentId){
       // Editing root: show auto sum
       const kids2=(proj2?.stages||[]).filter(s=>s.parentId===stage.id);
-      const autoSum=getHoursReal(stage, allStages);
+      const autoSum=getHoursReal(stage, proj?.stages||[]);
       hrInput.value='';
       hrInput.style.display='none';
       hrAuto.textContent=(decHToHHMM(autoSum)||Math.round(autoSum*10)/10+'h')+' (automático — soma das sub-etapas)';
