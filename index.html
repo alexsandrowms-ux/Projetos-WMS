@@ -1563,6 +1563,22 @@ datalist{display:none}
           <input class="fc" id="sap-nota" placeholder="Resumo curto, observações...">
         </div>
       </div>
+
+      <!-- Anexos -->
+      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:12px 0 8px">📎 Anexos</div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:10px 12px">
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <input class="fc" id="sap-anx-desc" placeholder="Descrição do anexo" style="flex:1;font-size:12px">
+          <label class="btn btn-ghost btn-xs" style="cursor:pointer" title="Selecionar arquivo">
+            📎 Arquivo
+            <input type="file" id="sap-anx-file" style="display:none" onchange="sapAnxFile(this)">
+          </label>
+          <button class="btn btn-ghost btn-xs" onclick="sapAddAnexo()">+ Add</button>
+        </div>
+        <div id="sap-anx-preview" style="font-size:11px;color:var(--accent);margin-bottom:4px;display:none"></div>
+        <div id="sap-anx-list"></div>
+      </div>
+
     </div>
     <div class="mfooter">
       <button class="btn btn-ghost" onclick="closeModal('modal-stage-ap')">Cancelar</button>
@@ -2966,26 +2982,11 @@ function renderGantt(){
   const roots=stages.filter(s=>!s.parentId);
   const cm={};stages.filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
   // Gantt: etapas raiz com seus apontamentos agrupados
+  // Gantt: etapas raiz, barra baseada nas datas da etapa (date/dateEnd)
   let rows=[];roots.forEach((r,ri)=>{
     const col=PCOLS[ri%PCOLS.length];
     const rootName=(r.num?r.num+' ':'')+r.name;
-    // Add root row itself
     rows.push({...r,isRoot:true,col,rootName});
-    // Add apontamento rows if they have dates
-    (r.apontamentos||[]).forEach((ap,ai)=>{
-      if(!ap.inicio)return;
-      rows.push({
-        ...r,
-        id:r.id+'_ap'+ai,
-        name:'  └ Ap.'+(ai+1)+(ap.nota?' '+ap.nota.slice(0,20):''),
-        date:ap.inicio.split('T')[0],
-        dateEnd:ap.fim?ap.fim.split('T')[0]:ap.inicio.split('T')[0],
-        isRoot:false,col,rootName,
-        isAp:true,apIdx:ai,
-        timeStart:ap.inicio.split('T')[1]?.slice(0,5)||'',
-        timeEnd:ap.fim?.split('T')[1]?.slice(0,5)||'',
-      });
-    });
   });
 
   // ── Monta cabeçalho de dias com agrupamento por mês ──
@@ -3485,28 +3486,12 @@ function renderCGantt(){
     const col = proj.color || PCOLS[pi % PCOLS.length];
     const stages = proj.stages || [];
     const roots = stages.filter(s => !s.parentId);
+    // cGantt: etapas raiz, barra baseada nas datas da etapa
     roots.forEach(root => {
-      // Add root row if it has dates
-      const rootStartD = root.date ? root.date.split('T')[0] : null;
-      const rootEndD   = effectiveDateEnd(root);
-      if(rootStartD || rootEndD){
-        allRows.push({ proj, col, root, stage: root, startD: rootStartD, endD: rootEndD });
-      }
-      // Add apontamento rows
-      (root.apontamentos||[]).forEach((ap,ai) => {
-        const startD = ap.inicio ? ap.inicio.split('T')[0] : null;
-        const endD   = ap.fim    ? ap.fim.split('T')[0]    : startD;
-        if(!startD) return;
-        const apStage = {
-          ...root,
-          id: root.id+'_ap'+ai,
-          name: '↳ Ap.'+(ai+1)+(ap.nota?' '+ap.nota.slice(0,20):''),
-          timeStart: ap.inicio?.split('T')[1]?.slice(0,5)||'',
-          timeEnd:   ap.fim?.split('T')[1]?.slice(0,5)||'',
-          status: ap.fim ? 'Concluído' : 'Em Andamento',
-        };
-        allRows.push({ proj, col, root, stage: apStage, startD, endD, isAp:true });
-      });
+      const startD = root.date ? root.date.split('T')[0] : null;
+      const endD   = effectiveDateEnd(root);
+      if(!startD && !endD) return;
+      allRows.push({ proj, col, root, stage: root, startD, endD });
     });
   });
 
@@ -4682,6 +4667,57 @@ function renderChamadosDash(){
 let _sapRootId = null;
 let _sapIdx    = null; // null = new, number = editing
 
+
+// ── Stage Apontamento Anexos ──
+let _sapAnexos = [];
+let _sapAnxFileData = null;
+
+function sapAnxFile(input){
+  const file = input.files[0]; if(!file) return;
+  if(file.size > 5*1024*1024){ toast('Arquivo muito grande (máx 5MB)','err'); input.value=''; return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    _sapAnxFileData = {name:file.name, type:file.type, data:e.target.result};
+    const prev = document.getElementById('sap-anx-preview');
+    if(prev){ prev.textContent='📎 '+file.name+' ('+(file.size/1024).toFixed(1)+' KB)'; prev.style.display='block'; }
+    const desc = document.getElementById('sap-anx-desc');
+    if(desc && !desc.value) desc.value = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+function sapAddAnexo(){
+  const desc = document.getElementById('sap-anx-desc')?.value.trim();
+  if(!desc){ toast('Informe a descrição do anexo','err'); return; }
+  const anx = {id:uid(), desc, date:new Date().toLocaleDateString('pt-BR')};
+  if(_sapAnxFileData){ anx.fileName=_sapAnxFileData.name; anx.fileType=_sapAnxFileData.type; anx.fileData=_sapAnxFileData.data; }
+  _sapAnexos.push(anx);
+  document.getElementById('sap-anx-desc').value = '';
+  const fi = document.getElementById('sap-anx-file'); if(fi) fi.value='';
+  const prev = document.getElementById('sap-anx-preview'); if(prev) prev.style.display='none';
+  _sapAnxFileData = null;
+  renderSapAnexos();
+}
+
+function removeSapAnexo(i){ _sapAnexos.splice(i,1); renderSapAnexos(); }
+
+function renderSapAnexos(){
+  const el = document.getElementById('sap-anx-list'); if(!el) return;
+  if(!_sapAnexos.length){
+    el.innerHTML='<div style="font-size:11px;color:var(--dim)">Nenhum anexo adicionado.</div>';
+    return;
+  }
+  el.innerHTML = _sapAnexos.map((a,i) =>
+    '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--border)">'+
+    '<span style="font-size:13px">'+(a.fileData?'📄':'📎')+'</span>'+
+    '<span style="font-size:11px;flex:1">'+esc(a.desc)+(a.fileName?' <span style="color:var(--dim);font-size:10px">('+esc(a.fileName)+')</span>':'')+'</span>'+
+    (a.fileData?'<a href="'+a.fileData+'" download="'+esc(a.fileName||a.desc)+'" style="font-size:10px;color:var(--green);font-weight:700">⬇ Baixar</a>':'')+
+    '<span style="font-size:10px;color:var(--dim)">'+a.date+'</span>'+
+    '<button class="btn btn-ghost btn-xs" onclick="removeSapAnexo('+i+')">✕</button>'+
+    '</div>'
+  ).join('');
+}
+
 function openStageApontamento(rootId, editIdx=null){
   _sapRootId = rootId;
   _sapIdx    = editIdx;
@@ -4697,6 +4733,12 @@ function openStageApontamento(rootId, editIdx=null){
   document.getElementById('sap-atividades').value = ap?.atividades||'';
   document.getElementById('sap-nota').value       = ap?.nota||'';
   document.getElementById('sap-tempo').value     = ap?.tempo||'';
+  _sapAnexos = ap?.anexos ? [...ap.anexos] : [];
+  _sapAnxFileData = null;
+  const fi = document.getElementById('sap-anx-file'); if(fi) fi.value='';
+  const prev = document.getElementById('sap-anx-preview'); if(prev) prev.style.display='none';
+  document.getElementById('sap-anx-desc').value = '';
+  renderSapAnexos();
   calcStageApTempo();
   openModal('modal-stage-ap');
 }
@@ -4740,7 +4782,7 @@ function saveStageAp(){
   const intMin = intv?timeToDecH(intv)*60:0;
   const net  = Math.max(0,diff-intMin);
   const tempo = fim?decHToHHMM(net/60)||'':'';
-  const ap = {id:uid(),inicio,fim,intervalo:intv,atividades,nota,tempo};
+  const ap = {id:uid(),inicio,fim,intervalo:intv,atividades,nota,tempo,anexos:[..._sapAnexos]};
   if(!root.apontamentos) root.apontamentos=[];
   if(_sapIdx!==null) root.apontamentos[_sapIdx]=ap;
   else root.apontamentos.push(ap);
