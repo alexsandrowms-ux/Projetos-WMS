@@ -1571,6 +1571,97 @@ datalist{display:none}
   </div>
 </div>
 
+
+<!-- ══ MODAL: QUICK ADD GANTT ══ -->
+<div class="overlay" id="modal-cg-quick">
+  <div class="modal" style="max-width:520px">
+    <div class="mhdr">
+      <div class="mtitle">📅 Agendar Atividade</div>
+      <button class="mclose" onclick="closeModal('modal-cg-quick')">×</button>
+    </div>
+    <div class="mbody" style="padding:20px">
+
+      <!-- Tipo de agenda -->
+      <div class="frow" style="margin-bottom:12px">
+        <div class="fg">
+          <label class="fl">Tipo</label>
+          <div style="display:flex;gap:8px">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg3)" id="cgq-type-proj-label">
+              <input type="radio" name="cgq-type" value="proj" id="cgq-type-proj" onchange="cgqTypeChange()" checked style="accent-color:var(--accent)"> 📌 Etapa de Projeto
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;font-weight:600;padding:7px 14px;border-radius:6px;border:1px solid var(--border);background:var(--bg3)" id="cgq-type-cham-label">
+              <input type="radio" name="cgq-type" value="chamado" id="cgq-type-cham" onchange="cgqTypeChange()" style="accent-color:var(--purple)"> 🎧 Chamado
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Projeto (para etapa) -->
+      <div id="cgq-row-proj" class="frow">
+        <div class="fg"><label class="fl">Projeto</label>
+          <select class="fc" id="cgq-proj" onchange="cgqProjChange()">
+            <option value="">— Selecione o projeto —</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Cliente</label>
+          <input class="fc" id="cgq-cliente" placeholder="Preenchido pelo projeto" readonly style="background:var(--bg3)">
+        </div>
+      </div>
+
+      <!-- Etapa (para apontamento) -->
+      <div id="cgq-row-etapa" class="frow">
+        <div class="fg"><label class="fl">Etapa</label>
+          <select class="fc" id="cgq-etapa">
+            <option value="">— Selecione a etapa —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Chamado select (para chamado) -->
+      <div id="cgq-row-chamado" class="frow" style="display:none">
+        <div class="fg"><label class="fl">Chamado</label>
+          <select class="fc" id="cgq-chamado">
+            <option value="">— Selecione o chamado —</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Dia todo toggle -->
+      <div class="frow" style="margin-bottom:4px">
+        <div class="fg" style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r)">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;font-size:13px;font-weight:600">
+            <input type="checkbox" id="cgq-diatodo" checked onchange="cgqDiaTodoChange()" style="width:16px;height:16px;accent-color:var(--accent)">
+            🕗 Dia todo <span style="font-weight:400;color:var(--dim);font-size:11px">(8h considerando intervalo)</span>
+          </label>
+          <span id="cgq-diatodo-info" style="font-size:11px;color:var(--accent)">09:00 → 18:00 − 1h</span>
+        </div>
+      </div>
+
+      <!-- Data/Hora (para agenda parcial) -->
+      <div id="cgq-row-horario" class="frow" style="display:none">
+        <div class="fg"><label class="fl">▶️ Data/Hora Início</label>
+          <input class="fc" type="datetime-local" id="cgq-inicio">
+        </div>
+        <div class="fg"><label class="fl">✅ Data/Hora Fim</label>
+          <input class="fc" type="datetime-local" id="cgq-fim">
+        </div>
+      </div>
+
+      <!-- Obs -->
+      <div class="frow cols1">
+        <div class="fg"><label class="fl">📝 Observação</label>
+          <textarea class="fc" id="cgq-obs" rows="2" placeholder="Atividades previstas, objetivo do agendamento..."></textarea>
+        </div>
+      </div>
+
+    </div>
+    <div class="mfooter">
+      <button class="btn btn-ghost" onclick="closeModal('modal-cg-quick')">Cancelar</button>
+      <button class="btn btn-primary" onclick="cgqSave()">💾 Agendar</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 
@@ -3197,6 +3288,149 @@ function cgOpenStage(stageId, projId){
   }, 150);
 }
 
+
+// ════════════════════════════════════════════════
+// GANTT QUICK ADD
+// ════════════════════════════════════════════════
+let _cgqDate = '';
+
+function cgQuickAdd(dateStr){
+  _cgqDate = dateStr;
+
+  // Populate projects
+  const projSel = document.getElementById('cgq-proj');
+  projSel.innerHTML = '<option value="">— Selecione o projeto —</option>' +
+    (S.projects||[]).map(p => '<option value="'+p.id+'">'+esc(p.name)+' · '+esc(p.client||'')+'</option>').join('');
+  document.getElementById('cgq-cliente').value = '';
+  document.getElementById('cgq-etapa').innerHTML = '<option value="">— Selecione a etapa —</option>';
+
+  // Populate chamados
+  const chamSel = document.getElementById('cgq-chamado');
+  chamSel.innerHTML = '<option value="">— Selecione o chamado —</option>' +
+    (S.chamados||[]).filter(c=>!['Fechado','Cancelado'].includes(c.status)).map(c => {
+      const snk = (c.osSnkList||[c.osSnk]).filter(Boolean).map(i=>typeof i==='object'?i.num:i).join(', ');
+      return '<option value="'+c.id+'">'+(snk?'['+snk+'] ':'')+esc(c.descricao||'Chamado')+'</option>';
+    }).join('');
+
+  // Set date defaults
+  const d = dateStr;
+  document.getElementById('cgq-inicio').value = d + 'T09:00';
+  document.getElementById('cgq-fim').value    = d + 'T18:00';
+  document.getElementById('cgq-obs').value    = '';
+
+  // Reset to proj type + dia todo
+  document.getElementById('cgq-type-proj').checked = true;
+  document.getElementById('cgq-diatodo').checked = true;
+  cgqTypeChange();
+  cgqDiaTodoChange();
+
+  openModal('modal-cg-quick');
+}
+
+function cgqTypeChange(){
+  const isProjType = document.getElementById('cgq-type-proj').checked;
+  document.getElementById('cgq-row-proj').style.display    = isProjType ? '' : 'none';
+  document.getElementById('cgq-row-etapa').style.display   = isProjType ? '' : 'none';
+  document.getElementById('cgq-row-chamado').style.display = isProjType ? 'none' : '';
+
+  // Style radio labels
+  document.getElementById('cgq-type-proj-label').style.borderColor  = isProjType ? 'var(--accent)' : 'var(--border)';
+  document.getElementById('cgq-type-cham-label').style.borderColor  = !isProjType ? 'var(--purple)' : 'var(--border)';
+  document.getElementById('cgq-type-proj-label').style.background   = isProjType ? 'rgba(14,165,233,.08)' : 'var(--bg3)';
+  document.getElementById('cgq-type-cham-label').style.background   = !isProjType ? 'rgba(167,139,250,.08)' : 'var(--bg3)';
+}
+
+function cgqProjChange(){
+  const projId = document.getElementById('cgq-proj').value;
+  const proj   = (S.projects||[]).find(p=>p.id===projId);
+  document.getElementById('cgq-cliente').value = proj?.client || proj?.name || '';
+
+  const etapaSel = document.getElementById('cgq-etapa');
+  etapaSel.innerHTML = '<option value="">— Selecione a etapa —</option>' +
+    (proj?.stages||[]).filter(s=>!s.parentId).map(s =>
+      '<option value="'+s.id+'">'+(s.num?s.num+' ':'')+esc(s.name)+'</option>'
+    ).join('');
+}
+
+function cgqDiaTodoChange(){
+  const isDiaTodo = document.getElementById('cgq-diatodo').checked;
+  document.getElementById('cgq-row-horario').style.display = isDiaTodo ? 'none' : '';
+  document.getElementById('cgq-diatodo-info').textContent  = isDiaTodo ? '09:00 → 18:00 − 1h = 8h' : '';
+  if(isDiaTodo && _cgqDate){
+    document.getElementById('cgq-inicio').value = _cgqDate + 'T09:00';
+    document.getElementById('cgq-fim').value    = _cgqDate + 'T18:00';
+  }
+}
+
+function cgqSave(){
+  const isProjType = document.getElementById('cgq-type-proj').checked;
+  const isDiaTodo  = document.getElementById('cgq-diatodo').checked;
+  const obs        = document.getElementById('cgq-obs').value.trim();
+
+  const inicio = isDiaTodo ? _cgqDate+'T09:00' : document.getElementById('cgq-inicio').value;
+  const fim    = isDiaTodo ? _cgqDate+'T18:00' : document.getElementById('cgq-fim').value;
+  const intv   = isDiaTodo ? '01:00' : '';
+
+  if(!inicio){ toast('Informe a data/hora de início','err'); return; }
+
+  if(isProjType){
+    // Create apontamento on selected stage
+    const projId  = document.getElementById('cgq-proj').value;
+    const stageId = document.getElementById('cgq-etapa').value;
+    if(!projId){ toast('Selecione o projeto','err'); return; }
+    if(!stageId){ toast('Selecione a etapa','err'); return; }
+
+    const proj  = (S.projects||[]).find(p=>p.id===projId);
+    const stage = (proj?.stages||[]).find(s=>s.id===stageId);
+    if(!stage){ toast('Etapa não encontrada','err'); return; }
+
+    if(!stage.apontamentos) stage.apontamentos = [];
+    const apH = isDiaTodo ? 8 : Math.max(0,(new Date(fim)-new Date(inicio))/3600000);
+    stage.apontamentos.push({
+      id: uid(),
+      inicio,
+      fim,
+      intervalo: intv,
+      atividades: obs,
+      nota: '',
+      tempo: decHToHHMM(apH) || '',
+    });
+
+    // Update stage status
+    const consumed = stage.apontamentos.reduce((a,ap)=>{
+      if(!ap.inicio||!ap.fim)return a;
+      const d=(new Date(ap.fim)-new Date(ap.inicio))/60000;
+      const i=ap.intervalo?timeToDecH(ap.intervalo)*60:0;
+      return a+Math.max(0,d-i)/60;
+    },0);
+    const budget = parseFloat(stage.hours)||0;
+    if(consumed>0 && stage.status==='Pendente') stage.status='Em Andamento';
+    if(consumed>=budget && budget>0) stage.status='Concluído';
+
+    saveS();
+    closeModal('modal-cg-quick');
+    renderCGantt();
+    toast('Apontamento agendado em '+fDS(_cgqDate)+' ✓','ok');
+
+  } else {
+    // Schedule chamado
+    const chamId = document.getElementById('cgq-chamado').value;
+    if(!chamId){ toast('Selecione o chamado','err'); return; }
+
+    const ch = (S.chamados||[]).find(c=>c.id===chamId);
+    if(!ch){ toast('Chamado não encontrado','err'); return; }
+
+    ch.agendamento  = inicio;
+    if(!ch.prazoConclusao) ch.prazoConclusao = fim;
+    if(obs && !ch.descricao) ch.descricao = obs;
+
+    saveS();
+    closeModal('modal-cg-quick');
+    renderCGantt();
+    toast('Chamado agendado em '+fDS(_cgqDate)+' ✓','ok');
+  }
+}
+
 function cgTooltip(r, stage){
   const proj = r.proj;
   const cliente = r.isChamado ? (r.label||'—') : (proj?.client||proj?.name||'—');
@@ -3442,7 +3676,7 @@ function renderCGantt(){
           </div>
         </td>`;
       }
-      return `<td style="${bg}"></td>`;
+      return `<td style="${bg};cursor:pointer" onclick="cgQuickAdd('${dStr}')" title="+ Agendar em ${dStr.split('-').reverse().join('/')}"></td>`;
     }).join('');
 
     const timeStr = (stage.timeStart||stage.timeEnd) ? `${stage.timeStart||'—'} → ${stage.timeEnd||'—'}` : '—';
