@@ -3066,7 +3066,7 @@ function renderGantt(){
     }).join('');
 
     const actBtns=`<button class="btn btn-ghost btn-xs" onclick="openStageModal(false,'${r.id}')">✏️</button>
-      ${!r.parentId?`<button class="btn btn-success btn-xs" onclick="openStageModal(true,null,'${r.id}')">+Sub</button>`:''}
+      <button class="btn btn-ghost btn-xs" onclick="openStageApontamento('${r.id}')" style="color:var(--accent);border-color:rgba(14,165,233,.3)">⏱ Etp</button>
       <button class="btn btn-danger btn-xs" onclick="askDeleteStage('${r.id}')">🗑</button>`;
 
     const dateRealCell=r.dateReal
@@ -4980,6 +4980,22 @@ ${catSections}
   toast('Checklist exportado ✓','ok');
 }
 
+
+function moveChecklistItem(projId, itemId, direction){
+  const proj = (S.projects||[]).find(p=>p.id===projId);
+  if(!proj||!proj.checklist) return;
+  const idx = proj.checklist.findIndex(i=>i.id===itemId);
+  if(idx<0) return;
+  const newIdx = idx + direction;
+  if(newIdx<0 || newIdx>=proj.checklist.length) return;
+  // Swap
+  const tmp = proj.checklist[idx];
+  proj.checklist[idx] = proj.checklist[newIdx];
+  proj.checklist[newIdx] = tmp;
+  saveS();
+  renderChecklist();
+}
+
 function renderChecklist(){
   // Populate project select
   const sel=document.getElementById('cl-proj-sel');
@@ -5040,6 +5056,8 @@ function renderChecklist(){
               ${item.done&&item.doneAt?`<div style="font-size:10px;color:var(--green);margin-top:2px">✅ Concluído em ${new Date(item.doneAt).toLocaleDateString('pt-BR')}</div>`:''}
             </div>
             <div style="display:flex;gap:4px;flex-shrink:0">
+              <button class="btn btn-ghost btn-xs" onclick="moveChecklistItem('${projId}','${item.id}',-1)" title="Mover para cima" style="font-size:11px;padding:2px 6px">▲</button>
+              <button class="btn btn-ghost btn-xs" onclick="moveChecklistItem('${projId}','${item.id}',1)" title="Mover para baixo" style="font-size:11px;padding:2px 6px">▼</button>
               <button class="btn btn-ghost btn-xs" onclick="openChecklistItemModal('${item.id}')">✏️</button>
               <button class="btn btn-ghost btn-xs" onclick="deleteChecklistItem('${projId}','${item.id}')" style="color:var(--red)">🗑</button>
             </div>
