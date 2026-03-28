@@ -781,7 +781,7 @@ datalist{display:none}
           <select class="fc" id="ch-filter-status" onchange="renderChamados()" style="width:150px;font-size:12px;padding:7px 8px">
             <option value="">Todos os status</option>
             <option>Aberto</option><option>Em Atendimento</option><option>Aguardando Cliente</option>
-            <option>Pausado</option><option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
+            <option>Pausado</option><option>Bloqueado</option><option>Resolvido</option><option>Fechado</option><option>Cancelado</option>
           </select>
           <select class="fc" id="ch-filter-cliente" onchange="renderChamados()" style="width:170px;font-size:12px;padding:7px 8px">
             <option value="">Todos os clientes</option>
@@ -3818,6 +3818,17 @@ function saveChamado(){
   const osSnk=_chOsSnkList.join(', ');
   const descricao=document.getElementById('ch-descricao').value.trim();
   if(!osSnk&&!descricao){toast('Informe ao menos o Nº OS ou a descrição','err');return;}
+  // Enforce status rules
+  const stEl=document.getElementById('ch-status');
+  const temImp=document.getElementById('ch-tem-impedimento')?.checked;
+  const validado=document.getElementById('ch-validado-cliente')?.checked;
+  if(stEl){
+    if(temImp && !['Bloqueado','Cancelado'].includes(stEl.value)){
+      stEl.value='Bloqueado'; // impedimento sempre vira Bloqueado
+    } else if(validado && !['Fechado','Cancelado'].includes(stEl.value)){
+      stEl.value='Fechado';   // validado pelo cliente vira Fechado
+    }
+  }
   const slaId=document.getElementById('ch-sla-nivel').value;
   const slaCfg=getSlaConfigs().find(c=>c.id===slaId);
   const ch={
@@ -3975,7 +3986,7 @@ function exportRelatorioAtendimento(){
   ).join('');
 
   // Chamados table
-  const SC={'Aberto':'#0ea5e9','Em Atendimento':'#f59e0b','Aguardando Cliente':'#a78bfa','Pausado':'#f97316','Resolvido':'#22c55e','Fechado':'#64748b','Cancelado':'#ef4444'};
+  const SC={'Aberto':'#0ea5e9','Em Atendimento':'#f59e0b','Aguardando Cliente':'#a78bfa','Pausado':'#f97316','Bloqueado':'#ef4444','Resolvido':'#22c55e','Fechado':'#64748b','Cancelado':'#ef4444'};
   const chamRows=chs.map(c=>{
     const proj=(S.projects||[]).find(p=>p.id===c.projId);
     const cl=proj?.client||c.cliente||'—';
@@ -4146,7 +4157,8 @@ function buildChamadoCard(c){
   const slaSpan=c.slaHoras?('<span>SLA: '+esc(c.slaNome)+' ('+c.slaHoras+'h)</span>'):'';
   const evSpan=evCount?('<span>📎 '+evCount+' evidência'+(evCount!==1?'s':'')+'</span>'):'';
   const pausaSpan=(c.status==='Pausado'&&c.motivoPausa)?('<span style="color:var(--amber)">⏸ '+esc(c.motivoPausa)+'</span>'):'';
-  const impedimentoSpan=c.temImpedimento?('<span style="font-size:11px;font-weight:700;color:var(--red);background:rgba(239,68,68,.1);padding:2px 8px;border-radius:10px">🚫 '+esc(c.motivoImpedimento||'Impedimento')+'</span>'):'';
+  const _impWarn=c.temImpedimento&&['Resolvido','Fechado'].includes(c.status)?'<span style="font-size:10px;font-weight:700;color:var(--amber)" title="Status inconsistente com impedimento">⚠️ Revisar</span>':'';
+  const impedimentoSpan=c.temImpedimento?('<span style="font-size:11px;font-weight:700;color:var(--red);background:rgba(239,68,68,.1);padding:2px 8px;border-radius:10px">🚫 '+esc(c.motivoImpedimento||'Impedimento')+'</span>'+_impWarn):'';
 
   // Solução footer
   const solucaoFooter=c.solucao?('<div style="padding:8px 14px;background:rgba(34,197,94,.04);border-top:1px solid var(--border);font-size:11.5px;color:var(--mid)">✅ <strong style="color:var(--green)">Solução:</strong> '+esc(c.solucao)+'</div>'):'';
@@ -4238,7 +4250,7 @@ function renderChamados(){
     el.innerHTML='<div class="empty" style="padding:40px"><span style="font-size:32px;display:block;margin-bottom:10px">🎧</span><div>Nenhum chamado encontrado.</div><div style="font-size:12px;color:var(--dim);margin-top:6px">Clique em &ldquo;+ Novo Chamado&rdquo; para registrar.</div></div>';
     return;
   }
-  const SC={'Aberto':'#0ea5e9','Em Atendimento':'#f59e0b','Aguardando Cliente':'#a78bfa','Resolvido':'#22c55e','Fechado':'#64748b','Cancelado':'#ef4444'};
+  const SC={'Aberto':'#0ea5e9','Em Atendimento':'#f59e0b','Aguardando Cliente':'#a78bfa','Pausado':'#f97316','Bloqueado':'#ef4444','Resolvido':'#22c55e','Fechado':'#64748b','Cancelado':'#ef4444'};
   el.innerHTML=chs.map(c=>buildChamadoCard(c)).join('');
 }
 
