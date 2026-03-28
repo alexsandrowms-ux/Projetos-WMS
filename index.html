@@ -1360,19 +1360,17 @@ datalist{display:none}
       </div>
 
       <!-- Datas e Horas -->
-      <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;margin:14px 0 8px">Tempo de Atendimento</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:14px 0 8px">
+        <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em">Apontamentos de Tempo</div>
+        <button class="btn btn-ghost btn-xs" onclick="addApontamento()" style="color:var(--accent);border-color:rgba(14,165,233,.3)">+ Apontamento</button>
+      </div>
+      <!-- Lista de apontamentos -->
+      <div id="ch-apontamentos-list" style="margin-bottom:10px"></div>
+      <!-- Totalizadores -->
       <div class="frow">
-        <div class="fg"><label class="fl">▶️ Início Atendimento</label><input class="fc" type="datetime-local" id="ch-inicio" onchange="calcChamadoTempo()"></div>
-        <div class="fg"><label class="fl">✅ Fim Atendimento</label><input class="fc" type="datetime-local" id="ch-fim" onchange="calcChamadoTempo()"></div>
-        <div class="fg"><label class="fl">⏱ Tempo Gasto</label>
+        <div class="fg"><label class="fl">⏱ Tempo Total Acumulado</label>
           <input class="fc" id="ch-tempo" placeholder="Calculado automaticamente" readonly style="background:rgba(34,197,94,.06);color:var(--green);font-weight:700">
           <span id="ch-tempo-info" style="font-size:10px;color:var(--accent);margin-top:3px;display:block"></span>
-        </div>
-      </div>
-      <div class="frow">
-        <div class="fg"><label class="fl">☕ Intervalo (pausa)</label>
-          <input class="fc" type="time" id="ch-intervalo" placeholder="01:00" onchange="calcChamadoTempo()" title="Tempo de intervalo/pausa a ser descontado">
-          <span style="font-size:10px;color:var(--dim);margin-top:3px;display:block">Será descontado do tempo total</span>
         </div>
         <div class="fg"><label class="fl">💰 Valor/hora (R$)</label>
           <input class="fc" type="number" id="ch-valor-hora" placeholder="Ex: 150.00" min="0" step="0.01" oninput="calcChamadoCusto()">
@@ -1381,11 +1379,34 @@ datalist{display:none}
           <input class="fc" id="ch-custo-total" placeholder="Calculado automaticamente" readonly style="background:rgba(34,197,94,.06);color:var(--green);font-weight:700">
         </div>
       </div>
+      <!-- campos legados ocultos para compatibilidade -->
+      <input type="hidden" id="ch-inicio">
+      <input type="hidden" id="ch-fim">
+      <input type="hidden" id="ch-intervalo">
 
       <!-- Pausa -->
       <div class="frow" id="ch-row-pausa" style="display:none">
         <div class="fg"><label class="fl" style="color:var(--amber)">⏸ Motivo da Pausa</label>
           <input class="fc" id="ch-motivo-pausa" placeholder="Ex: Aguardando retorno do cliente, ambiente indisponível...">
+        </div>
+      </div>
+
+      <!-- Validado pelo Cliente -->
+      <div class="frow" style="margin-bottom:4px">
+        <div class="fg" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:var(--r)">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin:0;font-size:13px;font-weight:600;color:var(--green)">
+            <input type="checkbox" id="ch-validado-cliente" onchange="onChValidadoChange(this.checked)" style="width:16px;height:16px;accent-color:var(--green);flex-shrink:0">
+            ✅ Chamado Validado pelo Cliente
+          </label>
+          <span id="ch-validado-info" style="font-size:11px;color:var(--dim)"></span>
+        </div>
+      </div>
+      <div class="frow" id="ch-row-validado" style="display:none;margin-bottom:4px">
+        <div class="fg"><label class="fl">👤 Validado por</label>
+          <input class="fc" id="ch-validado-por" placeholder="Nome de quem validou no cliente">
+        </div>
+        <div class="fg"><label class="fl">📅 Data de Validação</label>
+          <input class="fc" type="datetime-local" id="ch-validado-em">
         </div>
       </div>
 
@@ -3552,6 +3573,139 @@ function renderChEvList(){
 
 
 
+
+// ════════════════════════════════════════════════
+// APONTAMENTOS DE TEMPO (multi-entry)
+// ════════════════════════════════════════════════
+let _chApontamentos = []; // [{id, inicio, fim, intervalo}]
+
+function addApontamento(apon=null){
+  const id = apon?.id || uid();
+  const existingIdx = _chApontamentos.findIndex(a=>a.id===id);
+  if(!apon){
+    _chApontamentos.push({id, inicio:'', fim:'', intervalo:''});
+  }
+  renderApontamentos();
+  // Focus the new entry's inicio field
+  setTimeout(()=>{
+    const el = document.getElementById('ap-inicio-'+(_chApontamentos.length-1));
+    if(el) el.focus();
+  }, 50);
+}
+
+function removeApontamento(idx){
+  _chApontamentos.splice(idx,1);
+  renderApontamentos();
+  calcApontamentoTotal();
+}
+
+function updateApontamento(idx, field, val){
+  if(!_chApontamentos[idx]) return;
+  _chApontamentos[idx][field] = val;
+  calcApontamentoTotal();
+}
+
+function apChange(inp){
+  const i=parseInt(inp.dataset.ap);
+  const field=inp.dataset.field;
+  updateApontamento(i,field,inp.value);
+}
+
+function calcApontamentoTotal(){
+  let totalMin = 0;
+  _chApontamentos.forEach(a => {
+    if(!a.inicio || !a.fim) return;
+    const diff = (new Date(a.fim) - new Date(a.inicio)) / 60000; // minutes
+    if(diff <= 0) return;
+    const intv = a.intervalo ? timeToDecH(a.intervalo)*60 : 0;
+    totalMin += Math.max(0, diff - intv);
+  });
+  const hhmm = decHToHHMM(totalMin/60) || (totalMin > 0 ? Math.floor(totalMin/60)+'h '+Math.round(totalMin%60)+'min' : '');
+  const tEl = document.getElementById('ch-tempo');
+  const iEl = document.getElementById('ch-tempo-info');
+  if(tEl){ tEl.value = hhmm; tEl.style.color = hhmm ? 'var(--green)' : ''; }
+  if(iEl){
+    const count = _chApontamentos.filter(a=>a.inicio&&a.fim).length;
+    iEl.textContent = count > 0 ? `⚡ ${count} apontamento${count!==1?'s':''} · ${hhmm} acumulado` : '';
+  }
+  // Sync legacy fields for compat
+  if(_chApontamentos.length > 0){
+    const first = _chApontamentos[0];
+    const last  = _chApontamentos[_chApontamentos.length-1];
+    const inicioEl = document.getElementById('ch-inicio');
+    const fimEl    = document.getElementById('ch-fim');
+    if(inicioEl) inicioEl.value = first.inicio||'';
+    if(fimEl)    fimEl.value    = last.fim||'';
+  }
+  calcChamadoCusto();
+  // Auto-status Resolvido
+  const stEl = document.getElementById('ch-status');
+  const hasImpedimento = document.getElementById('ch-tem-impedimento')?.checked;
+  if(stEl && !hasImpedimento && totalMin > 0){
+    const last = _chApontamentos[_chApontamentos.length-1];
+    if(last?.fim && ['Aberto','Em Atendimento','Aguardando Cliente'].includes(stEl.value)){
+      stEl.value = 'Resolvido';
+      onChStatusChange('Resolvido');
+    }
+  }
+}
+
+function renderApontamentos(){
+  const el = document.getElementById('ch-apontamentos-list');
+  if(!el) return;
+  if(!_chApontamentos.length){
+    el.innerHTML = '<div style="font-size:12px;color:var(--dim);padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:6px;text-align:center">Nenhum apontamento. Clique em <strong>+ Apontamento</strong> para registrar o tempo.</div>';
+    return;
+  }
+  el.innerHTML = _chApontamentos.map((a,i) => {
+    // Calculate duration for this entry
+    let dur = '';
+    if(a.inicio && a.fim){
+      const diff = (new Date(a.fim) - new Date(a.inicio))/60000;
+      const intv = a.intervalo ? timeToDecH(a.intervalo)*60 : 0;
+      const net = Math.max(0, diff - intv);
+      dur = decHToHHMM(net/60) || '';
+    }
+    return '<div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:6px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">'
+        +'<span style="font-size:11px;font-weight:700;color:var(--mid)">Apontamento '+(i+1)+'</span>'
+        +'<div style="display:flex;align-items:center;gap:8px">'
+          +(dur?'<span style="font-size:12px;font-weight:700;color:var(--green)">⏱ '+dur+'</span>':'')
+          +'<button class="btn btn-ghost btn-xs" onclick="removeApontamento('+i+')" style="color:var(--red)">✕</button>'
+        +'</div>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end">'
+        +'<div><label class="fl">▶️ Início</label>'
+          +'<input class="fc" type="datetime-local" id="ap-inicio-'+i+'" value="'+a.inicio+'" data-ap="+i+" data-field="inicio" onchange="apChange(this)" style="font-size:12px"></div>'
+        +'<div><label class="fl">✅ Fim</label>'
+          +'<input class="fc" type="datetime-local" id="ap-fim-'+i+'" value="'+a.fim+'" data-ap="+i+" data-field="fim" onchange="apChange(this)" style="font-size:12px"></div>'
+        +'<div><label class="fl">☕ Intervalo</label>'
+          +'<input class="fc" type="time" id="ap-intv-'+i+'" value="'+a.intervalo+'" data-ap="+i+" data-field="intervalo" onchange="apChange(this)" style="font-size:12px;width:100px"></div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+}
+
+// ── Validado pelo cliente ──
+function onChValidadoChange(checked){
+  const row = document.getElementById('ch-row-validado');
+  const info = document.getElementById('ch-validado-info');
+  if(row) row.style.display = checked ? '' : 'none';
+  if(checked && !document.getElementById('ch-validado-em')?.value){
+    const now = new Date();
+    const dt = now.toISOString().slice(0,16);
+    const vEl = document.getElementById('ch-validado-em');
+    if(vEl) vEl.value = dt;
+    if(info) info.textContent = 'Marcado em ' + now.toLocaleDateString('pt-BR');
+  }
+  // Auto-set status to Fechado when validated
+  const stEl = document.getElementById('ch-status');
+  if(checked && stEl && ['Resolvido','Em Atendimento','Aberto'].includes(stEl.value)){
+    stEl.value = 'Fechado';
+    onChStatusChange('Fechado');
+  }
+}
+
 function onChStatusChange(val){
   const row = document.getElementById('ch-row-pausa');
   if(row) row.style.display = val==='Pausado' ? '' : 'none';
@@ -3632,10 +3786,21 @@ function openChamadoModal(id=null){
   _chOsSnkList=ch?.osSnkList?[...ch.osSnkList]:(ch?.osSnk?[{num:ch.osSnk,status:''}]:[]);
   _chOsPaniceList=ch?.osPaniceList?[...ch.osPaniceList]:(ch?.osPanice?[ch.osPanice]:[]);
   _chEvFileData=null;
+  // Load apontamentos
+  _chApontamentos=ch?.apontamentos?[...ch.apontamentos]:
+    (ch?.inicio?[{id:uid(),inicio:ch.inicio,fim:ch.fim||'',intervalo:ch.intervalo||''}]:[]);
+  renderApontamentos();
+  calcApontamentoTotal();
   renderChEvList();
   renderOsTags('snk');
   renderOsTags('panice');
-  document.getElementById('ch-intervalo').value=ch?.intervalo||'';
+  document.getElementById('ch-intervalo').value=''; // handled by apontamentos now
+  // Load validado
+  const vCheck=document.getElementById('ch-validado-cliente');
+  if(vCheck) vCheck.checked=ch?.validadoCliente||false;
+  document.getElementById('ch-validado-por').value=ch?.validadoPor||'';
+  document.getElementById('ch-validado-em').value=ch?.validadoEm||'';
+  onChValidadoChange(ch?.validadoCliente||false);
   document.getElementById('ch-motivo-pausa').value=ch?.motivoPausa||'';
   const impCheck=document.getElementById('ch-tem-impedimento');
   if(impCheck){impCheck.checked=ch?.temImpedimento||false;}
@@ -3676,10 +3841,15 @@ function saveChamado(){
     slaId,slaHoras:slaCfg?.horas||0,slaNome:slaCfg?.name||'',
     agendamento:document.getElementById('ch-agendamento')?.value||'',
     prazoConclusao:document.getElementById('ch-prazo-conclusao')?.value||'',
-    inicio:document.getElementById('ch-inicio').value,
+    apontamentos:[..._chApontamentos],
+    inicio:_chApontamentos[0]?.inicio||document.getElementById('ch-inicio').value||'',
+    fim:_chApontamentos[_chApontamentos.length-1]?.fim||document.getElementById('ch-fim').value||'',
     fim:document.getElementById('ch-fim').value,
     tempo:document.getElementById('ch-tempo').value,
     descricao,solucao:document.getElementById('ch-solucao').value.trim(),
+    validadoCliente:document.getElementById('ch-validado-cliente')?.checked||false,
+    validadoPor:document.getElementById('ch-validado-por')?.value.trim()||'',
+    validadoEm:document.getElementById('ch-validado-em')?.value||'',
     intervalo:document.getElementById('ch-intervalo')?.value||'',
     motivoPausa:document.getElementById('ch-motivo-pausa')?.value.trim()||'',
     temImpedimento:document.getElementById('ch-tem-impedimento')?.checked||false,
@@ -3953,6 +4123,12 @@ function buildChamadoCard(c){
   // SLA badge
   const slaBadge=sla?('<span style="font-size:10px;font-weight:700;color:'+sla.color+'">'+sla.icon+' SLA: '+sla.label+'</span>'):'';
 
+  // Validado badge
+  const validadoBadge=c.validadoCliente?('<span style="font-size:10px;font-weight:700;color:var(--green);background:rgba(34,197,94,.12);padding:2px 8px;border-radius:10px;border:1px solid rgba(34,197,94,.25)">✅ Validado pelo cliente'+(c.validadoPor?' · '+esc(c.validadoPor):'')+'</span>'):'';
+  // Apontamentos summary
+  const apCount=(c.apontamentos||[]).length;
+  const apBadge=apCount>1?('<span style="font-size:10px;color:var(--mid)">📋 '+apCount+' apontamentos</span>'):'';
+
   // Status badge
   const statusBadge='<span style="font-size:11px;padding:2px 8px;border-radius:10px;font-weight:700;background:'+sc+'18;color:'+sc+';border:1px solid '+sc+'30">'+c.status+'</span>';
   const tipoBadge='<span style="font-size:10px;color:var(--dim);background:var(--bg4);padding:2px 7px;border-radius:10px">'+(c.tipo||'Suporte')+'</span>';
@@ -3979,7 +4155,7 @@ function buildChamadoCard(c){
     +'<div style="display:flex;align-items:center;gap:10px;padding:11px 14px;flex-wrap:wrap">'
       +'<div style="flex:1;min-width:0">'
         +'<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:4px">'
-          +snkTags+panTags+statusBadge+tipoBadge+snkSitBadge+slaBadge+(c.temImpedimento?'<span style="font-size:11px;font-weight:700;color:var(--red);background:rgba(239,68,68,.12);padding:2px 9px;border-radius:10px;border:1px solid rgba(239,68,68,.3)">🚫 Impedimento</span>':'')
+          +snkTags+panTags+statusBadge+tipoBadge+snkSitBadge+slaBadge+validadoBadge+apBadge+(c.temImpedimento?'<span style="font-size:11px;font-weight:700;color:var(--red);background:rgba(239,68,68,.12);padding:2px 9px;border-radius:10px;border:1px solid rgba(239,68,68,.3)">🚫 Impedimento</span>':'')
         +'</div>'
         +'<div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:600px">'+esc(c.descricao||'Sem descrição')+'</div>'
         +'<div style="display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--mid)">'
