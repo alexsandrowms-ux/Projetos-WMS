@@ -925,8 +925,16 @@ datalist{display:none}
         <div class="fg"><label>💰 Valor/hora (R$) <span style="font-size:10px;color:var(--dim)">(vazio = padrão do projeto)</span></label><input class="fc" type="number" id="fs-rate" placeholder="Ex: 150.00" min="0" step="0.01"></div>
       </div>
       <div class="frow">
-        <div class="fg"><label>📅 Início Planejado</label><input class="fc" type="datetime-local" id="fs-date" onchange="calcModalHours()"></div>
-        <div class="fg"><label>🏁 Término Planejado</label><input class="fc" type="datetime-local" id="fs-dateend" onchange="calcModalHours()"></div>
+        <div class="fg span2" style="grid-column:span 2">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+            <label style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em">📅 Períodos de Planejamento</label>
+            <button class="btn btn-ghost btn-xs" onclick="addPlanejamento()" style="color:var(--accent)">+ Período</button>
+          </div>
+          <div id="fs-planejamentos-list" style="margin-bottom:4px"></div>
+          <!-- Legacy hidden fields for compat -->
+          <input type="hidden" id="fs-date">
+          <input type="hidden" id="fs-dateend">
+        </div>
       </div>
       <div class="frow" id="fs-row-realdates">
         <div class="fg"><label>▶️ Início Real</label><input class="fc" type="datetime-local" id="fs-datestartreal" onchange="calcRealHours()" title="Data/hora que a tarefa foi efetivamente iniciada"></div>
@@ -2983,11 +2991,26 @@ function renderGantt(){
   const roots=stages.filter(s=>!s.parentId);
   const cm={};stages.filter(s=>s.parentId).forEach(s=>{if(!cm[s.parentId])cm[s.parentId]=[];cm[s.parentId].push(s);});
   // Gantt: etapas raiz com seus apontamentos agrupados
-  // Gantt: etapas raiz, barra baseada nas datas da etapa (date/dateEnd)
+  // Gantt: etapas raiz — uma linha por período de planejamento
   let rows=[];roots.forEach((r,ri)=>{
     const col=PCOLS[ri%PCOLS.length];
     const rootName=(r.num?r.num+' ':'')+r.name;
-    rows.push({...r,isRoot:true,col,rootName});
+    const plans = r.planejamentos?.length ? r.planejamentos
+      : (r.date||r.dateEnd) ? [{id:'_',date:r.date,dateEnd:r.dateEnd,obs:''}] : [];
+    if(plans.length===0){
+      rows.push({...r,isRoot:true,col,rootName});
+    } else {
+      plans.forEach((plan,pi)=>{
+        rows.push({...r,
+          isRoot:pi===0,
+          _planIdx:pi,
+          date:plan.date,
+          dateEnd:plan.dateEnd||plan.date,
+          name: pi===0 ? r.name : '  └ Período '+(pi+1)+(plan.obs?' · '+plan.obs:''),
+          col,rootName,
+        });
+      });
+    }
   });
 
   // ── Monta cabeçalho de dias com agrupamento por mês ──
@@ -3487,12 +3510,22 @@ function renderCGantt(){
     const col = proj.color || PCOLS[pi % PCOLS.length];
     const stages = proj.stages || [];
     const roots = stages.filter(s => !s.parentId);
-    // cGantt: etapas raiz, barra baseada nas datas da etapa
+    // cGantt: um row por período de planejamento
     roots.forEach(root => {
-      const startD = root.date ? root.date.split('T')[0] : null;
-      const endD   = effectiveDateEnd(root);
-      if(!startD && !endD) return;
-      allRows.push({ proj, col, root, stage: root, startD, endD });
+      const plans = root.planejamentos?.length ? root.planejamentos
+        : (root.date||root.dateEnd) ? [{id:'_',date:root.date,dateEnd:root.dateEnd,obs:''}] : [];
+      if(plans.length===0) return;
+      plans.forEach((plan,pi)=>{
+        const startD = plan.date ? plan.date.split('T')[0] : null;
+        const endD   = plan.dateEnd ? plan.dateEnd.split('T')[0] : startD;
+        if(!startD && !endD) return;
+        const planStage = pi===0 ? root : {
+          ...root,
+          id: root.id+'_p'+pi,
+          name: '└ Período '+(pi+1)+(plan.obs?' · '+plan.obs.slice(0,20):''),
+        };
+        allRows.push({ proj, col, root, stage: planStage, startD, endD });
+      });
     });
   });
 
@@ -5087,6 +5120,71 @@ function toggleSubFields(isSub){
     : '📋 Horas Orçadas (total da etapa)';
 }
 
+
+// ════════════════════════════════════════════════
+// MÚLTIPLOS PLANEJAMENTOS POR ETAPA
+// ════════════════════════════════════════════════
+let _stagePlanejamentos = []; // [{id, date, dateEnd, obs}]
+
+function addPlanejamento(plan=null){
+  _stagePlanejamentos.push({
+    id: plan?.id || uid(),
+    date:    plan?.date    || '',
+    dateEnd: plan?.dateEnd || '',
+    obs:     plan?.obs     || '',
+  });
+  renderPlanejamentos();
+}
+
+function removePlanejamento(idx){
+  _stagePlanejamentos.splice(idx,1);
+  renderPlanejamentos();
+  syncLegacyDates();
+}
+
+function planChange(idx, field, val){
+  if(!_stagePlanejamentos[idx]) return;
+  _stagePlanejamentos[idx][field] = val;
+  syncLegacyDates();
+}
+
+function syncLegacyDates(){
+  // Keep legacy fs-date / fs-dateend in sync with first planejamento
+  const first = _stagePlanejamentos[0];
+  const fsDate    = document.getElementById('fs-date');
+  const fsDateEnd = document.getElementById('fs-dateend');
+  if(fsDate)    fsDate.value    = first?.date    || '';
+  if(fsDateEnd) fsDateEnd.value = first?.dateEnd || '';
+}
+
+function renderPlanejamentos(){
+  const el = document.getElementById('fs-planejamentos-list');
+  if(!el) return;
+  if(!_stagePlanejamentos.length){
+    el.innerHTML = '<div style="font-size:11px;color:var(--dim);padding:6px 0">Nenhum período. Clique em <strong>+ Período</strong>.</div>';
+    return;
+  }
+  el.innerHTML = _stagePlanejamentos.map((p,i) => {
+    const dur = p.date && p.dateEnd
+      ? Math.max(0,Math.round((new Date(p.dateEnd)-new Date(p.date))/86400000)+1) + ' dia(s)'
+      : '';
+    return '<div style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
+        +'<span style="font-size:11px;font-weight:700;color:var(--mid)">Período '+(i+1)+(dur?' <span style=\'color:var(--accent)\'>· '+dur+'</span>':'')+'</span>'
+        +'<button class="btn btn-ghost btn-xs" onclick="removePlanejamento('+i+')" style="color:var(--red)">✕</button>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">'
+        +'<div><label class="fl">📅 Início</label>'
+          +'<input class="fc" type="date" data-pidx="'+i+'" data-pfield="date" value="'+p.date+'" onchange="planChange('+i+',&quot;date&quot;,this.value);renderPlanejamentos()" style="font-size:12px"></div>'
+        +'<div><label class="fl">🏁 Término</label>'
+          +'<input class="fc" type="date" data-pidx="'+i+'" data-pfield="dateEnd" value="'+p.dateEnd+'" onchange="planChange('+i+',&quot;dateEnd&quot;,this.value);renderPlanejamentos()" style="font-size:12px"></div>'
+      +'</div>'
+      +'<div><label class="fl">📝 Obs</label>'
+        +'<input class="fc" type="text" value="'+esc(p.obs)+'" onchange="planChange('+i+',&quot;obs&quot;,this.value)" placeholder="Observação (opcional)" style="font-size:12px"></div>'
+    +'</div>';
+  }).join('');
+}
+
 function openStageModal(isNew=true,editId=null,defParent=null){
   _eStageId=isNew?null:editId; _defParent=defParent;
   const proj=getP(S.cur),stage=editId?proj?.stages?.find(s=>s.id===editId):null;
@@ -5100,6 +5198,11 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   const dtEnd   = stage?.dateEnd ? (stage.dateEnd + (stage.timeEnd ? 'T'+stage.timeEnd : '')) : '';
   document.getElementById('fs-date').value = dtStart;
   document.getElementById('fs-dateend').value = dtEnd;
+  // Load planejamentos
+  _stagePlanejamentos = stage?.planejamentos?.length
+    ? stage.planejamentos.map(p=>({...p}))
+    : (dtStart || dtEnd ? [{id:uid(), date:dtStart.split('T')[0]||dtStart, dateEnd:dtEnd.split('T')[0]||dtEnd, obs:''}] : []);
+  renderPlanejamentos();
   document.getElementById('fs-datereal').value=stage?.dateReal||'';
   document.getElementById('fs-datestartreal').value=stage?.dateStartReal||'';
   // Recalculate real hours from dates
@@ -5450,8 +5553,9 @@ function saveStage(){
   const d={name,
     num:document.getElementById('fs-num').value.trim(),
     executor:document.getElementById('fs-executor').value.trim(),
-    date:(()=>{const v=document.getElementById('fs-date').value;return v?v.split('T')[0]:''})(),
-    dateEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v?v.split('T')[0]:''})(),
+    date:_stagePlanejamentos[0]?.date||(()=>{const v=document.getElementById('fs-date').value;return v?v.split('T')[0]:''})(),
+    dateEnd:_stagePlanejamentos[0]?.dateEnd||(()=>{const v=document.getElementById('fs-dateend').value;return v?v.split('T')[0]:''})(),
+    planejamentos:_stagePlanejamentos.filter(p=>p.date||p.dateEnd).map(p=>({...p})),
     timeStart:(()=>{const v=document.getElementById('fs-date').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     timeEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     dateReal:document.getElementById('fs-datereal').value,
