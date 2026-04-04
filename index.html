@@ -580,6 +580,8 @@ datalist{display:none}
         <div class="sb-item" id="snav-cgantt" onclick="showPage('cgantt')"><span class="sb-icon">🗓️</span>Agenda Consolidada</div>
         <div class="sb-item" id="snav-chamados" onclick="showPage('chamados')"><span class="sb-icon">🎧</span>Atendimentos</div>
         <div class="sb-item" id="snav-checklist" onclick="showPage('checklist')"><span class="sb-icon">✅</span>Checklist Implantação</div>
+        <div class="sb-item" id="snav-planejamento" onclick="showPage('planejamento')"><span class="sb-icon">📊</span>Planejamento WMS</div>
+        <div class="sb-item" id="snav-escopo" onclick="showPage('escopo')"><span class="sb-icon">📄</span>Escopo / Proposta</div>
         <div class="sb-sep"></div>
 <div class="sb-item" id="snav-users" style="display:none" onclick="showPage('users')"><span class="sb-icon">👥</span>Usuários</div>
       </div>
@@ -844,6 +846,79 @@ datalist{display:none}
           </div>
         </div>
         <div id="cl-list"></div>
+      </div>
+
+
+      <!-- PLANEJAMENTO WMS -->
+      <div class="page" id="page-planejamento">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">📊 Planejamento de Implantação WMS</div>
+            <div style="font-size:12px;color:var(--mid)">Defina as datas e gere o Gantt para o cliente</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnPropagarDatas()">⚡ Auto-Preencher Datas</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnSalvar()">💾 Salvar Planejamento</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnCarregar()">📂 Carregar</button>
+            <button class="btn btn-primary" style="font-size:12px" onclick="showPage('escopo')">📄 Ver Escopo</button>
+          </div>
+        </div>
+
+        <!-- Config -->
+        <div class="card" style="padding:16px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Dados do Projeto</div>
+          <div class="frow">
+            <div class="fg"><label class="fl">Cliente / Empresa</label><input class="fc" id="pln-cliente" placeholder="Nome do cliente" oninput="plnAtualizarGantt()"></div>
+            <div class="fg"><label class="fl">Responsável no Cliente</label><input class="fc" id="pln-resp" placeholder="Nome do responsável" oninput="plnAtualizarGantt()"></div>
+            <div class="fg"><label class="fl">📅 Início do Projeto</label><input class="fc" type="date" id="pln-inicio" onchange="plnPropagarDatas()"></div>
+            <div class="fg"><label class="fl">Consultor AXL</label><input class="fc" id="pln-consultor" value="Alexsandro C. Lopes"></div>
+          </div>
+          <div id="pln-status-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px"></div>
+        </div>
+
+        <!-- Fases -->
+        <div class="card" style="padding:16px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Fases e Períodos</div>
+          <div style="overflow-x:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <thead>
+                <tr style="background:var(--bg3)">
+                  <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Fase</th>
+                  <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Módulo</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Horas</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Início</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Término</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Duração</th>
+                  <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Obs.</th>
+                </tr>
+              </thead>
+              <tbody id="pln-fases-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Gantt -->
+        <div class="card" style="padding:16px">
+          <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Gantt de Implantação</div>
+          <div id="pln-gantt-wrap" style="overflow-x:auto">
+            <div style="font-size:12px;color:var(--dim);padding:12px 0">Informe a data de início para visualizar o Gantt.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ESCOPO / PROPOSTA -->
+      <div class="page" id="page-escopo">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">📄 Proposta de Escopo WMS</div>
+            <div style="font-size:12px;color:var(--mid)">Geração automática do escopo para o cliente</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="imprimirEscopo()">🖨️ Imprimir / PDF</button>
+            <button class="btn btn-primary" style="font-size:12px" onclick="exportarEscopoHTML()">⬇ Exportar HTML</button>
+          </div>
+        </div>
+        <div id="escopo-preview" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:20px;min-height:400px"></div>
       </div>
 
     </div><!-- main-content -->
@@ -2261,6 +2336,14 @@ function showPage(page,pid=null){
     document.getElementById('page-checklist').classList.add('on');
     document.getElementById('snav-checklist').classList.add('on');
     renderChecklist();
+  } else if(page==='planejamento'){
+    document.getElementById('page-planejamento').classList.add('on');
+    document.getElementById('snav-planejamento').classList.add('on');
+    renderPlanejamentoWMS();
+  } else if(page==='escopo'){
+    document.getElementById('page-escopo').classList.add('on');
+    document.getElementById('snav-escopo').classList.add('on');
+    renderEscopo();
   }
 }
 
@@ -5098,6 +5181,314 @@ function renderChecklist(){
       </div>
     </div>`;
   }).join('');
+}
+
+
+// ════════════════════════════════════════════════
+// PLANEJAMENTO WMS
+// ════════════════════════════════════════════════
+const PLN_FASES = [
+  {num:'01',nome:'Pré-Implantação e Diagnóstico',     horas:20,cor:'#1E3A5F',semanas:2},
+  {num:'02',nome:'Configuração e Parametrização WMS', horas:40,cor:'#2E6DA4',semanas:4},
+  {num:'03',nome:'Integração com ERP Sankhya',        horas:30,cor:'#0891B2',semanas:3},
+  {num:'04',nome:'Treinamento de Usuários',           horas:24,cor:'#7C3AED',semanas:2},
+  {num:'05',nome:'Testes e Homologação',              horas:26,cor:'#D97706',semanas:3},
+  {num:'06',nome:'Go-Live e Acompanhamento',          horas:24,cor:'#16A34A',semanas:2},
+  {num:'07',nome:'Encerramento do Projeto',           horas:16,cor:'#6B7280',semanas:1},
+];
+let plnDatas = PLN_FASES.map(()=>({inicio:'',fim:'',obs:''}));
+
+function renderPlanejamentoWMS(){plnRenderFases();plnAtualizarGantt();}
+
+function plnRenderFases(){
+  const tbody=document.getElementById('pln-fases-tbody');
+  if(!tbody)return;
+  tbody.innerHTML=PLN_FASES.map((f,i)=>{
+    const d=plnDatas[i];
+    let dur='—';
+    if(d.inicio&&d.fim){
+      const dias=Math.round((new Date(d.fim)-new Date(d.inicio))/86400000)+1;
+      if(dias>0){const sem=Math.ceil(dias/7);dur=dias+'d / '+sem+'sem';}
+    }
+    const cor=f.cor;
+    return '<tr style="border-bottom:1px solid var(--border)">'
+      +'<td style="padding:7px 10px;font-weight:800;color:'+cor+'">'+f.num+'</td>'
+      +'<td style="padding:7px 10px;font-weight:600;min-width:220px">'+f.nome+'</td>'
+      +'<td style="padding:7px 10px;text-align:center"><span style="background:rgba(14,165,233,.1);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+f.horas+'h</span></td>'
+      +'<td style="padding:7px 10px;text-align:center"><input class="fc" type="date" value="'+d.inicio+'" onchange="plnDatas['+i+'].inicio=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px"></td>'
+      +'<td style="padding:7px 10px;text-align:center"><input class="fc" type="date" value="'+d.fim+'" onchange="plnDatas['+i+'].fim=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px"></td>'
+      +'<td style="padding:7px 10px;text-align:center;font-size:11px;color:var(--green);font-weight:700">'+dur+'</td>'
+      +'<td style="padding:7px 10px"><input class="fc" type="text" value="'+d.obs.replace(/"/g,'&quot;')+'" onchange="plnDatas['+i+'].obs=this.value" placeholder="Obs..." style="font-size:12px;width:180px"></td>'
+      +'</tr>';
+  }).join('');
+}
+
+function plnPropagarDatas(){
+  const ini=document.getElementById('pln-inicio')?.value;
+  if(!ini){toast('Informe a data de início','warn');return;}
+  let cur=new Date(ini+'T00:00:00');
+  PLN_FASES.forEach((f,i)=>{
+    while(cur.getDay()===0||cur.getDay()===6)cur.setDate(cur.getDate()+1);
+    const d1=new Date(cur);
+    const d2=new Date(d1);d2.setDate(d1.getDate()+f.semanas*7-1);
+    plnDatas[i].inicio=d1.toISOString().split('T')[0];
+    plnDatas[i].fim=d2.toISOString().split('T')[0];
+    cur=new Date(d2);cur.setDate(cur.getDate()+3);
+  });
+  plnRenderFases();plnAtualizarGantt();
+  toast('Datas preenchidas automaticamente ✓','ok');
+}
+
+function plnAtualizarGantt(){
+  const wrap=document.getElementById('pln-gantt-wrap');
+  if(!wrap)return;
+  const comData=plnDatas.filter(d=>d.inicio&&d.fim);
+  if(!comData.length){
+    wrap.innerHTML='<div style="font-size:12px;color:var(--dim);padding:12px 0">Informe a data de início para visualizar o Gantt.</div>';
+    plnAtualizarStatus();return;
+  }
+  const allD=comData.flatMap(d=>[new Date(d.inicio),new Date(d.fim)]);
+  let minD=new Date(Math.min(...allD)),maxD=new Date(Math.max(...allD));
+  minD.setDate(minD.getDate()-2);maxD.setDate(maxD.getDate()+5);
+  const weeks=[];let cur=new Date(minD);
+  while(cur.getDay()!==1)cur.setDate(cur.getDate()-1);
+  while(cur<=maxD){weeks.push(new Date(cur));cur=new Date(cur);cur.setDate(cur.getDate()+7);}
+  const today=new Date();today.setHours(0,0,0,0);
+  const toYMD=d=>d.toISOString().split('T')[0];
+  const mhMap={};
+  weeks.forEach(w=>{
+    const mk=w.getFullYear()+'-'+w.getMonth();
+    const lbl=w.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'}).toUpperCase();
+    if(!mhMap[mk])mhMap[mk]={lbl,count:0};mhMap[mk].count++;
+  });
+  const TH='padding:5px 6px;font-size:9px;font-weight:700;color:var(--mid);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;background:var(--bg3)';
+  const TL='padding:6px 10px;font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;background:var(--bg3);border-right:2px solid var(--border);border-bottom:1px solid var(--border);min-width:220px';
+  let h='<table style="border-collapse:collapse;font-size:11px"><thead>';
+  h+='<tr><th style="'+TL+'">FASE</th>';
+  Object.values(mhMap).forEach(m=>{h+='<th colspan="'+m.count+'" style="'+TH+';border-left:2px solid var(--border)">'+m.lbl+'</th>';});
+  h+='</tr><tr><th style="'+TL+'"></th>';
+  weeks.forEach(w=>{
+    const itw=today>=w&&today<new Date(w.getTime()+7*86400000);
+    h+='<th style="'+TH+';min-width:32px;'+(itw?'background:rgba(14,165,233,.15);color:var(--accent)':'')+'">'+w.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+'</th>';
+  });
+  h+='</tr></thead><tbody>';
+  PLN_FASES.forEach((f,i)=>{
+    const d=plnDatas[i];
+    h+='<tr><td style="'+TL+'"><span style="color:'+f.cor+';font-weight:800">'+f.num+'.</span> '+f.nome+'</td>';
+    weeks.forEach(w=>{
+      const wEnd=new Date(w.getTime()+6*86400000);
+      const itw=today>=w&&today<new Date(w.getTime()+7*86400000);
+      const bg=itw?'background:rgba(14,165,233,.05)':'';
+      if(d.inicio&&d.fim){
+        const fi=new Date(d.inicio),ff=new Date(d.fim);
+        if(fi<=wEnd&&ff>=w){
+          const isSt=toYMD(w)<=d.inicio&&toYMD(wEnd)>=d.inicio;
+          const isEn=toYMD(w)<=d.fim&&toYMD(wEnd)>=d.fim;
+          const rad=isSt&&isEn?'3px':isSt?'3px 0 0 3px':isEn?'0 3px 3px 0':'0';
+          h+='<td style="padding:2px 1px;border-bottom:1px solid var(--border)"><div style="height:18px;background:'+f.cor+';border-radius:'+rad+';opacity:.9;display:flex;align-items:center;padding:0 3px;font-size:8px;color:#fff;font-weight:700">'+(isSt?f.num:'')+'</div></td>';
+          return;
+        }
+      }
+      h+='<td style="border-bottom:1px solid var(--border);'+bg+'"></td>';
+    });
+    h+='</tr>';
+  });
+  h+='</tbody></table>';
+  wrap.innerHTML=h;
+  plnAtualizarStatus();
+}
+
+function plnAtualizarStatus(){
+  const el=document.getElementById('pln-status-row');if(!el)return;
+  const filled=plnDatas.filter(d=>d.inicio&&d.fim).length;
+  const totalH=PLN_FASES.reduce((a,f)=>a+f.horas,0);
+  let html='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+filled+'/'+PLN_FASES.length+' fases</span>';
+  html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+totalH+'h · R$ '+(totalH*110).toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>';
+  if(filled===PLN_FASES.length){
+    const fi=plnDatas.map(d=>d.inicio).filter(Boolean).sort()[0];
+    const ff=plnDatas.map(d=>d.fim).filter(Boolean).sort().reverse()[0];
+    if(fi&&ff){const d=Math.round((new Date(ff)-new Date(fi))/86400000)+1;
+      html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(34,197,94,.1);color:var(--green);font-weight:700">⏱ '+(d/30).toFixed(1)+' meses</span>';
+    }
+    html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(34,197,94,.1);color:var(--green);font-weight:700">✅ Pronto para envio</span>';
+  }
+  el.innerHTML=html;
+}
+
+function plnSalvar(){
+  const plano={versao:'1.0',geradoEm:new Date().toISOString(),
+    cliente:document.getElementById('pln-cliente')?.value||'',
+    responsavel:document.getElementById('pln-resp')?.value||'',
+    inicio:document.getElementById('pln-inicio')?.value||'',
+    consultor:document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
+    fases:PLN_FASES.map((f,i)=>({num:f.num,nome:f.nome,horas:f.horas,...plnDatas[i]}))};
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(plano,null,2)],{type:'application/json'}));
+  a.download='Planejamento_WMS_'+(plano.cliente||'Cliente').replace(/\s+/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();toast('Planejamento salvo ✓','ok');
+}
+
+function plnCarregar(){
+  const input=document.createElement('input');input.type='file';input.accept='.json';
+  input.onchange=e=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const p=JSON.parse(ev.target.result);
+        if(document.getElementById('pln-cliente'))document.getElementById('pln-cliente').value=p.cliente||'';
+        if(document.getElementById('pln-resp'))document.getElementById('pln-resp').value=p.responsavel||'';
+        if(document.getElementById('pln-inicio'))document.getElementById('pln-inicio').value=p.inicio||'';
+        if(document.getElementById('pln-consultor'))document.getElementById('pln-consultor').value=p.consultor||'Alexsandro C. Lopes';
+        p.fases.forEach((f,i)=>{plnDatas[i]={inicio:f.inicio||'',fim:f.fim||'',obs:f.obs||''};});
+        plnRenderFases();plnAtualizarGantt();toast('Planejamento carregado ✓','ok');
+      }catch(err){toast('Erro: '+err.message,'err');}
+    };
+    reader.readAsText(e.target.files[0]);
+  };input.click();
+}
+
+// ════════════════════════════════════════════════
+// ESCOPO / PROPOSTA
+// ════════════════════════════════════════════════
+const PLN_FASES_DET=[
+  {num:'01',atividades:['Reunião de Kickoff e alinhamento de expectativas','Levantamento e mapeamento dos processos de armazenagem','Diagnóstico da infraestrutura tecnológica (ERP, rede, coletores)','Identificação de volumes, SKUs, tipos de operação e sazonalidade','Definição e aprovação do escopo detalhado e cronograma','Elaboração do Documento de Requisitos de Implantação (DRI)']},
+  {num:'02',atividades:['Configuração do ambiente (servidor, banco de dados, licenças)','Sincronização de cadastros via integração com ERP Sankhya','Parametrização de regras de armazenagem (FIFO, FEFO, LIFO)','Configuração de setores, ruas, prateleiras e posições do armazém','Configuração de docas, zonas de recebimento e expedição','Parametrização de embalagens, UoM e conversões','Configuração de perfis de usuários e permissões de acesso']},
+  {num:'03',atividades:['Mapeamento dos fluxos de integração (pedidos, NF-e, estoque)','Configuração dos conectores nativos WMS-Sankhya','Testes de integração ponta a ponta (Entrada, Saída, Inventário)','Validação de consistência de dados entre WMS e ERP','Homologação do ambiente integrado com equipe técnica do cliente']},
+  {num:'04',atividades:['Treinamento para equipe de TI e administradores do sistema','Treinamento para supervisores e líderes operacionais','Treinamento prático para operadores de armazém (coletores)','Elaboração e entrega de material de apoio e manuais','Simulações de operação com dados reais do cliente']},
+  {num:'05',atividades:['Execução de testes de recebimento e conferência','Execução de testes de endereçamento e putaway','Execução de testes de separação (picking) e ondas','Execução de testes de expedição e emissão de documentos','Testes de inventário cíclico e geral','Registro e resolução de inconformidades','Aprovação formal da homologação pelo cliente']},
+  {num:'06',atividades:['Planejamento detalhado da virada (cutover plan)','Apoio presencial nos primeiros dias de operação','Monitoramento de indicadores operacionais','Ajustes finos de parâmetros e regras de negócio','Suporte intensivo pós Go-Live (primeiros 5 dias úteis)']},
+  {num:'07',atividades:['Relatório de encerramento do projeto','Reunião de lições aprendidas','Entrega de documentação técnica e operacional','Plano de sustentação e suporte pós-implantação','Transferência de conhecimento para equipe interna']},
+];
+
+function renderEscopo(){
+  const el=document.getElementById('escopo-preview');if(!el)return;
+  el.innerHTML=buildEscopoHTML();
+}
+
+function imprimirEscopo(){
+  const win=window.open('','_blank');
+  const html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Escopo WMS</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"DM Sans",sans-serif;color:#1e293b;padding:20px;background:#fff}'
+    +'@media print{body{padding:0}}</style></head><body>'
+    +buildEscopoHTML()+'</body></html>';
+  win.document.write(html);win.document.close();
+  setTimeout(()=>{win.focus();win.print();},400);
+}
+
+function exportarEscopoHTML(){
+  const html='<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Escopo WMS — AXL_IntraLog</title>'
+    +'<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"DM Sans",sans-serif;color:#1e293b;background:#f0f4f8;padding:24px}'
+    +'@media print{body{background:#fff;padding:0}}</style></head><body>'
+    +buildEscopoHTML()+'</body></html>';
+  const cliente=document.getElementById('pln-cliente')?.value||'Cliente';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+  a.download='Escopo_WMS_'+cliente.replace(/\s+/g,'_')+'.html';
+  a.click();toast('Escopo exportado ✓','ok');
+}
+
+function buildEscopoHTML(){
+  const cliente=document.getElementById('pln-cliente')?.value||'___________________';
+  const resp=document.getElementById('pln-resp')?.value||'___________________';
+  const consultor=document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes';
+  const iniVal=document.getElementById('pln-inicio')?.value||'';
+  const iniFmt=iniVal?new Date(iniVal+'T00:00:00').toLocaleDateString('pt-BR'):'_______ / _______ / _________';
+  const lastFim=plnDatas.map(d=>d.fim).filter(Boolean).sort().reverse()[0];
+  const fimFmt=lastFim?new Date(lastFim+'T00:00:00').toLocaleDateString('pt-BR'):'_______ / _______ / _________';
+  const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const totalH=PLN_FASES.reduce((a,f)=>a+f.horas,0);
+  const totalR=totalH*110;
+  const cur=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+  const fasesHTML=PLN_FASES.map((f,fi)=>{
+    const det=PLN_FASES_DET[fi];
+    const d=plnDatas[fi];
+    return '<div style="margin-bottom:14px;border-left:4px solid '+f.cor+';background:#f8fafc;border-radius:0 6px 6px 0;padding:12px 16px">'
+      +'<div style="font-size:13px;font-weight:800;color:#1E3A5F;margin-bottom:6px">FASE '+f.num+' — '+f.nome
+      +'<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:8px">'+f.horas+'h · '+cur(f.horas*110)+'</span>'
+      +(d.inicio?'<span style="font-size:11px;font-weight:600;color:'+f.cor+';margin-left:8px">📅 '+new Date(d.inicio+'T00:00:00').toLocaleDateString('pt-BR')+' → '+(d.fim?new Date(d.fim+'T00:00:00').toLocaleDateString('pt-BR'):'?')+'</span>':'')
+      +'</div>'
+      +'<ul style="margin:0;padding-left:18px">'+det.atividades.map(a=>'<li style="font-size:12px;color:#334155;line-height:1.7">'+a+'</li>').join('')+'</ul>'
+      +(d.obs?'<div style="font-size:11px;color:#7C3AED;margin-top:6px;font-style:italic">📝 '+d.obs+'</div>':'')
+      +'</div>';
+  }).join('');
+
+  const resumo=PLN_FASES.map((f,fi)=>{
+    const d=plnDatas[fi];
+    return '<tr style="background:'+(fi%2===0?'#f8fafc':'#fff')+'">'
+      +'<td style="padding:8px 12px;font-size:12px">'+f.num+'. '+f.nome+'</td>'
+      +'<td style="padding:8px 12px;text-align:center;font-size:12px;font-weight:700;color:#2E6DA4">'+f.horas+'h</td>'
+      +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(d.inicio?new Date(d.inicio+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
+      +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(d.fim?new Date(d.fim+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;color:#16a34a">'+cur(f.horas*110)+'</td>'
+      +'</tr>';
+  }).join('');
+
+  return '<div style="max-width:900px;margin:0 auto">'
+    // Header
+    +'<div style="display:grid;grid-template-columns:1fr auto;background:linear-gradient(135deg,#1E3A5F,#2E6DA4);border-radius:10px;overflow:hidden;margin-bottom:20px">'
+      +'<div style="padding:20px 24px">'
+        +'<div style="font-size:10px;font-weight:700;color:#A8C4E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Proposta de Escopo</div>'
+        +'<div style="font-size:22px;font-weight:900;color:#fff;font-family:Outfit,sans-serif">Implantação WMS — Operador Logístico</div>'
+        +'<div style="font-size:13px;color:#A8C4E0;margin-top:4px">Emitida em '+hoje+'</div>'
+      +'</div>'
+      +'<div style="background:#E87722;padding:20px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:180px">'
+        +'<div style="font-size:17px;font-weight:900;color:#fff;font-family:Outfit,sans-serif">AXL_IntraLog</div>'
+        +'<div style="font-size:11px;color:#fff;opacity:.85;text-align:center">Consultoria em IntraLogística</div>'
+      +'</div>'
+    +'</div>'
+    // Info grid
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">'
+      +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px">'
+        +'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Dados do Cliente</div>'
+        +[['Cliente / Empresa',cliente],['Responsável',resp],['Tipo de Operação','Operador Logístico']].map(r=>
+          '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span style="color:#64748b">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'
+        ).join('')
+      +'</div>'
+      +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px">'
+        +'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Dados da Proposta</div>'
+        +[['Consultor',consultor],['Horas Estimadas',totalH+'h'],['Valor/Hora','R$ 110,00'],['Investimento Total',cur(totalR)],['Início Previsto',iniFmt],['Término Previsto',fimFmt],['Prazo','3 a 4 meses'],['Validade','30 dias']].map(r=>
+          '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:12px"><span style="color:#64748b">'+r[0]+'</span><span style="font-weight:600">'+r[1]+'</span></div>'
+        ).join('')
+      +'</div>'
+    +'</div>'
+    // Fases
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin-bottom:16px">'
+      +'<div style="font-size:14px;font-weight:800;color:#1E3A5F;padding-bottom:10px;border-bottom:3px solid #E87722;margin-bottom:14px">Escopo Detalhado por Fase</div>'
+      +fasesHTML
+    +'</div>'
+    // Resumo financeiro
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:16px">'
+      +'<div style="padding:14px 16px;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-size:14px;font-weight:800;color:#1E3A5F">Resumo Financeiro e Cronograma</div>'
+      +'<table style="width:100%;border-collapse:collapse">'
+        +'<thead><tr style="background:#1E3A5F"><th style="padding:9px 12px;text-align:left;font-size:10px;color:#fff;font-weight:700;text-transform:uppercase">Fase / Módulo</th><th style="padding:9px 12px;text-align:center;font-size:10px;color:#fff;font-weight:700">Horas</th><th style="padding:9px 12px;text-align:center;font-size:10px;color:#fff;font-weight:700">Início</th><th style="padding:9px 12px;text-align:center;font-size:10px;color:#fff;font-weight:700">Término</th><th style="padding:9px 12px;text-align:right;font-size:10px;color:#fff;font-weight:700">Valor</th></tr></thead>'
+        +'<tbody>'+resumo+'</tbody>'
+        +'<tfoot><tr style="background:#1E3A5F"><td style="padding:10px 12px;font-size:13px;font-weight:800;color:#fff">TOTAL</td><td style="padding:10px 12px;text-align:center;font-size:13px;font-weight:800;color:#fff">'+totalH+'h</td><td style="padding:10px 12px;text-align:center;font-size:12px;color:#A8C4E0">'+iniFmt+'</td><td style="padding:10px 12px;text-align:center;font-size:12px;color:#A8C4E0">'+fimFmt+'</td><td style="padding:10px 12px;text-align:right;font-size:15px;font-weight:900;color:#E87722">'+cur(totalR)+'</td></tr></tfoot>'
+      +'</table>'
+    +'</div>'
+    // Premissas
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">'
+      +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px">'
+        +'<div style="font-size:13px;font-weight:800;color:#1E3A5F;padding-bottom:8px;border-bottom:3px solid #E87722;margin-bottom:12px">Premissas</div>'
+        +'<ul style="padding-left:18px">'+['Infraestrutura (servidor, rede, coletores) disponível antes do início','Cadastros sincronizados via ERP Sankhya','Ponto focal com autoridade de decisão designado','Equipes disponíveis para treinamentos e testes','Acesso remoto ao ambiente durante todo o projeto','Licenças WMS Sankhya ativas antes do início','Aprovações em até 2 dias úteis após solicitação'].map(a=>'<li style="font-size:12px;color:#334155;line-height:1.7">'+a+'</li>').join('')+'</ul>'
+      +'</div>'
+      +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px">'
+        +'<div style="font-size:13px;font-weight:800;color:#1E3A5F;padding-bottom:8px;border-bottom:3px solid #E87722;margin-bottom:12px">Não Incluso</div>'
+        +'<ul style="padding-left:18px">'+['Licenças de software (WMS, ERP, SO)','Hardware (servidor, coletores, impressoras)','Migração de dados históricos de sistemas legados','Suporte pós-implantação (contrato separado)','Deslocamentos e hospedagem (cobrados à parte)'].map(a=>'<li style="font-size:12px;color:#334155;line-height:1.7">'+a+'</li>').join('')+'</ul>'
+      +'</div>'
+    +'</div>'
+    // Assinatura
+    +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:24px">'
+      +'<div style="font-size:13px;font-weight:800;color:#1E3A5F;margin-bottom:20px">Aceite da Proposta</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:0">'
+        +'<div style="text-align:center"><div style="height:50px;border-bottom:1px solid #1e293b;margin-bottom:8px"></div><div style="font-size:12px;color:#334155;font-weight:600">'+consultor+' — AXL_IntraLog</div></div>'
+        +'<div></div>'
+        +'<div style="text-align:center"><div style="height:50px;border-bottom:1px solid #1e293b;margin-bottom:8px"></div><div style="font-size:12px;color:#334155;font-weight:600">'+resp+' — '+cliente+'<br><span style="font-weight:400;font-size:11px">Data: _____ / _____ / _______</span></div></div>'
+      +'</div>'
+    +'</div>'
+  +'</div>';
 }
 
 // ════════════════════════════════════
