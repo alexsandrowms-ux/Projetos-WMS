@@ -5223,20 +5223,38 @@ function renderPlanejamentoWMS(){
 
 function irParaPlanejamento(){
   const name = document.getElementById('fp-name')?.value.trim();
-  if(!name){ toast('Informe o nome do projeto antes de ir para o Planejamento','err'); return; }
+  if(!name){ toast('Informe o nome do projeto','err'); return; }
+
+  // Capture the ID BEFORE saving (for edits it's _eProjId; for new it will be found by name)
+  const editingId = _eProjId; // null if new project
+
   saveProject();
   closeModal('modal-proj');
+
   setTimeout(()=>{
     showPage('planejamento');
-    const proj = (S.projects||[]).find(p=>p.name===name);
+    plnPopularProjetos();
+
+    // Find project: by saved ID (edit) or by name (new)
+    const proj = editingId
+      ? (S.projects||[]).find(p=>p.id===editingId)
+      : (S.projects||[]).find(p=>p.name===name);
+
     if(proj){
-      plnPopularProjetos();
+      plnProjId = proj.id;
       const sel = document.getElementById('pln-proj-id');
-      if(sel){ sel.value=proj.id; plnOnProjChange(proj.id); }
+      if(sel){ sel.value=proj.id; }
+
+      // Pre-fill planning fields from project
+      plnOnProjChange(proj.id);
+
+      // Pre-fill start date from project if not yet set
       const ini = document.getElementById('pln-inicio');
-      if(ini && proj.startDate && !ini.value) ini.value=proj.startDate;
+      if(ini && !ini.value && proj.startDate) ini.value = proj.startDate;
+
+      toast('Projeto "'+proj.name+'" selecionado no planejamento','ok');
     }
-  }, 300);
+  }, 350);
 }
 
 function plnPopularProjetos(){
@@ -5664,16 +5682,29 @@ function exportarEscopoHTML(){
 }
 
 function buildEscopoHTML(){
-  const cliente=document.getElementById('pln-cliente')?.value||'___________________';
-  const resp=document.getElementById('pln-resp')?.value||'___________________';
-  const consultor=document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes';
-  const iniVal=document.getElementById('pln-inicio')?.value||'';
-  const iniFmt=iniVal?new Date(iniVal+'T00:00:00').toLocaleDateString('pt-BR'):'_______ / _______ / _________';
-  const lastFim=plnDatas.map(d=>d.fim).filter(Boolean).sort().reverse()[0];
-  const fimFmt=lastFim?new Date(lastFim+'T00:00:00').toLocaleDateString('pt-BR'):'_______ / _______ / _________';
-  const hoje=new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-  const totalH=PLN_FASES.reduce((a,f)=>a+f.horas,0);
-  const totalR=totalH*110;
+  // Pull data from linked project if available
+  const proj = plnProjId && plnProjId!=='__novo__' ? (S.projects||[]).find(p=>p.id===plnProjId) : null;
+
+  const cliente   = proj?.client  || document.getElementById('pln-cliente')?.value  || '___________________';
+  const resp      = document.getElementById('pln-resp')?.value || '___________________';
+  const consultor = proj?.owner   || document.getElementById('pln-consultor')?.value || 'Alexsandro C. Lopes';
+
+  // Dates: use project dates if set, else from planning Gantt
+  const iniValProj = proj?.startDate || document.getElementById('pln-inicio')?.value || '';
+  const firstFase  = plnDatas.map(d=>d.inicio).filter(Boolean).sort()[0] || '';
+  const iniVal     = iniValProj || firstFase;
+  const iniFmt     = iniVal ? new Date(iniVal+'T00:00:00').toLocaleDateString('pt-BR') : '_______ / _______ / _________';
+
+  const lastFim    = plnDatas.map(d=>d.fim).filter(Boolean).sort().reverse()[0]
+                     || proj?.endDate || '';
+  const fimFmt     = lastFim ? new Date(lastFim+'T00:00:00').toLocaleDateString('pt-BR') : '_______ / _______ / _________';
+
+  const hoje    = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Hours and rate from project
+  const totalH  = proj?.totalHours ? parseFloat(proj.totalHours)||180 : PLN_FASES.reduce((a,f)=>a+f.horas,0);
+  const valorH  = proj?.defaultRate ? parseFloat(proj.defaultRate)||110 : 110;
+  const totalR=totalH*valorH;
   const cur=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2});
 
   const fasesHTML=PLN_FASES.map((f,fi)=>{
@@ -5681,7 +5712,7 @@ function buildEscopoHTML(){
     const d=plnDatas[fi];
     return '<div style="margin-bottom:14px;border-left:4px solid '+f.cor+';background:#f8fafc;border-radius:0 6px 6px 0;padding:12px 16px">'
       +'<div style="font-size:13px;font-weight:800;color:#1E3A5F;margin-bottom:6px">FASE '+f.num+' — '+f.nome
-      +'<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:8px">'+f.horas+'h · '+cur(f.horas*110)+'</span>'
+      +'<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:8px">'+f.horas+'h · '+cur(f.horas*valorH)+'</span>'
       +(d.inicio?'<span style="font-size:11px;font-weight:600;color:'+f.cor+';margin-left:8px">📅 '+new Date(d.inicio+'T00:00:00').toLocaleDateString('pt-BR')+' → '+(d.fim?new Date(d.fim+'T00:00:00').toLocaleDateString('pt-BR'):'?')+'</span>':'')
       +'</div>'
       +'<ul style="margin:0;padding-left:18px">'+det.atividades.map(a=>'<li style="font-size:12px;color:#334155;line-height:1.7">'+a+'</li>').join('')+'</ul>'
@@ -5696,7 +5727,7 @@ function buildEscopoHTML(){
       +'<td style="padding:8px 12px;text-align:center;font-size:12px;font-weight:700;color:#2E6DA4">'+f.horas+'h</td>'
       +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(d.inicio?new Date(d.inicio+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
       +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(d.fim?new Date(d.fim+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
-      +'<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;color:#16a34a">'+cur(f.horas*110)+'</td>'
+      +'<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;color:#16a34a">'+cur(f.horas*valorH)+'</td>'
       +'</tr>';
   }).join('');
 
@@ -5723,7 +5754,7 @@ function buildEscopoHTML(){
       +'</div>'
       +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px">'
         +'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Dados da Proposta</div>'
-        +[['Consultor',consultor],['Horas Estimadas',totalH+'h'],['Valor/Hora','R$ 110,00'],['Investimento Total',cur(totalR)],['Início Previsto',iniFmt],['Término Previsto',fimFmt],['Prazo','3 a 4 meses'],['Validade','30 dias']].map(r=>
+        +[['Consultor',consultor],['Horas Estimadas',totalH+'h'],['Valor/Hora','R$ '+valorH.toLocaleString('pt-BR',{minimumFractionDigits:2})],['Investimento Total',cur(totalR)],['Início Previsto',iniFmt],['Término Previsto',fimFmt],['Prazo','3 a 4 meses'],['Validade','30 dias']].map(r=>
           '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e2e8f0;font-size:12px"><span style="color:#64748b">'+r[0]+'</span><span style="font-weight:700;color:#1e293b">'+r[1]+'</span></div>'
         ).join('')
       +'</div>'
