@@ -597,13 +597,54 @@ datalist{display:none}
 
       <!-- DASHBOARD -->
       <div class="page on" id="page-dashboard">
-        <div style="margin-bottom:20px">
-          <h1 style="font-family:var(--display);font-size:19px;font-weight:800">Dashboard</h1>
-          <p style="font-size:12px;color:var(--mid);margin-top:2px">Visão geral de todos os projetos de implantação WMS</p>
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+          <div>
+            <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">📊 Dashboard Executivo</div>
+            <div style="font-size:12px;color:var(--mid)" id="dash-updated">Monitoramento em tempo real · AXL_IntraLog</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost" style="font-size:12px" onclick="renderDash()">🔄 Atualizar</button>
+          </div>
         </div>
-        <div class="kpi-grid" id="kpi-grid"></div>
-        <div class="sec-title">Projetos <div class="ln"></div></div>
-        <div class="proj-grid" id="dash-grid"></div>
+
+        <!-- KPI Row 1: Projetos -->
+        <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">📁 Projetos</div>
+        <div class="kpi-grid" id="kpi-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr));margin-bottom:20px"></div>
+
+        <!-- KPI Row 2: Financeiro -->
+        <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">💰 Financeiro</div>
+        <div id="dash-fin-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px"></div>
+
+        <!-- KPI Row 3: Atendimentos -->
+        <div style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">🎧 Atendimentos / Sustentação</div>
+        <div id="dash-aten-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px"></div>
+
+        <!-- Row: Alertas + Progresso projetos -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+          <!-- Alertas -->
+          <div class="card" style="padding:16px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text)">🔔 Alertas e Pendências</div>
+            <div id="dash-alertas"></div>
+          </div>
+          <!-- Top projetos por progresso -->
+          <div class="card" style="padding:16px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text)">📈 Progresso dos Projetos</div>
+            <div id="dash-progresso"></div>
+          </div>
+        </div>
+
+        <!-- Row: SLA Chamados + Distribuição por tipo -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card" style="padding:16px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text)">📋 Chamados por Status</div>
+            <div id="dash-chamados-status"></div>
+          </div>
+          <div class="card" style="padding:16px">
+            <div style="font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text)">👤 Chamados por Consultor</div>
+            <div id="dash-chamados-cons"></div>
+          </div>
+        </div>
+
       </div>
 
       <!-- PROJETOS -->
@@ -2364,16 +2405,180 @@ function showPage(page,pid=null){
 // DASHBOARD
 // ════════════════════════════════════
 function renderDash(){
-  const ps=S.projects;
-  const act=ps.filter(p=>p.status==='Em Andamento').length;
-  const dn=ps.filter(p=>p.status==='Concluído').length;
-  document.getElementById('kpi-grid').innerHTML=`
-    <div class="kpi"><div class="kpi-lbl">Total Projetos</div><div class="kpi-val">${ps.length}</div><div class="kpi-sub">${act} ativos · ${dn} concluídos</div></div>
-    <div class="kpi"><div class="kpi-lbl">Em Andamento</div><div class="kpi-val" style="color:var(--accent)">${act}</div><div class="kpi-sub">${dn} concluídos</div></div>
-    <div class="kpi"><div class="kpi-lbl">Horas FAP Total</div><div class="kpi-val" style="color:var(--amber)">${ps.reduce((a,p)=>a+(+p.totalHours||0),0)}h</div><div class="kpi-sub">em ${ps.length} projeto(s)</div></div>
-    ${(()=>{const totalBac=ps.reduce((a,p)=>{const ev=calcEVM(p);return a+ev.BAC;},0);const totalAc=ps.reduce((a,p)=>{const ev=calcEVM(p);return a+ev.AC;},0);return totalBac>0?`<div class="kpi"><div class="kpi-lbl">💰 Orçamento Total</div><div class="kpi-val" style="color:var(--green);font-size:18px">${fCur(totalBac)}</div><div class="kpi-sub">Custo real: ${fCur(totalAc)}</div></div>`:''})()}
-    <div class="kpi"><div class="kpi-lbl">Etapas Cadastradas</div><div class="kpi-val" style="color:var(--green)">${ps.reduce((a,p)=>a+(p.stages||[]).length,0)}</div><div class="kpi-sub">todos os projetos</div></div>`;
-  renderCards('dash-grid',ps);
+  const ps   = S.projects||[];
+  const chs  = S.chamados||[];
+  const today = new Date(); today.setHours(0,0,0,0);
+
+  // ── Helpers ──
+  const kpi = (lbl,val,sub='',color='var(--text)',icon='')=>
+    `<div class="kpi"><div class="kpi-lbl">${icon?icon+' ':''}${lbl}</div><div class="kpi-val" style="color:${color}">${val}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
+  const bar = (pct,color='var(--accent)')=>
+    `<div style="height:5px;border-radius:3px;background:var(--bg3);margin-top:4px"><div style="height:100%;width:${Math.min(100,pct)}%;border-radius:3px;background:${color}"></div></div>`;
+  const chip = (txt,color)=>
+    `<span style="font-size:10px;padding:2px 8px;border-radius:8px;font-weight:700;background:${color}20;color:${color}">${txt}</span>`;
+  const fCur = v=>'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+
+  // ── Calc projetos ──
+  const ativos     = ps.filter(p=>['Em Andamento','Planejamento'].includes(p.status));
+  const concluidos = ps.filter(p=>p.status==='Concluído');
+  const atrasados  = ps.filter(p=>{
+    const stages=(p.stages||[]).filter(s=>!s.parentId&&s.dateEnd);
+    return stages.some(s=>new Date(s.dateEnd)<today&&getRootStatus(s,p.stages||[])==='Pendente'||getRootStatus(s,p.stages||[])==='Em Andamento');
+  });
+  const totalEtapas = ps.reduce((a,p)=>a+(p.stages||[]).filter(s=>!s.parentId).length,0);
+  const etapasConcluidas = ps.reduce((a,p)=>a+(p.stages||[]).filter(s=>!s.parentId&&getRootStatus(s,p.stages||[])==='Concluído').length,0);
+
+  // Horas
+  const totalHPlan = ps.reduce((a,p)=>a+parseFloat(p.totalHours||0),0);
+  const totalHReal = ps.reduce((a,p)=>a+(p.stages||[]).filter(s=>!s.parentId).reduce((b,r)=>b+getHoursReal(r,p.stages||[]),0),0);
+  const pctHoras   = totalHPlan>0?Math.round(totalHReal/totalHPlan*100):0;
+
+  // Financeiro
+  const orcTotal  = ps.reduce((a,p)=>{
+    const h=parseFloat(p.totalHours||0),r=parseFloat(p.defaultRate||0);
+    return a+h*r;
+  },0);
+  const custoReal = ps.reduce((a,p)=>{
+    const r=parseFloat(p.defaultRate||0);
+    return a+(p.stages||[]).filter(s=>!s.parentId).reduce((b,st)=>b+getHoursReal(st,p.stages||[])*r,0);
+  },0);
+  const margem    = orcTotal>0?Math.round((1-custoReal/orcTotal)*100):0;
+
+  // ── Chamados ──
+  const chAbertos   = chs.filter(c=>!['Fechado','Cancelado','Resolvido'].includes(c.status));
+  const chResolvidos = chs.filter(c=>c.status==='Resolvido'||c.status==='Fechado');
+  const chSlaViol   = chs.filter(c=>slaStatus(c)==='violado');
+  const chSlaRisco  = chs.filter(c=>slaStatus(c)==='risco');
+  const chBloqueados = chs.filter(c=>c.status==='Bloqueado');
+  // Tempo médio resolução (em horas)
+  const chTempoMed = (()=>{
+    const resolvidos = chs.filter(c=>c.createdAt&&(c.status==='Resolvido'||c.status==='Fechado'));
+    if(!resolvidos.length)return 0;
+    return resolvidos.reduce((a,c)=>{
+      const d=(new Date(c.updatedAt||c.createdAt)-new Date(c.createdAt))/3600000;
+      return a+Math.max(0,d);
+    },0)/resolvidos.length;
+  })();
+
+  // ── KPI Projetos ──
+  document.getElementById('kpi-grid').innerHTML = [
+    kpi('Total Projetos',    ps.length,      ativos.length+' ativos · '+concluidos.length+' concluídos','var(--text)','📁'),
+    kpi('Em Andamento',      ativos.length,  ps.length>0?Math.round(ativos.length/ps.length*100)+'% do portfólio':'','var(--accent)','🔄'),
+    kpi('Concluídos',        concluidos.length, ps.length>0?Math.round(concluidos.length/ps.length*100)+'% do portfólio':'','var(--green)','✅'),
+    kpi('Atrasados',         atrasados.length, atrasados.length>0?'Requer atenção':'Sem atrasos',atrasados.length>0?'var(--red)':'var(--green)','⚠️'),
+    kpi('Etapas Total',      totalEtapas,   etapasConcluidas+' concluídas','var(--text)','📋'),
+    kpi('% Conclusão Etapas',etapasConcluidas&&totalEtapas?Math.round(etapasConcluidas/totalEtapas*100)+'%':'0%',bar(totalEtapas?etapasConcluidas/totalEtapas*100:0,'var(--green)'),'var(--green)','📊'),
+    kpi('Horas Realizadas',  decHToHHMM(totalHReal)||totalHReal.toFixed(1)+'h', 'de '+totalHPlan+'h planejadas','var(--accent)','⏱️'),
+    kpi('Eficiência Horas',  pctHoras+'%',  bar(pctHoras,'var(--accent)'),'var(--accent)','🎯'),
+  ].join('');
+
+  // ── KPI Financeiro ──
+  document.getElementById('dash-fin-grid').innerHTML = [
+    kpi('Orçamento Total',   fCur(orcTotal),  'soma de todos os projetos','var(--amber)','💰'),
+    kpi('Custo Realizado',   fCur(custoReal), Math.round(custoReal/Math.max(orcTotal,1)*100)+'% do orçamento','var(--text)','📤'),
+    kpi('Saldo Disponível',  fCur(orcTotal-custoReal), orcTotal-custoReal>=0?'Dentro do orçamento':'Acima do orçamento',orcTotal-custoReal>=0?'var(--green)':'var(--red)','🏦'),
+    kpi('Margem Restante',   margem+'%',      bar(margem,margem>20?'var(--green)':margem>5?'var(--amber)':'var(--red)'),'var(--text)','📈'),
+  ].join('');
+
+  // ── KPI Atendimentos ──
+  document.getElementById('dash-aten-grid').innerHTML = [
+    kpi('Total Chamados',    chs.length,     chAbertos.length+' em aberto','var(--text)','🎧'),
+    kpi('Abertos',           chAbertos.length, chBloqueados.length+' bloqueados',chAbertos.length>5?'var(--amber)':'var(--green)','📂'),
+    kpi('SLA Violado',       chSlaViol.length, chSlaRisco.length+' em risco',chSlaViol.length>0?'var(--red)':'var(--green)','🚨'),
+    kpi('Tempo Médio',       chTempoMed>0?decHToHHMM(chTempoMed)||chTempoMed.toFixed(1)+'h':'—','para resolução','var(--text)','⏱️'),
+    kpi('Resolvidos',        chResolvidos.length, chs.length>0?Math.round(chResolvidos.length/chs.length*100)+'% do total':'','var(--green)','✅'),
+    kpi('Bloqueados',        chBloqueados.length,'requer ação imediata',chBloqueados.length>0?'var(--red)':'var(--green)','🔒'),
+  ].join('');
+
+  // ── Alertas ──
+  const alertas = [];
+  atrasados.forEach(p=>alertas.push({cor:'var(--red)',   icon:'⚠️', txt:'<strong>'+esc(p.name)+'</strong> — etapa(s) com prazo vencido'}));
+  chSlaViol.forEach(c=>alertas.push({cor:'var(--red)',   icon:'🚨', txt:'Chamado <strong>'+(c.osSnk||c.descricao||'').slice(0,30)+'</strong> — SLA violado'}));
+  chSlaRisco.forEach(c=>alertas.push({cor:'var(--amber)',icon:'⚠️', txt:'Chamado <strong>'+(c.osSnk||c.descricao||'').slice(0,30)+'</strong> — em risco de SLA'}));
+  chBloqueados.forEach(c=>alertas.push({cor:'var(--amber)',icon:'🔒',txt:'Chamado bloqueado: <strong>'+(c.descricao||'').slice(0,40)+'</strong>'}));
+  if(!alertas.length) alertas.push({cor:'var(--green)',icon:'✅',txt:'Nenhum alerta no momento — tudo em ordem!'});
+
+  document.getElementById('dash-alertas').innerHTML = alertas.slice(0,8).map(a=>
+    `<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px">
+      <span style="color:${a.cor};flex-shrink:0">${a.icon}</span>
+      <span style="color:var(--text);line-height:1.4">${a.txt}</span>
+    </div>`
+  ).join('') + (alertas.length>8?`<div style="font-size:11px;color:var(--dim);margin-top:6px">+${alertas.length-8} alerta(s) adicionais</div>`:'');
+
+  // ── Progresso projetos ──
+  const progItems = [...ps].sort((a,b)=>{
+    const pA = progrProj(a), pB = progrProj(b);
+    return pB-pA;
+  }).slice(0,7);
+  document.getElementById('dash-progresso').innerHTML = progItems.length
+    ? progItems.map(p=>{
+        const pct=progrProj(p);
+        const cor=pct===100?'var(--green)':pct>50?'var(--accent)':'var(--amber)';
+        return `<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px">
+            <span style="font-weight:600;color:var(--text)">${esc(p.name)}</span>
+            <span style="color:${cor};font-weight:700">${pct}%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <div style="flex:1;height:6px;background:var(--bg3);border-radius:3px">
+              <div style="height:100%;width:${pct}%;border-radius:3px;background:${cor};transition:width .3s"></div>
+            </div>
+            <span style="font-size:10px;color:var(--dim)">${esc(p.client||'')}</span>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div style="font-size:12px;color:var(--dim)">Nenhum projeto cadastrado.</div>';
+
+  // ── Chamados por Status ──
+  const statusCols = {
+    'Aberto':'var(--accent)','Em Atendimento':'var(--blue2)||#3b82f6',
+    'Aguardando Cliente':'var(--amber)','Pausado':'var(--mid)',
+    'Bloqueado':'var(--red)','Resolvido':'var(--green)','Fechado':'#6b7280','Cancelado':'#6b7280'
+  };
+  const stMap = {};
+  chs.forEach(c=>{ stMap[c.status]=(stMap[c.status]||0)+1; });
+  document.getElementById('dash-chamados-status').innerHTML = Object.keys(stMap).length
+    ? Object.entries(stMap).sort((a,b)=>b[1]-a[1]).map(([st,n])=>{
+        const cor=statusCols[st]||'var(--dim)';
+        const pct=chs.length>0?Math.round(n/chs.length*100):0;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px">
+          <span style="min-width:130px;color:var(--text)">${st}</span>
+          <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px">
+            <div style="height:100%;width:${pct}%;border-radius:4px;background:${cor}"></div>
+          </div>
+          <span style="font-weight:700;color:${cor};min-width:30px;text-align:right">${n}</span>
+        </div>`;
+      }).join('')
+    : '<div style="font-size:12px;color:var(--dim)">Nenhum chamado registrado.</div>';
+
+  // ── Chamados por Consultor ──
+  const consMap = {};
+  chs.forEach(c=>{ const k=c.consultor||'—'; consMap[k]=(consMap[k]||0)+1; });
+  document.getElementById('dash-chamados-cons').innerHTML = Object.keys(consMap).length
+    ? Object.entries(consMap).sort((a,b)=>b[1]-a[1]).map(([cons,n])=>{
+        const pct=chs.length>0?Math.round(n/chs.length*100):0;
+        const abertos=chs.filter(c=>c.consultor===cons&&!['Fechado','Cancelado','Resolvido'].includes(c.status)).length;
+        return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:12px">
+          <span style="min-width:130px;color:var(--text);font-weight:600">${esc(cons)}</span>
+          <div style="flex:1;height:8px;background:var(--bg3);border-radius:4px">
+            <div style="height:100%;width:${pct}%;border-radius:4px;background:var(--accent)"></div>
+          </div>
+          <span style="font-weight:700;color:var(--accent);min-width:24px;text-align:right">${n}</span>
+          ${abertos?`<span style="font-size:10px;color:var(--amber)">${abertos} aberto(s)</span>`:''}
+        </div>`;
+      }).join('')
+    : '<div style="font-size:12px;color:var(--dim)">Nenhum chamado registrado.</div>';
+
+  // update timestamp
+  const upd = document.getElementById('dash-updated');
+  if(upd) upd.textContent='Atualizado em '+new Date().toLocaleString('pt-BR')+' · AXL_IntraLog';
+}
+
+function progrProj(p){
+  const stages=(p.stages||[]).filter(s=>!s.parentId);
+  if(!stages.length) return 0;
+  const done=stages.filter(s=>getRootStatus(s,p.stages||[])==='Concluído').length;
+  return Math.round(done/stages.length*100);
 }
 
 // ════════════════════════════════════
