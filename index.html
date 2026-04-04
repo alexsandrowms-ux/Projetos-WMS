@@ -634,7 +634,7 @@ datalist{display:none}
         </div>
 
         <!-- Row: SLA Chamados + Distribuição por tipo -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
           <div class="card" style="padding:16px">
             <div style="font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text)">📋 Chamados por Status</div>
             <div id="dash-chamados-status"></div>
@@ -642,6 +642,17 @@ datalist{display:none}
           <div class="card" style="padding:16px">
             <div style="font-size:12px;font-weight:700;margin-bottom:12px;color:var(--text)">👤 Chamados por Consultor</div>
             <div id="dash-chamados-cons"></div>
+          </div>
+        </div>
+
+        <!-- Drill-down panel (hidden by default) -->
+        <div id="dash-drill" style="display:none">
+          <div class="card" style="padding:16px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+              <div style="font-size:13px;font-weight:800;color:var(--text)" id="dash-drill-title">Detalhes</div>
+              <button class="btn btn-ghost btn-xs" onclick="dashDrillClose()">✕ Fechar</button>
+            </div>
+            <div id="dash-drill-body"></div>
           </div>
         </div>
 
@@ -2410,8 +2421,14 @@ function renderDash(){
   const today = new Date(); today.setHours(0,0,0,0);
 
   // ── Helpers ──
-  const kpi = (lbl,val,sub='',color='var(--text)',icon='')=>
-    `<div class="kpi"><div class="kpi-lbl">${icon?icon+' ':''}${lbl}</div><div class="kpi-val" style="color:${color}">${val}</div>${sub?`<div class="kpi-sub">${sub}</div>`:''}</div>`;
+  const kpi = (lbl,val,sub='',color='var(--text)',icon='',drill=null)=>{
+    const onclick=drill?`onclick="dashDrill('${drill}')" style="cursor:pointer" title="Clique para ver detalhes"`:'' ;
+    return `<div class="kpi" ${onclick} onmouseenter="if('${drill}')this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor=''">
+      <div class="kpi-lbl">${icon?icon+' ':''}${lbl}${drill?'<span style=\'font-size:9px;color:var(--dim);margin-left:4px\'>▼</span>':''}</div>
+      <div class="kpi-val" style="color:${color}">${val}</div>
+      ${sub?`<div class="kpi-sub">${sub}</div>`:''}
+    </div>`;
+  };
   const bar = (pct,color='var(--accent)')=>
     `<div style="height:5px;border-radius:3px;background:var(--bg3);margin-top:4px"><div style="height:100%;width:${Math.min(100,pct)}%;border-radius:3px;background:${color}"></div></div>`;
   const chip = (txt,color)=>
@@ -2462,32 +2479,32 @@ function renderDash(){
 
   // ── KPI Projetos ──
   document.getElementById('kpi-grid').innerHTML = [
-    kpi('Total Projetos',    ps.length,      ativos.length+' ativos · '+concluidos.length+' concluídos','var(--text)','📁'),
-    kpi('Em Andamento',      ativos.length,  ps.length>0?Math.round(ativos.length/ps.length*100)+'% do portfólio':'','var(--accent)','🔄'),
-    kpi('Concluídos',        concluidos.length, ps.length>0?Math.round(concluidos.length/ps.length*100)+'% do portfólio':'','var(--green)','✅'),
-    kpi('Atrasados',         atrasados.length, atrasados.length>0?'Requer atenção':'Sem atrasos',atrasados.length>0?'var(--red)':'var(--green)','⚠️'),
-    kpi('Etapas Total',      totalEtapas,   etapasConcluidas+' concluídas','var(--text)','📋'),
-    kpi('% Conclusão Etapas',etapasConcluidas&&totalEtapas?Math.round(etapasConcluidas/totalEtapas*100)+'%':'0%',bar(totalEtapas?etapasConcluidas/totalEtapas*100:0,'var(--green)'),'var(--green)','📊'),
+    kpi('Total Projetos',    ps.length,      ativos.length+' ativos · '+concluidos.length+' concluídos','var(--text)','📁','proj-todos'),
+    kpi('Em Andamento',      ativos.length,  ps.length>0?Math.round(ativos.length/ps.length*100)+'% do portfólio':'','var(--accent)','🔄','proj-ativos'),
+    kpi('Concluídos',        concluidos.length, ps.length>0?Math.round(concluidos.length/ps.length*100)+'% do portfólio':'','var(--green)','✅','proj-concluidos'),
+    kpi('Atrasados',         atrasados.length, atrasados.length>0?'Requer atenção':'Sem atrasos',atrasados.length>0?'var(--red)':'var(--green)','⚠️','proj-atrasados'),
+    kpi('Etapas Total',      totalEtapas,   etapasConcluidas+' concluídas','var(--text)','📋','etapas-todas'),
+    kpi('% Conclusão Etapas',etapasConcluidas&&totalEtapas?Math.round(etapasConcluidas/totalEtapas*100)+'%':'0%',bar(totalEtapas?etapasConcluidas/totalEtapas*100:0,'var(--green)'),'var(--green)','📊','etapas-concluidas'),
     kpi('Horas Realizadas',  decHToHHMM(totalHReal)||totalHReal.toFixed(1)+'h', 'de '+totalHPlan+'h planejadas','var(--accent)','⏱️'),
     kpi('Eficiência Horas',  pctHoras+'%',  bar(pctHoras,'var(--accent)'),'var(--accent)','🎯'),
   ].join('');
 
   // ── KPI Financeiro ──
   document.getElementById('dash-fin-grid').innerHTML = [
-    kpi('Orçamento Total',   fCur(orcTotal),  'soma de todos os projetos','var(--amber)','💰'),
-    kpi('Custo Realizado',   fCur(custoReal), Math.round(custoReal/Math.max(orcTotal,1)*100)+'% do orçamento','var(--text)','📤'),
-    kpi('Saldo Disponível',  fCur(orcTotal-custoReal), orcTotal-custoReal>=0?'Dentro do orçamento':'Acima do orçamento',orcTotal-custoReal>=0?'var(--green)':'var(--red)','🏦'),
+    kpi('Orçamento Total',   fCur(orcTotal),  'soma de todos os projetos','var(--amber)','💰','fin-orcamento'),
+    kpi('Custo Realizado',   fCur(custoReal), Math.round(custoReal/Math.max(orcTotal,1)*100)+'% do orçamento','var(--text)','📤','fin-custo'),
+    kpi('Saldo Disponível',  fCur(orcTotal-custoReal), orcTotal-custoReal>=0?'Dentro do orçamento':'Acima do orçamento',orcTotal-custoReal>=0?'var(--green)':'var(--red)','🏦','fin-saldo'),
     kpi('Margem Restante',   margem+'%',      bar(margem,margem>20?'var(--green)':margem>5?'var(--amber)':'var(--red)'),'var(--text)','📈'),
   ].join('');
 
   // ── KPI Atendimentos ──
   document.getElementById('dash-aten-grid').innerHTML = [
-    kpi('Total Chamados',    chs.length,     chAbertos.length+' em aberto','var(--text)','🎧'),
-    kpi('Abertos',           chAbertos.length, chBloqueados.length+' bloqueados',chAbertos.length>5?'var(--amber)':'var(--green)','📂'),
-    kpi('SLA Violado',       chSlaViol.length, chSlaRisco.length+' em risco',chSlaViol.length>0?'var(--red)':'var(--green)','🚨'),
+    kpi('Total Chamados',    chs.length,     chAbertos.length+' em aberto','var(--text)','🎧','ch-todos'),
+    kpi('Abertos',           chAbertos.length, chBloqueados.length+' bloqueados',chAbertos.length>5?'var(--amber)':'var(--green)','📂','ch-abertos'),
+    kpi('SLA Violado',       chSlaViol.length, chSlaRisco.length+' em risco',chSlaViol.length>0?'var(--red)':'var(--green)','🚨','ch-sla'),
     kpi('Tempo Médio',       chTempoMed>0?decHToHHMM(chTempoMed)||chTempoMed.toFixed(1)+'h':'—','para resolução','var(--text)','⏱️'),
-    kpi('Resolvidos',        chResolvidos.length, chs.length>0?Math.round(chResolvidos.length/chs.length*100)+'% do total':'','var(--green)','✅'),
-    kpi('Bloqueados',        chBloqueados.length,'requer ação imediata',chBloqueados.length>0?'var(--red)':'var(--green)','🔒'),
+    kpi('Resolvidos',        chResolvidos.length, chs.length>0?Math.round(chResolvidos.length/chs.length*100)+'% do total':'','var(--green)','✅','ch-resolvidos'),
+    kpi('Bloqueados',        chBloqueados.length,'requer ação imediata',chBloqueados.length>0?'var(--red)':'var(--green)','🔒','ch-bloqueados'),
   ].join('');
 
   // ── Alertas ──
@@ -2579,6 +2596,193 @@ function progrProj(p){
   if(!stages.length) return 0;
   const done=stages.filter(s=>getRootStatus(s,p.stages||[])==='Concluído').length;
   return Math.round(done/stages.length*100);
+}
+
+
+// ════════════════════════════════════════════════
+// DASHBOARD DRILL-DOWN
+// ════════════════════════════════════════════════
+function dashDrillClose(){
+  const el=document.getElementById('dash-drill');
+  if(el) el.style.display='none';
+}
+
+function dashDrill(key){
+  const ps  = S.projects||[];
+  const chs = S.chamados||[];
+  const el  = document.getElementById('dash-drill');
+  const ttl = document.getElementById('dash-drill-title');
+  const body= document.getElementById('dash-drill-body');
+  if(!el||!ttl||!body) return;
+
+  const fCur = v=>'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const today= new Date(); today.setHours(0,0,0,0);
+
+  // ── Project row builder ──
+  const projRow = (p,extra='')=>{
+    const stages=(p.stages||[]).filter(s=>!s.parentId);
+    const done=stages.filter(s=>getRootStatus(s,p.stages||[])==='Concluído').length;
+    const pct=stages.length?Math.round(done/stages.length*100):0;
+    const hr=stages.reduce((a,r)=>a+getHoursReal(r,p.stages||[]),0);
+    const rate=parseFloat(p.defaultRate)||0;
+    return `<tr onclick="showPage('detail','${p.id}')" style="cursor:pointer" onmouseenter="this.style.background='rgba(14,165,233,.06)'" onmouseleave="this.style.background=''">
+      <td style="padding:8px 10px;font-weight:700;color:var(--accent)">${esc(p.name)}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--mid)">${esc(p.client||'—')}</td>
+      <td style="padding:8px 10px"><span class="badge badge-${SB[p.status]||'gray'}" style="font-size:10px">${p.status||'—'}</span></td>
+      <td style="padding:8px 10px;font-size:11px">${stages.length} etapas</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--green)">${pct}%</td>
+      <td style="padding:8px 10px;font-size:11px">${decHToHHMM(hr)||'0h'}</td>
+      <td style="padding:8px 10px;font-size:11px;color:var(--amber)">${rate>0?fCur(hr*rate):'—'}</td>
+      ${extra}
+    </tr>`;
+  };
+
+  // ── Stage row builder ──
+  const stageRow = (proj,st)=>{
+    const status=getRootStatus(st,proj.stages||[]);
+    const hr=getHoursReal(st,proj.stages||[]);
+    const atrasada=st.dateEnd&&new Date(st.dateEnd)<today&&status!=='Concluído';
+    return `<tr onclick="showPage('detail','${proj.id}')" style="cursor:pointer" onmouseenter="this.style.background='rgba(14,165,233,.06)'" onmouseleave="this.style.background=''">
+      <td style="padding:7px 10px;font-weight:600;color:var(--text)">${esc(st.num||'')} ${esc(st.name)}</td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--mid)">${esc(proj.name)}</td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--mid)">${esc(proj.client||'—')}</td>
+      <td style="padding:7px 10px"><span class="badge badge-${SB[status]||'gray'}" style="font-size:10px">${status}</span></td>
+      <td style="padding:7px 10px;font-size:11px">${st.hours||'—'}h plan.</td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--green)">${decHToHHMM(hr)||'0h'} real</td>
+      <td style="padding:7px 10px;font-size:11px;color:${atrasada?'var(--red)':'var(--mid)'}">${st.dateEnd?fDS(st.dateEnd):(atrasada?'⚠️ Atrasada':'—')}</td>
+    </tr>`;
+  };
+
+  // ── Chamado row builder ──
+  const chRow = c=>{
+    const sla=slaStatus(c);
+    const slaColor=sla==='violado'?'var(--red)':sla==='risco'?'var(--amber)':'var(--green)';
+    const snk=(c.osSnkList||[]).filter(Boolean).map(i=>typeof i==='object'?i.num:i).join(', ')||c.osSnk||'—';
+    return `<tr onclick="openChamadoModal('${c.id}')" style="cursor:pointer" onmouseenter="this.style.background='rgba(14,165,233,.06)'" onmouseleave="this.style.background=''">
+      <td style="padding:7px 10px;font-size:11px;font-weight:700;color:var(--accent)">${esc(snk)}</td>
+      <td style="padding:7px 10px;font-size:11px">${esc((c.descricao||'').slice(0,40))}</td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--mid)">${esc(c.cliente||'—')}</td>
+      <td style="padding:7px 10px;font-size:11px;color:var(--mid)">${esc(c.consultor||'—')}</td>
+      <td style="padding:7px 10px"><span class="badge badge-${SB[c.status]||'gray'}" style="font-size:10px">${c.status||'—'}</span></td>
+      <td style="padding:7px 10px;font-size:11px;color:${slaColor};font-weight:700">${sla==='ok'?'✅ OK':sla==='risco'?'⚠️ Risco':'🚨 Violado'}</td>
+    </tr>`;
+  };
+
+  const projThead=`<thead><tr style="background:var(--bg3)">
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Projeto</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Cliente</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Status</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Etapas</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Progresso</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">H. Real</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Custo Real</th>
+  </tr></thead>`;
+
+  const stageThead=`<thead><tr style="background:var(--bg3)">
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Etapa</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Projeto</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Cliente</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Status</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Planejado</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Realizado</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Término</th>
+  </tr></thead>`;
+
+  const chThead=`<thead><tr style="background:var(--bg3)">
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">OS</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Descrição</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Cliente</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Consultor</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Status</th>
+    <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">SLA</th>
+  </tr></thead>`;
+
+  const tbl=(thead,rows,empty='Nenhum registro.')=>{
+    if(!rows.length) return `<div style="font-size:12px;color:var(--dim);padding:12px 0">${empty}</div>`;
+    return `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">${thead}<tbody>${rows.join('')}</tbody></table></div>`;
+  };
+
+  // ── Resolve drill key ──
+  let title='', html='';
+
+  if(key==='proj-todos'){
+    title='📁 Todos os Projetos ('+ps.length+')';
+    html=tbl(projThead, ps.map(p=>projRow(p)));
+  } else if(key==='proj-ativos'){
+    const list=ps.filter(p=>['Em Andamento','Planejamento'].includes(p.status));
+    title='🔄 Projetos Em Andamento ('+list.length+')';
+    html=tbl(projThead, list.map(p=>projRow(p)));
+  } else if(key==='proj-concluidos'){
+    const list=ps.filter(p=>p.status==='Concluído');
+    title='✅ Projetos Concluídos ('+list.length+')';
+    html=tbl(projThead, list.map(p=>projRow(p)));
+  } else if(key==='proj-atrasados'){
+    const list=ps.filter(p=>(p.stages||[]).filter(s=>!s.parentId).some(s=>s.dateEnd&&new Date(s.dateEnd)<today&&getRootStatus(s,p.stages||[])!=='Concluído'));
+    title='⚠️ Projetos com Etapas Atrasadas ('+list.length+')';
+    html=tbl(projThead, list.map(p=>{
+      const atrasadas=(p.stages||[]).filter(s=>!s.parentId&&s.dateEnd&&new Date(s.dateEnd)<today&&getRootStatus(s,p.stages||[])!=='Concluído');
+      return projRow(p, `<td style="padding:7px 10px;font-size:11px;color:var(--red);font-weight:700">${atrasadas.length} etapa(s)</td>`);
+    }));
+  } else if(key==='etapas-todas'){
+    const rows=[];
+    ps.forEach(p=>(p.stages||[]).filter(s=>!s.parentId).forEach(s=>rows.push(stageRow(p,s))));
+    title='📋 Todas as Etapas ('+rows.length+')';
+    html=tbl(stageThead,rows);
+  } else if(key==='etapas-concluidas'){
+    const rows=[];
+    ps.forEach(p=>(p.stages||[]).filter(s=>!s.parentId&&getRootStatus(s,p.stages||[])==='Concluído').forEach(s=>rows.push(stageRow(p,s))));
+    title='✅ Etapas Concluídas ('+rows.length+')';
+    html=tbl(stageThead,rows);
+  } else if(key==='fin-orcamento'||key==='fin-custo'||key==='fin-saldo'){
+    title='💰 Visão Financeira por Projeto';
+    const rows=ps.map(p=>{
+      const orcP=parseFloat(p.totalHours||0)*(parseFloat(p.defaultRate)||0);
+      const hrReal=(p.stages||[]).filter(s=>!s.parentId).reduce((a,r)=>a+getHoursReal(r,p.stages||[]),0);
+      const custoP=hrReal*(parseFloat(p.defaultRate)||0);
+      const saldo=orcP-custoP;
+      return `<tr onmouseenter="this.style.background='rgba(14,165,233,.06)'" onmouseleave="this.style.background=''">
+        <td style="padding:8px 10px;font-weight:700;color:var(--accent)">${esc(p.name)}</td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--mid)">${esc(p.client||'—')}</td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--amber);font-weight:700">${fCur(orcP)}</td>
+        <td style="padding:8px 10px;font-size:11px">${fCur(custoP)}</td>
+        <td style="padding:8px 10px;font-size:11px;font-weight:700;color:${saldo>=0?'var(--green)':'var(--red)'}">${saldo>=0?'+':''}${fCur(saldo)}</td>
+        <td style="padding:8px 10px;font-size:11px;color:var(--mid)">${parseFloat(p.defaultRate)||0?'R$ '+(parseFloat(p.defaultRate)).toLocaleString('pt-BR',{minimumFractionDigits:2})+'/h':'—'}</td>
+      </tr>`;
+    });
+    const thead=`<thead><tr style="background:var(--bg3)">
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Projeto</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Cliente</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Orçamento</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Custo Real</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Saldo</th>
+      <th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--dim);font-weight:700;text-transform:uppercase">Valor/h</th>
+    </tr></thead>`;
+    html=tbl(thead,rows);
+  } else if(key==='ch-todos'){
+    title='🎧 Todos os Chamados ('+chs.length+')';
+    html=tbl(chThead, chs.map(c=>chRow(c)));
+  } else if(key==='ch-abertos'){
+    const list=chs.filter(c=>!['Fechado','Cancelado','Resolvido'].includes(c.status));
+    title='📂 Chamados em Aberto ('+list.length+')';
+    html=tbl(chThead, list.map(c=>chRow(c)));
+  } else if(key==='ch-sla'){
+    const list=chs.filter(c=>slaStatus(c)==='violado'||slaStatus(c)==='risco');
+    title='🚨 Chamados com Alerta de SLA ('+list.length+')';
+    html=tbl(chThead, list.map(c=>chRow(c)));
+  } else if(key==='ch-resolvidos'){
+    const list=chs.filter(c=>c.status==='Resolvido'||c.status==='Fechado');
+    title='✅ Chamados Resolvidos/Fechados ('+list.length+')';
+    html=tbl(chThead, list.map(c=>chRow(c)));
+  } else if(key==='ch-bloqueados'){
+    const list=chs.filter(c=>c.status==='Bloqueado');
+    title='🔒 Chamados Bloqueados ('+list.length+')';
+    html=tbl(chThead, list.map(c=>chRow(c)));
+  }
+
+  ttl.textContent=title;
+  body.innerHTML=html;
+  el.style.display='block';
+  el.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
 // ════════════════════════════════════
