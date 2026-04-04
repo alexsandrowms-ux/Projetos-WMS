@@ -858,9 +858,10 @@ datalist{display:none}
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-ghost" style="font-size:12px" onclick="plnPropagarDatas()">⚡ Auto-Preencher Datas</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="plnSalvar()">💾 Salvar Planejamento</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnSalvar()">💾 Salvar</button>
             <button class="btn btn-ghost" style="font-size:12px" onclick="plnCarregar()">📂 Carregar</button>
-            <button class="btn btn-primary" style="font-size:12px" onclick="showPage('escopo')">📄 Ver Escopo</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="showPage('escopo')">📄 Ver Escopo</button>
+            <button class="btn btn-primary" style="font-size:12px" id="btn-aprovar-escopo" onclick="plnAprovarELancar()" style="background:#16a34a">✅ Aprovar e Lançar Etapas</button>
           </div>
         </div>
 
@@ -868,10 +869,21 @@ datalist{display:none}
         <div class="card" style="padding:16px;margin-bottom:16px">
           <div style="font-size:11px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Dados do Projeto</div>
           <div class="frow">
-            <div class="fg"><label class="fl">Cliente / Empresa</label><input class="fc" id="pln-cliente" placeholder="Nome do cliente" oninput="plnAtualizarGantt()"></div>
+            <div class="fg"><label class="fl">🗂 Projeto Vinculado</label>
+              <select class="fc" id="pln-proj-id" onchange="plnOnProjChange(this.value)">
+                <option value="">— Selecione ou crie novo —</option>
+                <option value="__novo__">+ Criar novo projeto</option>
+              </select>
+            </div>
+            <div class="fg"><label class="fl">Cliente / Empresa</label><input class="fc" id="pln-cliente" placeholder="Preenchido pelo projeto" oninput="plnAtualizarGantt()"></div>
             <div class="fg"><label class="fl">Responsável no Cliente</label><input class="fc" id="pln-resp" placeholder="Nome do responsável" oninput="plnAtualizarGantt()"></div>
+          </div>
+          <div class="frow">
             <div class="fg"><label class="fl">📅 Início do Projeto</label><input class="fc" type="date" id="pln-inicio" onchange="plnPropagarDatas()"></div>
             <div class="fg"><label class="fl">Consultor AXL</label><input class="fc" id="pln-consultor" value="Alexsandro C. Lopes"></div>
+            <div class="fg"><label class="fl">Status do Escopo</label>
+              <div id="pln-escopo-status" style="padding:7px 10px;border-radius:6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);font-size:12px;font-weight:700;color:var(--amber)">⏳ Aguardando aprovação</div>
+            </div>
           </div>
           <div id="pln-status-row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:12px"></div>
         </div>
@@ -5198,7 +5210,249 @@ const PLN_FASES = [
 ];
 let plnDatas = PLN_FASES.map(()=>({inicio:'',fim:'',obs:''}));
 
-function renderPlanejamentoWMS(){plnRenderFases();plnAtualizarGantt();}
+
+// ── Vínculo planejamento ↔ projeto ──
+let plnProjId = null;
+
+function renderPlanejamentoWMS(){
+  plnPopularProjetos();
+  plnRenderFases();
+  plnAtualizarGantt();
+}
+
+function plnPopularProjetos(){
+  const sel = document.getElementById('pln-proj-id');
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— Selecione ou crie novo —</option>'
+    + '<option value="__novo__">➕ Criar novo projeto</option>'
+    + (S.projects||[]).map(p =>
+        '<option value="'+p.id+'"'+(cur===p.id?' selected':'')+'>'+esc(p.name)+' · '+esc(p.client||'')+'</option>'
+      ).join('');
+  if(cur) sel.value = cur;
+}
+
+function plnOnProjChange(projId){
+  plnProjId = projId;
+  const statusEl = document.getElementById('pln-escopo-status');
+  const clienteEl = document.getElementById('pln-cliente');
+
+  if(projId === '__novo__'){
+    if(clienteEl){ clienteEl.removeAttribute('readonly'); clienteEl.style.background=''; clienteEl.value=''; }
+    plnSetStatus('🆕 Novo projeto — será criado ao aprovar','var(--accent)','rgba(14,165,233,.1)','rgba(14,165,233,.2)');
+    return;
+  }
+  if(!projId){
+    if(clienteEl){ clienteEl.removeAttribute('readonly'); clienteEl.style.background=''; }
+    plnSetStatus('⏳ Aguardando aprovação','var(--amber)','rgba(245,158,11,.1)','rgba(245,158,11,.2)');
+    return;
+  }
+  const proj = (S.projects||[]).find(p=>p.id===projId);
+  if(!proj) return;
+  if(clienteEl){
+    clienteEl.value = proj.client||proj.name||'';
+    clienteEl.setAttribute('readonly','true');
+    clienteEl.style.background = 'rgba(14,165,233,.04)';
+  }
+  const n = (proj.stages||[]).filter(s=>!s.parentId).length;
+  if(n>0){
+    plnSetStatus('✅ Escopo aprovado — '+n+' etapas já lançadas','var(--green)','rgba(34,197,94,.1)','rgba(34,197,94,.2)');
+  } else {
+    plnSetStatus('⏳ Projeto vinculado — escopo pendente','var(--amber)','rgba(245,158,11,.1)','rgba(245,158,11,.2)');
+  }
+}
+
+function plnSetStatus(txt,color,bg,border){
+  const el = document.getElementById('pln-escopo-status');
+  if(!el) return;
+  el.textContent=txt; el.style.color=color; el.style.background=bg; el.style.borderColor=border;
+}
+
+// ── Verificar conflitos de datas com projetos existentes ──
+function plnVerificarConflitos(ignoreProjId){
+  const conflitos = [];
+  (S.projects||[]).forEach(proj=>{
+    if(proj.id===ignoreProjId) return;
+    (proj.stages||[]).filter(s=>!s.parentId&&s.date&&s.dateEnd).forEach(stage=>{
+      const sI=new Date(stage.date), sF=new Date(stage.dateEnd||stage.date);
+      PLN_FASES.forEach((f,i)=>{
+        const d=plnDatas[i];
+        if(!d.inicio||!d.fim) return;
+        const dI=new Date(d.inicio), dF=new Date(d.fim);
+        if(dI<=sF && dF>=sI){
+          conflitos.push({
+            fase:f.num, faseNome:f.nome,
+            projNome:proj.name, client:proj.client||'',
+            stageNome:stage.name,
+            conflitoDe:stage.date, conflitoAte:stage.dateEnd||stage.date,
+          });
+        }
+      });
+    });
+  });
+  return conflitos;
+}
+
+// ── Auto-preencher com detecção de conflitos ──
+function plnPropagarDatas(){
+  const ini = document.getElementById('pln-inicio')?.value;
+  if(!ini){ toast('Informe a data de início','warn'); return; }
+  const ignoreProjId = plnProjId==='__novo__' ? null : plnProjId;
+
+  let cur = new Date(ini+'T00:00:00');
+  PLN_FASES.forEach((f,i)=>{
+    // Skip weekends
+    while(cur.getDay()===0||cur.getDay()===6) cur.setDate(cur.getDate()+1);
+    const d1 = new Date(cur);
+
+    // Check conflicts with existing projects
+    let shifted = 0;
+    let tryD1 = new Date(d1);
+    outer: for(let attempt=0; attempt<60; attempt++){
+      const tryD2 = new Date(tryD1);
+      tryD2.setDate(tryD1.getDate()+f.semanas*7-1);
+      // Check against all existing stages
+      for(const proj of (S.projects||[])){
+        if(proj.id===ignoreProjId) continue;
+        for(const stage of (proj.stages||[]).filter(s=>!s.parentId&&s.date&&s.dateEnd)){
+          const sI=new Date(stage.date), sF=new Date(stage.dateEnd||stage.date);
+          if(tryD1<=sF && tryD2>=sI){
+            // Conflict: push start to day after conflicting stage ends
+            tryD1 = new Date(sF);
+            tryD1.setDate(tryD1.getDate()+1);
+            while(tryD1.getDay()===0||tryD1.getDay()===6) tryD1.setDate(tryD1.getDate()+1);
+            shifted++;
+            continue outer;
+          }
+        }
+      }
+      break; // no conflict found
+    }
+
+    const d2 = new Date(tryD1); d2.setDate(tryD1.getDate()+f.semanas*7-1);
+    plnDatas[i].inicio = tryD1.toISOString().split('T')[0];
+    plnDatas[i].fim    = d2.toISOString().split('T')[0];
+    if(shifted>0) plnDatas[i].obs = (plnDatas[i].obs||'')+'⚠️ Reagendado (conflito)';
+
+    cur = new Date(d2); cur.setDate(cur.getDate()+3);
+  });
+
+  plnRenderFases();
+  plnAtualizarGantt();
+
+  // Show conflict warning if any
+  const conflitos = plnVerificarConflitos(ignoreProjId);
+  if(conflitos.length>0){
+    toast('⚠️ '+conflitos.length+' conflito(s) detectado(s) e reagendado(s)','warn');
+    plnMostrarConflitos(conflitos);
+  } else {
+    toast('Datas preenchidas sem conflitos ✓','ok');
+  }
+}
+
+function plnMostrarConflitos(conflitos){
+  const el = document.getElementById('pln-status-row');
+  if(!el) return;
+  const aviso = '<div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:6px;padding:8px 12px;font-size:11px;color:var(--amber);margin-top:8px;width:100%">'
+    +'⚠️ <strong>Conflitos detectados e reagendados:</strong><br>'
+    +conflitos.map(c=>'Fase '+c.fase+' ('+c.faseNome+') conflitava com <strong>'+c.projNome+(c.client?' · '+c.client:'')+' — '+c.stageNome+'</strong> ('+c.conflitoDe+' → '+c.conflitoAte+')').join('<br>')
+    +'</div>';
+  // Append to status row
+  const existingAviso = el.querySelector('.conflict-aviso');
+  if(existingAviso) existingAviso.remove();
+  const div = document.createElement('div');
+  div.className='conflict-aviso'; div.style.width='100%';
+  div.innerHTML=aviso;
+  el.appendChild(div);
+}
+
+// ── Aprovar Escopo e Lançar Etapas ──
+function plnAprovarELancar(){
+  const filled = plnDatas.filter(d=>d.inicio&&d.fim).length;
+  if(filled<PLN_FASES.length){
+    toast('Preencha as datas de todas as '+PLN_FASES.length+' fases antes de aprovar','err');
+    return;
+  }
+  const projSel = document.getElementById('pln-proj-id');
+  const projId  = projSel?.value||'';
+  if(!projId){ toast('Selecione um projeto ou escolha "Criar novo"','err'); return; }
+
+  const cliente   = document.getElementById('pln-cliente')?.value.trim()||'';
+  const consultor = document.getElementById('pln-consultor')?.value.trim()||'Alexsandro C. Lopes';
+  const isNovo    = projId==='__novo__';
+
+  // Final conflict check
+  const ignoreProjId = isNovo ? null : projId;
+  const conflitos = plnVerificarConflitos(ignoreProjId);
+
+  let msg = isNovo
+    ? 'Criar um novo projeto <strong>"Implantação WMS — '+esc(cliente)+'"</strong> e lançar as '+PLN_FASES.length+' etapas com as datas do Gantt?'
+    : 'Lançar as '+PLN_FASES.length+' etapas no projeto selecionado. Etapas existentes serão substituídas.';
+
+  if(conflitos.length>0){
+    msg += '<div style="margin-top:8px;padding:8px;background:rgba(245,158,11,.1);border-radius:4px;font-size:11px;color:var(--amber)">⚠️ '+conflitos.length+' fase(s) com datas que coincidem com outros projetos.</div>';
+  }
+
+  document.getElementById('mc-icon').textContent='✅';
+  document.getElementById('mc-title').textContent='Aprovar Escopo e Lançar Etapas';
+  document.getElementById('mc-msg').innerHTML=msg;
+  document.getElementById('mc-btn').onclick=()=>{
+    closeModal('modal-confirm');
+    _executarLancamentoEtapas(projId, cliente, consultor, isNovo);
+  };
+  openModal('modal-confirm');
+}
+
+function _executarLancamentoEtapas(projId, cliente, consultor, isNovo){
+  const novasEtapas = PLN_FASES.map((f,i)=>{
+    const d = plnDatas[i];
+    return {
+      id:uid(), parentId:null, num:f.num, name:f.nome,
+      hours:String(f.horas), executor:consultor,
+      date:d.inicio||'', dateEnd:d.fim||'',
+      planejamentos:[{id:uid(),date:d.inicio||'',dateEnd:d.fim||'',obs:d.obs||''}],
+      status:'Pendente', apontamentos:[], bgColor:'', hourRate:110,
+    };
+  });
+
+  let finalProjId = projId;
+  if(isNovo){
+    const newProj={
+      id:uid(), name:'Implantação WMS — '+(cliente||'Novo Cliente'),
+      client:cliente||'', status:'Em Andamento', color:'#f59e0b',
+      defaultRate:110, stages:novasEtapas, checklist:[],
+      createdAt:new Date().toISOString(),
+    };
+    if(!S.projects) S.projects=[];
+    S.projects.push(newProj);
+    finalProjId = newProj.id;
+    plnProjId   = finalProjId;
+    setTimeout(()=>{
+      plnPopularProjetos();
+      const sel=document.getElementById('pln-proj-id');
+      if(sel){sel.value=finalProjId;plnOnProjChange(finalProjId);}
+    },100);
+  } else {
+    const proj=(S.projects||[]).find(p=>p.id===projId);
+    if(!proj){toast('Projeto não encontrado','err');return;}
+    proj.stages=novasEtapas;
+    if(cliente) proj.client=cliente;
+    plnOnProjChange(projId);
+  }
+
+  saveS();
+  // Refresh consolidated gantt if open
+  if(document.getElementById('page-cgantt')?.classList.contains('on')) renderCGantt();
+
+  plnSetStatus('✅ Escopo aprovado — '+PLN_FASES.length+' etapas lançadas!','var(--green)','rgba(34,197,94,.1)','rgba(34,197,94,.2)');
+  toast('✅ '+PLN_FASES.length+' etapas lançadas — datas já refletidas no Gantt','ok');
+
+  setTimeout(()=>{
+    if(confirm('Etapas lançadas! Abrir o projeto agora?')){
+      showPage('detail',finalProjId);
+    }
+  },400);
+}
 
 function plnRenderFases(){
   const tbody=document.getElementById('pln-fases-tbody');
