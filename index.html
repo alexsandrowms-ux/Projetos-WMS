@@ -967,6 +967,7 @@ datalist{display:none}
     </div>
     <div class="mfooter">
       <button class="btn btn-ghost" onclick="closeModal('modal-proj')">Cancelar</button>
+      <button class="btn btn-ghost" style="color:var(--accent);border-color:rgba(14,165,233,.3)" onclick="irParaPlanejamento()" title="Salva o projeto e abre o Planejamento WMS vinculado">📊 Ir para Planejamento</button>
       <button class="btn btn-primary" onclick="saveProject()">Salvar Projeto</button>
     </div>
   </div>
@@ -5218,6 +5219,27 @@ function renderPlanejamentoWMS(){
   plnPopularProjetos();
   plnRenderFases();
   plnAtualizarGantt();
+}
+
+function irParaPlanejamento(){
+  // Save first then navigate to planning with project pre-selected
+  const name = document.getElementById('mp-name')?.value.trim();
+  if(!name){ toast('Informe o nome do projeto antes de ir para o Planejamento','err'); return; }
+  saveProject(); // save the project
+  closeModal('modal-proj');
+  // Navigate to planning and pre-select this project
+  setTimeout(()=>{
+    showPage('planejamento');
+    // Find the project we just saved (by name, since it may be new)
+    const proj = (S.projects||[]).find(p=>p.name===name);
+    if(proj){
+      const sel = document.getElementById('pln-proj-id');
+      if(sel){ sel.value=proj.id; plnOnProjChange(proj.id); }
+      // Pre-fill client if set
+      const cli = document.getElementById('pln-cliente');
+      if(cli && proj.client){ cli.value=proj.client; }
+    }
+  }, 300);
 }
 
 function plnPopularProjetos(){
