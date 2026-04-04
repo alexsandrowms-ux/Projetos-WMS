@@ -5222,22 +5222,19 @@ function renderPlanejamentoWMS(){
 }
 
 function irParaPlanejamento(){
-  // Save first then navigate to planning with project pre-selected
-  const name = document.getElementById('mp-name')?.value.trim();
+  const name = document.getElementById('fp-name')?.value.trim();
   if(!name){ toast('Informe o nome do projeto antes de ir para o Planejamento','err'); return; }
-  saveProject(); // save the project
+  saveProject();
   closeModal('modal-proj');
-  // Navigate to planning and pre-select this project
   setTimeout(()=>{
     showPage('planejamento');
-    // Find the project we just saved (by name, since it may be new)
     const proj = (S.projects||[]).find(p=>p.name===name);
     if(proj){
+      plnPopularProjetos();
       const sel = document.getElementById('pln-proj-id');
       if(sel){ sel.value=proj.id; plnOnProjChange(proj.id); }
-      // Pre-fill client if set
-      const cli = document.getElementById('pln-cliente');
-      if(cli && proj.client){ cli.value=proj.client; }
+      const ini = document.getElementById('pln-inicio');
+      if(ini && proj.startDate && !ini.value) ini.value=proj.startDate;
     }
   }, 300);
 }
