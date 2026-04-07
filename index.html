@@ -5717,7 +5717,7 @@ function renderChecklist(){
     const catItems=items.filter(i=>i.cat===cat);
     const catDone=catItems.filter(i=>i.done).length;
     return`<div style="margin-bottom:14px">
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;border-bottom:none">
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:rgba(180,70,0,.55);border:1px solid rgba(232,119,34,.35);border-radius:var(--r) var(--r) 0 0;border-bottom:none">
         <div style="display:flex;gap:2px;flex-shrink:0">
           <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',-1)" title="Mover categoria para cima" style="font-size:10px;padding:1px 5px">▲</button>
           <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',1)" title="Mover categoria para baixo" style="font-size:10px;padding:1px 5px">▼</button>
