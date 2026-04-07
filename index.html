@@ -5362,24 +5362,147 @@ function toggleStageApontamentos(rootId){
 let _clEditId = null;
 
 const WMS_DEFAULT_CHECKLIST = [
-  {cat:'Pré-Implantação', name:'Reunião de Kickoff', desc:'Alinhamento de escopo, equipe e cronograma'},
-  {cat:'Pré-Implantação', name:'Levantamento de Processos', desc:'Mapeamento dos processos de armazenagem do cliente'},
-  {cat:'Pré-Implantação', name:'Configuração do Ambiente', desc:'Instalação e configuração do servidor e banco de dados'},
-  {cat:'Configuração',    name:'Cadastro de Produtos/SKUs', desc:'Importação e configuração de produtos no WMS'},
-  {cat:'Configuração',    name:'Configuração de Endereços', desc:'Parametrização de setores, ruas, prateleiras e posições'},
-  {cat:'Configuração',    name:'Configuração de Regras de Armazenagem', desc:'FIFO, FEFO, LIFO e regras de picking'},
-  {cat:'Integração',      name:'Integração com ERP/Sankhya', desc:'Configuração de APIs e fluxos de integração'},
-  {cat:'Integração',      name:'Teste de Integração', desc:'Validação dos fluxos de entrada e saída de dados'},
-  {cat:'Treinamento',     name:'Treinamento Equipe TI', desc:'Treinamento técnico para equipe de TI do cliente'},
-  {cat:'Treinamento',     name:'Treinamento Usuários Chave', desc:'Treinamento operacional para supervisores e líderes'},
-  {cat:'Treinamento',     name:'Treinamento Operadores', desc:'Treinamento prático para operadores de armazém'},
-  {cat:'Testes',          name:'Teste de Recebimento', desc:'Validação do fluxo de recebimento de mercadorias'},
-  {cat:'Testes',          name:'Teste de Armazenagem', desc:'Validação das regras de endereçamento e putaway'},
-  {cat:'Testes',          name:'Teste de Separação/Picking', desc:'Validação do processo de separação de pedidos'},
-  {cat:'Testes',          name:'Teste de Expedição', desc:'Validação do processo de expedição e conferência'},
-  {cat:'Go-Live',         name:'Aprovação para Go-Live', desc:'Validação e assinatura para entrada em produção'},
-  {cat:'Go-Live',         name:'Acompanhamento Go-Live', desc:'Suporte presencial nos primeiros dias em produção'},
-  {cat:'Pós-Implantação', name:'Reunião de Encerramento', desc:'Apresentação de resultados e lições aprendidas'},
+  {cat:'Cadastro de Produto', name:'1.1 - Codigo de Barras:', desc:''},
+  {cat:'Cadastro de Produto', name:'- Referencia', desc:'Configurações » Cadastros » Produtos » Produtos » Aba/Geral | Precisamos cadastrar os codigos nas und alternativas dos cadastros dos produtos.'},
+  {cat:'Cadastro de Produto', name:'- Unidade Alternativa(Verificar se tem configuração de Dividir)', desc:'Configurações » Cadastros » Produtos » Produtos » aba/Unidade Alternativa | O que seria isso?'},
+  {cat:'Cadastro de Produto', name:'- Aba/Codigo de Barras(caso tenha a necessidade).', desc:'Configurações » Cadastros » Produtos » Produtos » Codigo de Barras | Sim e ja vamos alimentar'},
+  {cat:'Cadastro de Produto', name:'Verificar se existe Codigo de Barras duplicados', desc:'WMS » Rotinas » Validação de Configurações do WMS | Verificado e não temos'},
+  {cat:'Cadastro de Produto', name:'1.2 - Medidas do produto:', desc:''},
+  {cat:'Cadastro de Produto', name:'- Flag - Controlado pelo WMS', desc:'Configurações » Cadastros » Produtos » Produtos » aba/medidas e Estoque'},
+  {cat:'Cadastro de Produto', name:'- Peso Bruto', desc:'Configurações » Cadastros » Produtos » Produtos » aba/medidas e Estoque | Temos o peso bruto da caixa, iremos inseriri o do produto'},
+  {cat:'Cadastro de Produto', name:'- Peso Liquido', desc:'Configurações » Cadastros » Produtos » Produtos » aba/medidas e Estoque'},
+  {cat:'Cadastro de Produto', name:'- Altura', desc:'Configurações » Cadastros » Produtos » Produtos » aba/medidas e Estoque | Temos a altura da caixa iremos inserir o do produto'},
+  {cat:'Cadastro de Produto', name:'- Largura', desc:'Configurações » Cadastros » Produtos » Produtos » aba/medidas e Estoque | Temos a largura da caixa iremos inserir o do produto'},
+  {cat:'Cadastro de Produto', name:'- Espessura/Profundidade', desc:'Configurações » Cadastros » Produtos » Produtos » aba/medidas e Estoque | Temos da caixa, vamos coloca do produto'},
+  {cat:'Cadastro de Produto', name:'1.3 - Aba/WMS', desc:''},
+  {cat:'Cadastro de Produto', name:'- Flag - Recuperavel de Avaria', desc:'Configurações » Cadastros » Produtos » Produtos » aba/WMS | Realidade , precisamos alocar um espaço destes produtos.'},
+  {cat:'Cadastro de Produto', name:'- Usar controle adicional no WMS(Caso seja controlado no ERP)', desc:'Configurações » Cadastros » Produtos » Produtos » aba/WMS'},
+  {cat:'Cadastro de Produto', name:'- Lastro x camada', desc:'Temos que cadastrar no sankhya'},
+  {cat:'Cadastro de Produto', name:'- Dias para Expedição', desc:'Tentar reduzir, para um dia util.'},
+  {cat:'Cadastro de Produto', name:'- Fragmenta lote no envio para separação(somente se tiver lote)', desc:'Configurações » Cadastros » Produtos » Produtos » aba/WMS | Não utilizavel'},
+  {cat:'Cadastro de Produto', name:'- ShefLife e ShelfLife Minimo(Caso seja controlado por FEFO)', desc:'Configurações » Cadastros » Produtos » Produtos » aba/WMS | Não utilizavel'},
+  {cat:'Cadastro de Locais', name:'1.1 - Flag - Controlado pelo WMS', desc:'Comercial » Arquivo » Cadastros » Locais | Sim, temos que colocar'},
+  {cat:'Preferências da Empresa', name:'1.1 - Flag - Controlado pelo WMS', desc:'Comercial » Preferências » Empresa » Aba/WMS | Sim, temos que colocar'},
+  {cat:'Tipo de Operação (TOP)', name:'1.1 - Compra', desc:'Comercial » Arquivo » Cadastros » Tipos de Operação - TOP/Aba/WMS | Sim'},
+  {cat:'Tipo de Operação (TOP)', name:'1.2 - Transferencia', desc:'Comercial » Arquivo » Cadastros » Tipos de Operação - TOP/Aba/WMS | Sim'},
+  {cat:'Tipo de Operação (TOP)', name:'1.3 - Requisição', desc:'Comercial » Arquivo » Cadastros » Tipos de Operação - TOP/Aba/WMS | Verificar necessidade'},
+  {cat:'Tipo de Operação (TOP)', name:'1.4 - Pedido de Venda', desc:'Comercial » Arquivo » Cadastros » Tipos de Operação - TOP/Aba/WMS | SIm'},
+  {cat:'Tipo de Operação (TOP)', name:'1.5 - Dev. de Venda', desc:'Comercial » Arquivo » Cadastros » Tipos de Operação - TOP/Aba/WMS | Sim'},
+  {cat:'Infraestrutura e Equipamentos', name:'Instalação e validação bancadas checkouts', desc:'Fisíco | Iremos encaminhar videos da expedição e separação, para compreender a nossa realidade'},
+  {cat:'Infraestrutura e Equipamentos', name:'Instalação e validação antenas dos coletores', desc:'Instalação | Sim, aguardando finalização de contrato e istalação'},
+  {cat:'Infraestrutura e Equipamentos', name:'Instalação e validação impressoras zebras', desc:'Instalação | Precisamos confirmar se o modelo que temos possui homologação na sankhya?'},
+  {cat:'Infraestrutura e Equipamentos', name:'Instalação e validação emulador (Android versão>=9)', desc:'Instalação | Aguardando retorno do Snakhya'},
+  {cat:'Infraestrutura e Equipamentos', name:'Etiquetar os endereços (porta pallet) de pulmão, picking e flowrack, docas e checkouts (carrinhos)', desc:'Instalação | Sim, aguardando finalização de contrato e istalação'},
+  {cat:'Infraestrutura e Equipamentos', name:'Existe carrinhos suficientes para realização da separação?', desc:'Fisíco | Não utilizamos carrinhos para a separação'},
+  {cat:'Infraestrutura e Equipamentos', name:'Existe hidráulicos suficientes para realização da separação?', desc:'Fisíco | Temos tres e foram solicitadas a compra de mais três unidades.'},
+  {cat:'Infraestrutura e Equipamentos', name:'SPS (Sankhya Print Service)', desc:'Instalação'},
+  {cat:'Infraestrutura e Equipamentos', name:'Paletização Padronizada', desc:'Fisíco | Temos que padronizar'},
+  {cat:'Infraestrutura e Equipamentos', name:'Ruas sem impedimentos', desc:'Fisíco | Atualmente temos impedimentos mas iremos estruturar para não termos'},
+  {cat:'Infraestrutura e Equipamentos', name:'1.1 - Cadastrar a Mascara para Endereçamento:', desc:'Configurações » Avançado » Máscaras » Máscara para Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'1.2 - Criar a arvore de Armazenagem do endereços:', desc:'WMS » Cadastros » Cadastro Massivo de Endereços'},
+  {cat:'Infraestrutura e Equipamentos', name:'1.3 - Configurar  Endereço p/ armazenagem/separação', desc:'Comercial » Preferências » Empresa » aba/WMS'},
+  {cat:'Infraestrutura e Equipamentos', name:'1.4 - Configurar Empresa p/Estoque no WMS', desc:'Comercial » Preferências » Empresa » aba/WMS'},
+  {cat:'Infraestrutura e Equipamentos', name:'1.5 - Medidas End. Peso.M3', desc:''},
+  {cat:'Infraestrutura e Equipamentos', name:'2.1 - Criar o modelo JRXL da Etiqueta Porta Palete(disponivel no Place)', desc:'Configurações » Avançado » Relatórios Formatados'},
+  {cat:'Infraestrutura e Equipamentos', name:'2.2 - Realizar a Impressão das Etiquetas', desc:'Configurações » Avançado » Relatórios Formatados(CTRL+P) | A impressão das etiquetas será em uma proxima etapa, antes do treinamento operacional'},
+  {cat:'Infraestrutura e Equipamentos', name:'1 -  Endereços de Picking(Picking Fixo).', desc:'WMS » Cadastros » Endereço de Armazenamento | Picking fixo'},
+  {cat:'Infraestrutura e Equipamentos', name:'1.1 - Definir Estoque Maxímo e Minimo do Produto', desc:'A definir'},
+  {cat:'Infraestrutura e Equipamentos', name:'2 - Endereços de Pulmão', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'3 - Ordem dos Endereços.', desc:'WMS » Cadastros » Endereço de Armazenamento » Aba/Geral » Campo » Ordem'},
+  {cat:'Infraestrutura e Equipamentos', name:'4 -  Endereços de Checkouts', desc:'WMS » Cadastros » Endereço de Armazenamento | Não terá, ideia utilizar Checkout de coletor'},
+  {cat:'Infraestrutura e Equipamentos', name:'5 - Endereços de Conexão', desc:''},
+  {cat:'Infraestrutura e Equipamentos', name:'6 - Endereços de Docas.', desc:''},
+  {cat:'Infraestrutura e Equipamentos', name:'Tipo - Entrada', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'Tipo - Saída', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'Tipo - Balcão', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'6 - Endereços Virtuais:', desc:''},
+  {cat:'Infraestrutura e Equipamentos', name:'1 - End. Indefinido para Movimentação;', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'2 - Endereço Indefinido para Armazenagem;', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'3 - Retorno de Expedição', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'4 - Checkout Indefinido', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'7- Endereços Especiais:', desc:''},
+  {cat:'Infraestrutura e Equipamentos', name:'1 - Avaria', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'2 - Perda', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'3 - Sobra', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'4 - Divergencia', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'5 - Garantia', desc:'WMS » Cadastros » Endereço de Armazenamento'},
+  {cat:'Infraestrutura e Equipamentos', name:'6 - Subrair estoque Bloqueado WMSDESCONESTBLQ', desc:''},
+  {cat:'Infraestrutura e Equipamentos', name:'4.1 - Area de Armazenagem.', desc:'WMS » Cadastros » Área de Armazenagem'},
+  {cat:'Infraestrutura e Equipamentos', name:'4.2 - Areas de Separação.', desc:'WMS » Cadastros » Área de Separação'},
+  {cat:'Infraestrutura e Equipamentos', name:'4.3 - Areas de Conferencia.', desc:'WMS » Cadastros » Área de Conferência'},
+  {cat:'Estratégia de Armazenagem', name:'1.1 - Configurar os Algoritmo de Armazenagem(pikcing, Endereços Vazios e Completar Endereço).', desc:'WMS » Rotinas » Configuração de Armazenagem'},
+  {cat:'Estratégia de Armazenagem', name:'1.2 - Produtos Compativeis.', desc:'WMS » Cadastros » Produtos Compatíveis'},
+  {cat:'Estratégia de Armazenagem', name:'1.3 - Regra para Armazenagem de NF de Dev. Venda.', desc:'Configurações » Avançado » Preferências >> WMSREGRARMDEV - Regra de armazenagem para devolues de venda.'},
+  {cat:'Estratégia de Armazenagem', name:'1.4 - Priorizar a Menor data de Validade no PICKING.', desc:'Configurações » Avançado » Preferências >>WMSDTVALMINPICK - Preferência de data de validade minima no picking'},
+  {cat:'Estratégia de Armazenagem', name:'1.5 - Armazenar utilizando LxC(Norma de Paletização)', desc:'WMS » Rotinas » Configuração de Armazenagem » Usar lastro x camada:'},
+  {cat:'Estratégia de Armazenagem', name:'1.6 -  Geração automatica de Tarefas de Armazenagem(job)', desc:'REGCONFARMAUTO - Registro de conferência c/ armazenagem automática.'},
+  {cat:'Estratégia de Armazenagem', name:'1.7 - FIFO(First In, First Out/o primeiro a entrar é o primeiro a sair)', desc:'Não faz o controle.'},
+  {cat:'Estratégia de Armazenagem', name:'1.8 - FEFO(“First expired, first out”, que é “Primeiro a vencer, primeiro a sair”)', desc:'Não faz o controle.'},
+  {cat:'Estratégia de Armazenagem', name:'1.9 - LOTE UNICO por ENDEREÇO', desc:'Não faz o controle.'},
+  {cat:'Gestão de Mão de Obra', name:'1.1 - Cadastro de Tipo de Equipamento', desc:'WMS » Cadastros » Tipos de Equipamento'},
+  {cat:'Gestão de Mão de Obra', name:'1.2 - Cadastro de Equipamento', desc:'WMS » Cadastros » Cadastro de Equipamentos'},
+  {cat:'Gestão de Mão de Obra', name:'2.1 - Configuração de Usuario(Tarefa unidade permitida)', desc:'WMS » Rotinas » Configurações por Usuário'},
+  {cat:'Gestão de Mão de Obra', name:'2.2 - Grupo de Endereços', desc:'WMS » Cadastros » Grupos de Endereços'},
+  {cat:'Motivo de Corte e Divergência', name:'1.1 - Motivo de Corte', desc:'WMS » Cadastros » Motivos de Corte | Revisar'},
+  {cat:'Motivo de Corte e Divergência', name:'1.2 - Motivo de Divergencia(Entrada e Saída).', desc:'WMS » Cadastros » Motivo de Divergência | Revisar'},
+  {cat:'Motivo de Corte e Divergência', name:'1.3 - Liberação de Ocorrencia', desc:'Configurações » Avançado » Preferências » WMSREGOCOR - Configurao de registro de ocorrencias do WMS'},
+  {cat:'Motivo de Corte e Divergência', name:'1.4 - Tipo de Ocorrencias', desc:'WMS » Cadastros » Tipos de Ocorrência'},
+  {cat:'Tipos de Conferência de Entrada', name:'1.1 - Conferencia de Entrada', desc:'WMS » Rotinas » Configurações por Usuário'},
+  {cat:'Tipos de Conferência de Entrada', name:'1.2 - Conferencia Parcial de Entrada', desc:'WMS » Rotinas » Configurações por Usuário | Revisar'},
+  {cat:'Tipos de Conferência de Entrada', name:'1.3 - Registro de Conferencia', desc:'WMS » Rotinas » Configurações por Usuário(conceder acesso ao usuario) | Revisar'},
+  {cat:'Tipos de Conferência de Entrada', name:'1.4 - Registro de Conferencia de Entrada(Rotina SankhyaOM).', desc:'WMS » Rotinas » Registro de Conferência de Entrada'},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'Nota modelo sobra estoque WMS (Entrada):', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'Nota modelo perda estoque WMS (Saída):', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'Local para ajuste de estoque:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'Modelo Retor. de Est. Gerencial WMS(Venda):', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'Modelo Estorno WMS - Dev. Compra', desc:''},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'Série p/ devolução de mercadorias:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'TOP p/ devolução de mercadorias:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Config. Modelo de Nota/TOP/Local', name:'TOP Entrada de mercadoria', desc:''},
+  {cat:'Envio de Pedidos para Expedição', name:'Utiliza doca automaticamente separações balcão:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Envio de Pedidos para Expedição', name:'Considerar armazenagens pendentes no envio para expedição:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Envio de Pedidos para Expedição', name:'Envio ped. balcão considera entradas pendentes:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Envio de Pedidos para Expedição', name:'Tratamento p/falta de estoque no envio da OC:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Envio de Pedidos para Expedição', name:'Tipo de corte na separação:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Tipos de Separação', name:'Separação(Picking Discreto)', desc:'WMS » Rotinas » Configurações por Usuário'},
+  {cat:'Tipos de Separação', name:'Separação por Onda', desc:''},
+  {cat:'Tipos de Separação', name:'Separação por Esteira', desc:'WMS » Rotinas » Configurações por Usuário'},
+  {cat:'Tipos de Separação', name:'Separação por Area', desc:'Utiliza a tarefa: Separação'},
+  {cat:'Tipos de Separação', name:'Separação Agrupada', desc:'Utiliza a tarefa: Separação'},
+  {cat:'Tipos de Separação', name:'Separação Pulmão', desc:'Utiliza a tarefa: Separação'},
+  {cat:'Tipos de Separação', name:'Separação Parcial no Pulmão.', desc:'Utiliza a tarefa: Separação'},
+  {cat:'Tipos de Separação', name:'Separação Balcão', desc:'WMS » Rotinas » Configurações por Usuário'},
+  {cat:'Impressão de Etiquetas de Volume', name:'Modelo padrão de Etiqueta de Volume:', desc:'Configurações » Avançado » Relatórios Formatados'},
+  {cat:'Impressão de Etiquetas de Volume', name:'Impressora padrão da Etiqueta de Volume:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Impressão de Etiquetas de Volume', name:'Impressão de etiqueta de volumes:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Impressão de Etiquetas de Volume', name:'Imprimir etiquetas de volume na conferência:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Impressão de Etiquetas de Volume', name:'Imprime etiquetas de separação por OC:', desc:'Configurações » Avançado » Preferências » ABA/WMS'},
+  {cat:'Impressão de Etiquetas de Volume', name:'Modelo de Etiqueta de Grandeza(Sep. Por Produto)', desc:''},
+  {cat:'Reabastecimento', name:'Reabastecimento Corretivo', desc:'Sim'},
+  {cat:'Reabastecimento', name:'Reabastecimento Preventivo(Rotina)', desc:'Não'},
+  {cat:'Reabastecimento', name:'Habilita nova Rotina de Ressuprimento Preventivo(parametroHABNOVORESSUP)', desc:'Não'},
+  {cat:'Reabastecimento', name:'Reabastecimento Preventivo', desc:'Sim'},
+  {cat:'Reabastecimento', name:'Reabastecimento Corretivo', desc:'Sim'},
+  {cat:'Otimização de Endereço/Espaço', name:'WMS » Rotinas » Remanejamento de Estoque', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Otimização de Endereço/Espaço', name:'WMS » Rotinas » Transferência entre Endereços', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Otimização de Endereço/Espaço', name:'Movimentação Pro-Ativa(Coletor)', desc:'WMS » Rotinas » Configurações por Usuário'},
+  {cat:'Gestão e Acompanhamento das Operações', name:'1.1 - Gerencia do WMS', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Gestão e Acompanhamento das Operações', name:'1.2 - Recebimento de Mercadoria', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Gestão e Acompanhamento das Operações', name:'1.3 - Expedição de Mercadoria', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Gestão e Acompanhamento das Operações', name:'1.4 - Consulta de Checkout', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Gestão e Acompanhamento das Operações', name:'1.5 - Consulta Estoque com ocorrencia.', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Gestão e Acompanhamento das Operações', name:'1.6 - Fila de Tarefas', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Gestão e Acompanhamento das Operações', name:'1.7 - Gestão de U.M.A', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Consulta de Estoque e Rastreabilidade', name:'1.1 - Estoque/ Endereçamento WMS', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Consulta de Estoque e Rastreabilidade', name:'1.2 - Movimentação por Produto', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Consulta de Estoque e Rastreabilidade', name:'1.2 - Movimentação por Endereço', desc:'Configurações » Controle de Acesso » Acessos'},
+  {cat:'Gestão de Indicadores (KPIs)', name:'1.Recebimento', desc:''},
+  {cat:'Gestão de Indicadores (KPIs)', name:'1.1. Conferencia', desc:''},
+  {cat:'Gestão de Indicadores (KPIs)', name:'1.2. Armazenagem', desc:''},
+  {cat:'Gestão de Indicadores (KPIs)', name:'2.Reabastecimento', desc:''},
+  {cat:'Gestão de Indicadores (KPIs)', name:'3.Inventario', desc:''},
+  {cat:'Gestão de Indicadores (KPIs)', name:'4. Expedição', desc:''},
+  {cat:'Faturamento Automático', name:'WMS » Rotinas » Configuração Faturamento Automático', desc:'Configurações » Controle de Acesso » Acessos'},
 ];
 
 function getChecklist(projId){
@@ -5393,12 +5516,12 @@ function clLoadTemplate(){
   const proj=(S.projects||[]).find(p=>p.id===projId);
   if(!proj)return;
   if((proj.checklist||[]).length>0){
-    if(!confirm('Isso vai adicionar os processos padrão ao checklist existente. Continuar?'))return;
+    if(!confirm('Isso vai SUBSTITUIR o checklist atual pelo padrão WMS. Deseja continuar?'))return;
   }
-  if(!proj.checklist)proj.checklist=[];
-  WMS_DEFAULT_CHECKLIST.forEach(item=>{
-    proj.checklist.push({id:uid(),name:item.name,cat:item.cat,desc:item.desc,done:false,doneAt:'',doneBy:''});
-  });
+  proj.checklist = WMS_DEFAULT_CHECKLIST.map(item=>({
+    id:uid(), name:item.name, cat:item.cat, desc:item.desc,
+    done:false, doneAt:'', doneBy:''
+  }));
   saveS();renderChecklist();
   toast('Checklist padrão WMS carregado ✓','ok');
 }
@@ -5522,14 +5645,34 @@ ${catSections}
 function moveChecklistItem(projId, itemId, direction){
   const proj = (S.projects||[]).find(p=>p.id===projId);
   if(!proj||!proj.checklist) return;
-  const idx = proj.checklist.findIndex(i=>i.id===itemId);
-  if(idx<0) return;
-  const newIdx = idx + direction;
-  if(newIdx<0 || newIdx>=proj.checklist.length) return;
-  // Swap
-  const tmp = proj.checklist[idx];
-  proj.checklist[idx] = proj.checklist[newIdx];
-  proj.checklist[newIdx] = tmp;
+  const item = proj.checklist.find(i=>i.id===itemId);
+  if(!item) return;
+  // Move within same category
+  const catItems = proj.checklist.filter(i=>i.cat===item.cat);
+  const catIdx   = catItems.findIndex(i=>i.id===itemId);
+  const newCatIdx = catIdx + direction;
+  if(newCatIdx < 0 || newCatIdx >= catItems.length) return;
+  // Find global positions and swap
+  const globalIdx1 = proj.checklist.findIndex(i=>i.id===catItems[catIdx].id);
+  const globalIdx2 = proj.checklist.findIndex(i=>i.id===catItems[newCatIdx].id);
+  const tmp = proj.checklist[globalIdx1];
+  proj.checklist[globalIdx1] = proj.checklist[globalIdx2];
+  proj.checklist[globalIdx2] = tmp;
+  saveS();
+  renderChecklist();
+}
+
+function moveCatChecklist(projId, cat, direction){
+  const proj = (S.projects||[]).find(p=>p.id===projId);
+  if(!proj||!proj.checklist) return;
+  const cats = [...new Set(proj.checklist.map(i=>i.cat))];
+  const ci = cats.indexOf(cat);
+  const ni = ci + direction;
+  if(ni<0||ni>=cats.length) return;
+  // Swap cats[ci] and cats[ni]
+  [cats[ci], cats[ni]] = [cats[ni], cats[ci]];
+  // Rebuild checklist in new cat order
+  proj.checklist = cats.flatMap(c=>proj.checklist.filter(i=>i.cat===c));
   saveS();
   renderChecklist();
 }
@@ -5575,6 +5718,10 @@ function renderChecklist(){
     const catDone=catItems.filter(i=>i.done).length;
     return`<div style="margin-bottom:14px">
       <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;border-bottom:none">
+        <div style="display:flex;gap:2px;flex-shrink:0">
+          <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',-1)" title="Mover categoria para cima" style="font-size:10px;padding:1px 5px">▲</button>
+          <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',1)" title="Mover categoria para baixo" style="font-size:10px;padding:1px 5px">▼</button>
+        </div>
         <span style="font-size:12px;font-weight:700">${cat}</span>
         <span style="font-size:10px;color:var(--dim)">${catDone}/${catItems.length}</span>
         <div style="flex:1;background:var(--bg4);border-radius:4px;height:4px;overflow:hidden">
