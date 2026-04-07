@@ -5677,6 +5677,18 @@ function moveCatChecklist(projId, cat, direction){
   renderChecklist();
 }
 
+let _clOpenCats = {}; // cat key → true=open, default closed
+
+function clToggleCat(catKey){
+  _clOpenCats[catKey] = !_clOpenCats[catKey];
+  const body = document.getElementById('cl-cat-'+catKey);
+  const btn  = document.getElementById('cl-btn-'+catKey);
+  if(body){
+    body.style.display = _clOpenCats[catKey] ? '' : 'none';
+  }
+  if(btn) btn.textContent = _clOpenCats[catKey] ? '−' : '+';
+}
+
 function renderChecklist(){
   // Populate project select
   const sel=document.getElementById('cl-proj-sel');
@@ -5716,19 +5728,24 @@ function renderChecklist(){
   el.innerHTML=cats.map(cat=>{
     const catItems=items.filter(i=>i.cat===cat);
     const catDone=catItems.filter(i=>i.done).length;
-    return`<div style="margin-bottom:14px">
-      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:rgba(180,70,0,.55);border:1px solid rgba(232,119,34,.35);border-radius:var(--r) var(--r) 0 0;border-bottom:none">
-        <div style="display:flex;gap:2px;flex-shrink:0">
+    const catKey=cat.replace(/[^a-zA-Z0-9]/g,'_');
+    const isOpen=!!_clOpenCats[catKey];
+    const pctCat=catItems.length?Math.round(catDone/catItems.length*100):0;
+    return`<div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:rgba(180,70,0,.55);border:1px solid rgba(232,119,34,.35);border-radius:${isOpen?'var(--r) var(--r) 0 0':'var(--r)'};cursor:pointer" onclick="clToggleCat('${catKey}')">
+        <button id="cl-btn-${catKey}" class="btn btn-ghost btn-xs" style="font-size:13px;font-weight:900;padding:0 6px;min-width:22px;color:#fff;background:rgba(0,0,0,.25);border-color:rgba(255,255,255,.2)" onclick="event.stopPropagation();clToggleCat('${catKey}')">${isOpen?'−':'+'}</button>
+        <div style="display:flex;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
           <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',-1)" title="Mover categoria para cima" style="font-size:10px;padding:1px 5px">▲</button>
           <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',1)" title="Mover categoria para baixo" style="font-size:10px;padding:1px 5px">▼</button>
         </div>
-        <span style="font-size:12px;font-weight:700">${cat}</span>
-        <span style="font-size:10px;color:var(--dim)">${catDone}/${catItems.length}</span>
-        <div style="flex:1;background:var(--bg4);border-radius:4px;height:4px;overflow:hidden">
-          <div style="width:${catItems.length?Math.round(catDone/catItems.length*100):0}%;background:var(--green);height:100%;border-radius:4px;transition:width .3s"></div>
+        <span style="font-size:12px;font-weight:700;color:#fff">${cat}</span>
+        <span style="font-size:10px;color:rgba(255,255,255,.6)">${catDone}/${catItems.length}</span>
+        <div style="flex:1;background:rgba(0,0,0,.25);border-radius:4px;height:5px;overflow:hidden">
+          <div style="width:${pctCat}%;background:${pctCat===100?'var(--green)':'#E87722'};height:100%;border-radius:4px;transition:width .3s"></div>
         </div>
+        <span style="font-size:10px;color:rgba(255,255,255,.5);flex-shrink:0">${pctCat}%</span>
       </div>
-      <div style="border:1px solid var(--border);border-radius:0 0 var(--r) var(--r);overflow:hidden">
+      <div id="cl-cat-${catKey}" style="display:${isOpen?'':'none'};border:1px solid rgba(232,119,34,.25);border-top:none;border-radius:0 0 var(--r) var(--r);overflow:hidden">
         ${catItems.map(item=>`
           <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--bg2);border-bottom:1px solid var(--border);${item.done?'opacity:.65':''}">
             <label style="display:flex;align-items:center;gap:0;cursor:pointer;margin:0">
