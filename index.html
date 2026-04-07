@@ -5662,6 +5662,36 @@ function moveChecklistItem(projId, itemId, direction){
   renderChecklist();
 }
 
+
+function clMarkCat(projId, cat, done){
+  const proj=(S.projects||[]).find(p=>p.id===projId);
+  if(!proj||!proj.checklist)return;
+  const now=new Date().toLocaleDateString('pt-BR');
+  proj.checklist.filter(i=>i.cat===cat).forEach(i=>{
+    i.done=done;
+    if(done){i.doneAt=now;i.doneBy=S.user?.name||'';}
+    else{i.doneAt='';i.doneBy='';}
+  });
+  saveS();renderChecklist();
+  toast((done?'✓ Todas marcadas':'✗ Todas desmarcadas')+' em "'+cat+'"','ok');
+}
+
+function clDeleteCat(projId, cat){
+  const proj=(S.projects||[]).find(p=>p.id===projId);
+  if(!proj||!proj.checklist)return;
+  const n=proj.checklist.filter(i=>i.cat===cat).length;
+  document.getElementById('mc-icon').textContent='🗑';
+  document.getElementById('mc-title').textContent='Excluir categoria';
+  document.getElementById('mc-msg').innerHTML='Excluir <strong>'+n+' atividade(s)</strong> da categoria <strong>"'+cat+'"</strong>? Esta ação não pode ser desfeita.';
+  document.getElementById('mc-btn').onclick=()=>{
+    closeModal('modal-confirm');
+    proj.checklist=proj.checklist.filter(i=>i.cat!==cat);
+    saveS();renderChecklist();
+    toast('Categoria "'+cat+'" excluída','ok');
+  };
+  openModal('modal-confirm');
+}
+
 function moveCatChecklist(projId, cat, direction){
   const proj = (S.projects||[]).find(p=>p.id===projId);
   if(!proj||!proj.checklist) return;
@@ -5737,6 +5767,9 @@ function renderChecklist(){
         <div style="display:flex;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
           <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',-1)" title="Mover categoria para cima" style="font-size:10px;padding:1px 5px">▲</button>
           <button class="btn btn-ghost btn-xs" onclick="moveCatChecklist('${projId}','${cat}',1)" title="Mover categoria para baixo" style="font-size:10px;padding:1px 5px">▼</button>
+          <button class="btn btn-ghost btn-xs" onclick="clMarkCat('${projId}','${cat}',true)" title="Marcar todos" style="font-size:10px;padding:1px 6px;color:var(--green)">✓ Todos</button>
+          <button class="btn btn-ghost btn-xs" onclick="clMarkCat('${projId}','${cat}',false)" title="Desmarcar todos" style="font-size:10px;padding:1px 6px;color:var(--amber)">✗ Todos</button>
+          <button class="btn btn-ghost btn-xs" onclick="clDeleteCat('${projId}','${cat}')" title="Excluir todas as atividades desta categoria" style="font-size:10px;padding:1px 6px;color:var(--red)">🗑 Cat</button>
         </div>
         <span style="font-size:12px;font-weight:700;color:#fff">${cat}</span>
         <span style="font-size:10px;color:rgba(255,255,255,.6)">${catDone}/${catItems.length}</span>
