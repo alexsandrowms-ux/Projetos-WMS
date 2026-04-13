@@ -5594,54 +5594,120 @@ function exportChecklist(){
   const done=items.filter(i=>i.done).length;
   const pct=Math.round(done/items.length*100);
   const cats=[...new Set(items.map(i=>i.cat))];
-  const catSections=cats.map(cat=>{
-    const catItems=items.filter(i=>i.cat===cat);
-    const rows=catItems.map(item=>`<tr>
-      <td style="text-align:center">${item.done?'<span style="color:#16a34a;font-size:16px">✅</span>':'<span style="color:#94a3b8">○</span>'}</td>
-      <td style="font-weight:${item.done?'400':'600'};color:${item.done?'#64748b':'#1e293b'};text-decoration:${item.done?'line-through':''}">${esc(item.name)}</td>
-      <td style="font-size:11px;color:#64748b">${esc(item.resp||'—')}</td>
-      <td style="font-size:11px;color:#64748b">${esc(item.desc||'—')}</td>
-      <td style="font-size:11px;text-align:center">${item.doneAt?new Date(item.doneAt).toLocaleDateString('pt-BR'):'—'}</td>
-    </tr>`).join('');
-    return`<div style="margin-bottom:20px">
-      <div style="font-size:13px;font-weight:700;color:#0f172a;padding:8px 12px;background:#f1f5f9;border-radius:6px;margin-bottom:8px">${cat}</div>
-      <table style="width:100%;border-collapse:collapse">
-        <thead><tr style="background:#1e293b;color:#fff">
-          <th style="padding:7px;width:40px">✓</th>
-          <th style="padding:7px;text-align:left">Processo</th>
-          <th style="padding:7px;text-align:left;width:150px">Responsável</th>
-          <th style="padding:7px;text-align:left">Descrição</th>
-          <th style="padding:7px;width:100px">Concluído em</th>
-        </tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>`;
+
+  // Build category sections
+  const catSections=cats.map(function(cat){
+    const catItems=items.filter(function(i){return i.cat===cat;});
+    const catDone=catItems.filter(function(i){return i.done;}).length;
+    const catPct=catItems.length?Math.round(catDone/catItems.length*100):0;
+    const rows=catItems.map(function(item){
+      const bg=item.done?'background:#f0fdf4;':'';
+      const strike=item.done?'line-through':'none';
+      const col=item.done?'#64748b':'#1e293b';
+      const fw=item.done?'400':'600';
+      const dt=item.doneAt||'—';
+      return '<tr id="row-'+item.id+'" style="'+bg+'">'+
+        '<td style="text-align:center;width:36px">'+
+          '<input type="checkbox" id="chk-'+item.id+'" '+
+            (item.done?'checked':'')+
+            ' onchange="toggleItem(\''+item.id+'\',this.checked)"'+
+            ' style="width:16px;height:16px;cursor:pointer;accent-color:#16a34a">'+
+        '</td>'+
+        '<td style="font-weight:'+fw+';color:'+col+';text-decoration:'+strike+'" id="name-'+item.id+'">'+esc(item.name)+'</td>'+
+        '<td style="font-size:11px;color:#64748b">'+esc(item.doneBy||'—')+'</td>'+
+        '<td style="font-size:11px;color:#64748b;max-width:320px">'+esc(item.desc||'—')+'</td>'+
+        '<td style="font-size:11px;text-align:center;white-space:nowrap" id="date-'+item.id+'">'+esc(dt)+'</td>'+
+      '</tr>';
+    }).join('');
+    const barColor=catPct===100?'#22c55e':'#E87722';
+    return '<div style="margin-bottom:20px">'+
+      '<div style="font-size:13px;font-weight:700;color:#fff;padding:8px 14px;background:linear-gradient(90deg,#7c2d00,#b44600);border-radius:6px 6px 0 0;display:flex;align-items:center;gap:10px">'+
+        '<span>'+esc(cat)+'</span>'+
+        '<span style="font-size:11px;opacity:.75">'+catDone+'/'+catItems.length+' · '+catPct+'%</span>'+
+        '<div style="flex:1;background:rgba(0,0,0,.3);border-radius:3px;height:5px;overflow:hidden;margin-left:8px">'+
+          '<div style="width:'+catPct+'%;height:100%;background:'+barColor+';border-radius:3px"></div>'+
+        '</div>'+
+        '<label style="font-size:11px;cursor:pointer;display:flex;align-items:center;gap:5px;font-weight:400;color:rgba(255,255,255,.85)">'+
+          '<input type="checkbox" onchange="markAllCat(\''+cat.replace(/'/g,"\\'")+'\',this.checked)" style="accent-color:#22c55e;width:14px;height:14px"> Todos'+
+        '</label>'+
+      '</div>'+
+      '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+        '<thead><tr style="background:#1e293b">'+
+          '<th style="padding:7px 10px;color:#fff;font-size:10px;text-transform:uppercase;width:36px">OK</th>'+
+          '<th style="padding:7px 10px;text-align:left;color:#fff;font-size:10px;text-transform:uppercase">Processo</th>'+
+          '<th style="padding:7px 10px;text-align:left;color:#fff;font-size:10px;text-transform:uppercase;width:120px">Responsável</th>'+
+          '<th style="padding:7px 10px;text-align:left;color:#fff;font-size:10px;text-transform:uppercase">Descrição / Localização</th>'+
+          '<th style="padding:7px 10px;text-align:center;color:#fff;font-size:10px;text-transform:uppercase;width:100px">Concluído em</th>'+
+        '</tr></thead>'+
+        '<tbody>'+rows+'</tbody>'+
+      '</table>'+
+    '</div>';
   }).join('');
-  const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>Checklist - ${esc(proj.name)}</title>
-<style>*{box-sizing:border-box}body{font-family:sans-serif;color:#1e293b;background:#f8fafc;padding:24px}
-td{border-bottom:1px solid #f1f5f9;padding:7px 10px;vertical-align:top}
-tr:hover td{background:#f8fafc}</style></head><body>
-<h2 style="font-size:20px;margin-bottom:4px">✅ Checklist de Implantação</h2>
-<p style="color:#64748b;margin-bottom:8px">${esc(proj.name)} · ${esc(proj.client||'')}</p>
-<div style="background:#fff;border-radius:8px;padding:12px 16px;margin-bottom:20px;border:1px solid #e2e8f0">
-  <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-    <span style="font-size:13px">${done} de ${items.length} processos concluídos</span>
-    <strong style="color:${pct===100?'#16a34a':pct>50?'#d97706':'#0ea5e9'}">${pct}%</strong>
-  </div>
-  <div style="background:#e2e8f0;border-radius:8px;height:10px">
-    <div style="width:${pct}%;background:${pct===100?'#16a34a':pct>50?'#22c55e':'#0ea5e9'};height:100%;border-radius:8px"></div>
-  </div>
-</div>
-${catSections}
-</body></html>`;
+
+  const progColor=pct===100?'#22c55e':'#0ea5e9';
+  const progressBar=
+    '<div style="background:#e2e8f0;border-radius:6px;height:10px;overflow:hidden;margin:10px 0 4px">'+
+      '<div id="prog-bar" style="width:'+pct+'%;height:100%;background:'+progColor+';transition:width .3s;border-radius:6px"></div>'+
+    '</div>'+
+    '<div id="prog-label" style="font-size:12px;color:#64748b;text-align:right">'+done+' de '+items.length+' concluídos · '+pct+'%</div>';
+
+  // Interactive script — built as string to avoid nested template literal issues
+  const itemDataJson=JSON.stringify(items.map(function(i){return {id:i.id,cat:i.cat,name:i.name};}));
+  const scriptBlock='<'+'script>\n'+
+    'var _D='+itemDataJson+';\n'+
+    'function toggleItem(id,ok){\n'+
+      'var r=document.getElementById("row-"+id),n=document.getElementById("name-"+id),d=document.getElementById("date-"+id);\n'+
+      'if(r)r.style.background=ok?"#f0fdf4":"";\n'+
+      'if(n){n.style.textDecoration=ok?"line-through":"none";n.style.color=ok?"#64748b":"#1e293b";n.style.fontWeight=ok?"400":"600";}\n'+
+      'if(d)d.textContent=ok?new Date().toLocaleDateString("pt-BR"):"\\u2014";\n'+
+      'updateProg();}\n'+
+    'function markAllCat(cat,ok){\n'+
+      '_D.filter(function(i){return i.cat===cat;}).forEach(function(i){\n'+
+        'var c=document.getElementById("chk-"+i.id);if(c){c.checked=ok;toggleItem(i.id,ok);}});}\n'+
+    'function markAll(ok){\n'+
+      '_D.forEach(function(i){var c=document.getElementById("chk-"+i.id);if(c){c.checked=ok;toggleItem(i.id,ok);}});}\n'+
+    'function updateProg(){\n'+
+      'var all=document.querySelectorAll("input[type=checkbox]"),ok=0;\n'+
+      '[].forEach.call(all,function(c){if(c.checked)ok++;});\n'+
+      'var pct=Math.round(ok/all.length*100);\n'+
+      'var b=document.getElementById("prog-bar"),l=document.getElementById("prog-label"),g=document.getElementById("pct-badge");\n'+
+      'if(b){b.style.width=pct+"%";b.style.background=pct===100?"#22c55e":"#0ea5e9";}\n'+
+      'if(l)l.textContent=ok+" de "+all.length+" conclu\\xEDdos \\xB7 "+pct+"%";\n'+
+      'if(g)g.textContent=pct+"%";}\n'+
+    '</'+'script>';
+
+  const html='<!DOCTYPE html>\n<html lang="pt-BR">\n<head>\n<meta charset="UTF-8">\n'+
+    '<title>Checklist WMS \u2014 '+esc(proj.name)+'</title>\n'+
+    '<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@700;800;900&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">\n'+
+    '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:"DM Sans",sans-serif;background:#f0f4f8;color:#1e293b;padding:24px}table{width:100%}tr:hover td{background:#f8fafc}@media print{body{background:#fff;padding:0}.no-print{display:none!important}}</style>\n'+
+    '</head>\n<body>\n<div style="max-width:1100px;margin:0 auto">\n'+
+    '<div style="display:grid;grid-template-columns:1fr auto;background:linear-gradient(135deg,#1E3A5F,#2E6DA4);border-radius:10px;overflow:hidden;margin-bottom:20px">\n'+
+      '<div style="padding:18px 24px">\n'+
+        '<div style="font-size:10px;font-weight:700;color:#A8C4E0;text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px">Checklist de Implanta\u00E7\u00E3o</div>\n'+
+        '<div style="font-size:20px;font-weight:900;color:#fff;font-family:Outfit,sans-serif">'+esc(proj.name)+'</div>\n'+
+        '<div style="font-size:12px;color:#A8C4E0;margin-top:3px">Cliente: '+esc(proj.client||'\u2014')+' \u00B7 Gerado em '+new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})+'</div>\n'+
+      '</div>\n'+
+      '<div style="background:#E87722;padding:18px 24px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:140px">\n'+
+        '<div style="font-size:30px;font-weight:900;color:#fff;font-family:Outfit,sans-serif" id="pct-badge">'+pct+'%</div>\n'+
+        '<div style="font-size:11px;color:#fff;opacity:.85">'+done+'/'+items.length+' itens</div>\n'+
+      '</div>\n'+
+    '</div>\n'+
+    progressBar+
+    '<div style="margin-bottom:16px;display:flex;gap:8px;flex-wrap:wrap;margin-top:12px" class="no-print">\n'+
+      '<button onclick="markAll(true)" style="padding:7px 14px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:12px;font-weight:700;color:#16a34a">\u2713 Marcar Todos</button>\n'+
+      '<button onclick="markAll(false)" style="padding:7px 14px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:12px;font-weight:700;color:#d97706">\u2717 Desmarcar Todos</button>\n'+
+      '<button onclick="window.print()" style="padding:7px 14px;border-radius:6px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;font-size:12px;font-weight:700;color:#1e293b;margin-left:auto">\uD83D\uDDA8\uFE0F Imprimir</button>\n'+
+    '</div>\n'+
+    catSections+
+    scriptBlock+
+    '\n</div>\n</body>\n</html>';
+
   const a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([html],{type:'text/html'}));
-  a.download='Checklist_'+proj.name.replace(/\s+/g,'_')+'.html';
+  a.href=URL.createObjectURL(new Blob([html],{type:'text/html;charset=utf-8'}));
+  a.download='Checklist_WMS_'+esc(proj.name).replace(/\s+/g,'_')+'.html';
   a.click();
-  toast('Checklist exportado ✓','ok');
+  toast('Checklist exportado \u2713','ok');
 }
-
-
 function moveChecklistItem(projId, itemId, direction){
   const proj = (S.projects||[]).find(p=>p.id===projId);
   if(!proj||!proj.checklist) return;
