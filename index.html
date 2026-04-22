@@ -947,16 +947,24 @@ datalist{display:none}
             <table style="width:100%;border-collapse:collapse;font-size:12px">
               <thead>
                 <tr style="background:var(--bg3)">
-                  <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Fase</th>
-                  <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Módulo</th>
-                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Horas</th>
+                  <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:65px">#</th>
+                  <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Módulo / Período</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:90px">Horas</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Início</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Término</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Duração</th>
                   <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Obs.</th>
+                  <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:120px">Ações</th>
                 </tr>
               </thead>
               <tbody id="pln-fases-tbody"></tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="8" style="padding:8px 10px;border-top:1px solid var(--border)">
+                    <button class="btn btn-ghost btn-xs" onclick="plnAddFase()" style="color:var(--accent);font-size:11px">＋ Nova Fase</button>
+                  </td>
+                </tr>
+              </tfoot>
             </table>
           </div>
         </div>
@@ -5872,7 +5880,7 @@ function renderChecklist(){
 // ════════════════════════════════════════════════
 // PLANEJAMENTO WMS
 // ════════════════════════════════════════════════
-const PLN_FASES = [
+let PLN_FASES = [
   {num:'01',nome:'Pré-Implantação e Diagnóstico',     horas:20,cor:'#1E3A5F',semanas:2},
   {num:'02',nome:'Configuração e Parametrização WMS', horas:40,cor:'#2E6DA4',semanas:4},
   {num:'03',nome:'Integração com ERP Sankhya',        horas:30,cor:'#0891B2',semanas:3},
@@ -5881,7 +5889,8 @@ const PLN_FASES = [
   {num:'06',nome:'Go-Live e Acompanhamento',          horas:24,cor:'#16A34A',semanas:2},
   {num:'07',nome:'Encerramento do Projeto',           horas:16,cor:'#6B7280',semanas:1},
 ];
-let plnDatas = PLN_FASES.map(()=>({inicio:'',fim:'',obs:''}));
+// Cada fase agora suporta múltiplas datas de execução: {datas:[{inicio,fim,obs}]}
+let plnDatas = PLN_FASES.map(()=>({datas:[{inicio:'',fim:'',obs:''}]}));
 
 
 // ── Vínculo planejamento ↔ projeto ──
@@ -5985,17 +5994,18 @@ function plnVerificarConflitos(ignoreProjId){
     (proj.stages||[]).filter(s=>!s.parentId&&s.date&&s.dateEnd).forEach(stage=>{
       const sI=new Date(stage.date), sF=new Date(stage.dateEnd||stage.date);
       PLN_FASES.forEach((f,i)=>{
-        const d=plnDatas[i];
-        if(!d.inicio||!d.fim) return;
-        const dI=new Date(d.inicio), dF=new Date(d.fim);
-        if(dI<=sF && dF>=sI){
-          conflitos.push({
-            fase:f.num, faseNome:f.nome,
-            projNome:proj.name, client:proj.client||'',
-            stageNome:stage.name,
-            conflitoDe:stage.date, conflitoAte:stage.dateEnd||stage.date,
-          });
-        }
+        (plnDatas[i].datas||[]).forEach(dt=>{
+          if(!dt.inicio||!dt.fim) return;
+          const dI=new Date(dt.inicio), dF=new Date(dt.fim);
+          if(dI<=sF && dF>=sI){
+            conflitos.push({
+              fase:f.num, faseNome:f.nome,
+              projNome:proj.name, client:proj.client||'',
+              stageNome:stage.name,
+              conflitoDe:stage.date, conflitoAte:stage.dateEnd||stage.date,
+            });
+          }
+        });
       });
     });
   });
@@ -6003,7 +6013,7 @@ function plnVerificarConflitos(ignoreProjId){
 }
 
 // ── Auto-preencher com detecção de conflitos ──
-function plnPropagarDatas(){
+function plnPropagarDatasComConflito(){
   const ini = document.getElementById('pln-inicio')?.value;
   if(!ini){ toast('Informe a data de início','warn'); return; }
   const ignoreProjId = plnProjId==='__novo__' ? null : plnProjId;
@@ -6039,9 +6049,11 @@ function plnPropagarDatas(){
     }
 
     const d2 = new Date(tryD1); d2.setDate(tryD1.getDate()+f.semanas*7-1);
-    plnDatas[i].inicio = tryD1.toISOString().split('T')[0];
-    plnDatas[i].fim    = d2.toISOString().split('T')[0];
-    if(shifted>0) plnDatas[i].obs = (plnDatas[i].obs||'')+'⚠️ Reagendado (conflito)';
+    if(!plnDatas[i].datas) plnDatas[i].datas=[{inicio:'',fim:'',obs:''}];
+    if(!plnDatas[i].datas[0]) plnDatas[i].datas[0]={inicio:'',fim:'',obs:''};
+    plnDatas[i].datas[0].inicio = tryD1.toISOString().split('T')[0];
+    plnDatas[i].datas[0].fim   = d2.toISOString().split('T')[0];
+    if(shifted>0) plnDatas[i].datas[0].obs = (plnDatas[i].datas[0].obs||'')+'⚠️ Reagendado (conflito)';
 
     cur = new Date(d2); cur.setDate(cur.getDate()+3);
   });
@@ -6077,7 +6089,7 @@ function plnMostrarConflitos(conflitos){
 
 // ── Aprovar Escopo e Lançar Etapas ──
 function plnAprovarELancar(){
-  const filled = plnDatas.filter(d=>d.inicio&&d.fim).length;
+  const filled = plnDatas.filter(d=>(d.datas||[]).some(dt=>dt.inicio&&dt.fim)).length;
   if(filled<PLN_FASES.length){
     toast('Preencha as datas de todas as '+PLN_FASES.length+' fases antes de aprovar','err');
     return;
@@ -6115,11 +6127,13 @@ function plnAprovarELancar(){
 function _executarLancamentoEtapas(projId, cliente, consultor, isNovo){
   const novasEtapas = PLN_FASES.map((f,i)=>{
     const d = plnDatas[i];
+    const allDts = (d.datas||[]).filter(dt=>dt.inicio||dt.fim);
+    const firstDt = allDts[0] || {inicio:'',fim:'',obs:''};
     return {
       id:uid(), parentId:null, num:f.num, name:f.nome,
       hours:String(f.horas), executor:consultor,
-      date:d.inicio||'', dateEnd:d.fim||'',
-      planejamentos:[{id:uid(),date:d.inicio||'',dateEnd:d.fim||'',obs:d.obs||''}],
+      date:firstDt.inicio||'', dateEnd:firstDt.fim||'',
+      planejamentos: allDts.map(dt=>({id:uid(),date:dt.inicio||'',dateEnd:dt.fim||'',obs:dt.obs||''})),
       status:'Pendente', apontamentos:[], bgColor:'', hourRate:110,
     };
   });
@@ -6166,24 +6180,66 @@ function _executarLancamentoEtapas(projId, cliente, consultor, isNovo){
 function plnRenderFases(){
   const tbody=document.getElementById('pln-fases-tbody');
   if(!tbody)return;
-  tbody.innerHTML=PLN_FASES.map((f,i)=>{
-    const d=plnDatas[i];
-    let dur='—';
-    if(d.inicio&&d.fim){
-      const dias=Math.round((new Date(d.fim)-new Date(d.inicio))/86400000)+1;
-      if(dias>0){const sem=Math.ceil(dias/7);dur=dias+'d / '+sem+'sem';}
-    }
-    const cor=f.cor;
-    return '<tr style="border-bottom:1px solid var(--border)">'
-      +'<td style="padding:7px 10px;font-weight:800;color:'+cor+'">'+f.num+'</td>'
-      +'<td style="padding:7px 10px;font-weight:600;min-width:220px">'+f.nome+'</td>'
-      +'<td style="padding:7px 10px;text-align:center"><span style="background:rgba(14,165,233,.1);color:var(--accent);padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700">'+f.horas+'h</span></td>'
-      +'<td style="padding:7px 10px;text-align:center"><input class="fc" type="date" value="'+d.inicio+'" onchange="plnDatas['+i+'].inicio=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px"></td>'
-      +'<td style="padding:7px 10px;text-align:center"><input class="fc" type="date" value="'+d.fim+'" onchange="plnDatas['+i+'].fim=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px"></td>'
-      +'<td style="padding:7px 10px;text-align:center;font-size:11px;color:var(--green);font-weight:700">'+dur+'</td>'
-      +'<td style="padding:7px 10px"><input class="fc" type="text" value="'+d.obs.replace(/"/g,'&quot;')+'" onchange="plnDatas['+i+'].obs=this.value" placeholder="Obs..." style="font-size:12px;width:180px"></td>'
-      +'</tr>';
-  }).join('');
+  const PLN_COLORS=['#1E3A5F','#2E6DA4','#0891B2','#7C3AED','#D97706','#16A34A','#6B7280','#E11D48','#059669','#B45309','#7E22CE','#0F766E'];
+  let html='';
+  PLN_FASES.forEach((f,i)=>{
+    const d=plnDatas[i]||{datas:[{inicio:'',fim:'',obs:''}]};
+    const totalDts=(d.datas||[]).length;
+    // ── Linha da FASE (editável) ──
+    const colorSwatches=PLN_COLORS.map(c=>`<span onclick="PLN_FASES[${i}].cor='${c}';plnRenderFases();plnAtualizarGantt()" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${f.cor===c?'#fff':'transparent'};vertical-align:middle;margin:0 1px;flex-shrink:0"></span>`).join('');
+    html+=`<tr style="background:var(--bg3);border-top:2px solid var(--border2)">
+      <td style="padding:6px 8px;width:65px">
+        <input class="fc" value="${esc(f.num)}" onchange="PLN_FASES[${i}].num=this.value;plnAtualizarGantt()" style="font-size:11px;font-weight:800;width:52px;padding:4px 6px;color:${f.cor}">
+      </td>
+      <td style="padding:6px 8px">
+        <input class="fc" value="${esc(f.nome)}" onchange="PLN_FASES[${i}].nome=this.value;plnAtualizarGantt()" style="font-size:12px;font-weight:700;width:100%;min-width:180px">
+      </td>
+      <td style="padding:6px 8px;width:90px">
+        <div style="display:flex;align-items:center;gap:4px">
+          <input class="fc" type="number" value="${f.horas}" onchange="PLN_FASES[${i}].horas=+this.value;plnAtualizarStatus()" style="font-size:12px;width:58px;padding:4px 6px" min="0">
+          <span style="font-size:10px;color:var(--mid)">h</span>
+        </div>
+      </td>
+      <td colspan="4" style="padding:6px 8px">
+        <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+          <span style="font-size:9px;color:var(--dim);font-weight:700;text-transform:uppercase;margin-right:2px">Cor:</span>
+          ${colorSwatches}
+          <span style="font-size:10px;margin-left:6px;padding:2px 8px;border-radius:10px;background:${f.cor}22;color:${f.cor};font-weight:700;border:1px solid ${f.cor}44">${totalDts} período${totalDts!==1?'s':''}</span>
+        </div>
+      </td>
+      <td style="padding:6px 8px;text-align:right;white-space:nowrap">
+        <button class="btn btn-ghost btn-xs" onclick="plnAddDataFase(${i})" style="color:var(--accent);font-size:11px">+ Data</button>
+        ${PLN_FASES.length>1?`<button class="btn btn-ghost btn-xs" onclick="plnRemoveFase(${i})" style="color:var(--red);font-size:11px" title="Remover fase">✕ Fase</button>`:''}
+      </td>
+    </tr>`;
+    // ── Linhas de DATAS (uma por período) ──
+    (d.datas||[]).forEach((dt,j)=>{
+      let dur='—';
+      if(dt.inicio&&dt.fim){
+        const dias=Math.round((new Date(dt.fim)-new Date(dt.inicio))/86400000)+1;
+        if(dias>0){const sem=Math.ceil(dias/7);dur=dias+'d / '+sem+'sem';}
+      }
+      html+=`<tr style="border-bottom:1px solid var(--border);background:var(--bg)">
+        <td style="padding:5px 8px 5px 14px;color:${f.cor};font-size:10px;font-weight:800;white-space:nowrap">📅 ${j+1}</td>
+        <td style="padding:5px 10px;font-size:11px;color:var(--mid);white-space:nowrap">Período ${j+1}</td>
+        <td></td>
+        <td style="padding:5px 6px;text-align:center">
+          <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px">
+        </td>
+        <td style="padding:5px 6px;text-align:center">
+          <input class="fc" type="date" value="${dt.fim}" onchange="plnDatas[${i}].datas[${j}].fim=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px">
+        </td>
+        <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--green);font-weight:700;white-space:nowrap">${dur}</td>
+        <td style="padding:5px 6px">
+          <input class="fc" type="text" value="${(dt.obs||'').replace(/"/g,'&quot;')}" onchange="plnDatas[${i}].datas[${j}].obs=this.value" placeholder="Obs..." style="font-size:12px;width:100%;min-width:140px">
+        </td>
+        <td style="padding:5px 8px;text-align:right">
+          ${totalDts>1?`<button class="btn btn-ghost btn-xs" onclick="plnRemoveDataFase(${i},${j})" style="color:var(--red)" title="Remover período">✕</button>`:''}
+        </td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML=html;
 }
 
 function plnPropagarDatas(){
@@ -6194,8 +6250,10 @@ function plnPropagarDatas(){
     while(cur.getDay()===0||cur.getDay()===6)cur.setDate(cur.getDate()+1);
     const d1=new Date(cur);
     const d2=new Date(d1);d2.setDate(d1.getDate()+f.semanas*7-1);
-    plnDatas[i].inicio=d1.toISOString().split('T')[0];
-    plnDatas[i].fim=d2.toISOString().split('T')[0];
+    if(!plnDatas[i].datas) plnDatas[i].datas=[{inicio:'',fim:'',obs:''}];
+    if(!plnDatas[i].datas[0]) plnDatas[i].datas[0]={inicio:'',fim:'',obs:''};
+    plnDatas[i].datas[0].inicio=d1.toISOString().split('T')[0];
+    plnDatas[i].datas[0].fim=d2.toISOString().split('T')[0];
     cur=new Date(d2);cur.setDate(cur.getDate()+3);
   });
   plnRenderFases();plnAtualizarGantt();
@@ -6205,12 +6263,12 @@ function plnPropagarDatas(){
 function plnAtualizarGantt(){
   const wrap=document.getElementById('pln-gantt-wrap');
   if(!wrap)return;
-  const comData=plnDatas.filter(d=>d.inicio&&d.fim);
-  if(!comData.length){
+  const allDateRanges=plnDatas.flatMap(d=>(d.datas||[]).filter(dt=>dt.inicio&&dt.fim));
+  if(!allDateRanges.length){
     wrap.innerHTML='<div style="font-size:12px;color:var(--dim);padding:12px 0">Informe a data de início para visualizar o Gantt.</div>';
     plnAtualizarStatus();return;
   }
-  const allD=comData.flatMap(d=>[new Date(d.inicio),new Date(d.fim)]);
+  const allD=allDateRanges.flatMap(dt=>[new Date(dt.inicio),new Date(dt.fim)]);
   let minD=new Date(Math.min(...allD)),maxD=new Date(Math.max(...allD));
   minD.setDate(minD.getDate()-2);maxD.setDate(maxD.getDate()+5);
   const weeks=[];let cur=new Date(minD);
@@ -6236,23 +6294,31 @@ function plnAtualizarGantt(){
   });
   h+='</tr></thead><tbody>';
   PLN_FASES.forEach((f,i)=>{
-    const d=plnDatas[i];
+    const d=plnDatas[i]||{datas:[]};
+    const activeDts=(d.datas||[]).filter(dt=>dt.inicio&&dt.fim);
     h+='<tr><td style="'+TL+'"><span style="color:'+f.cor+';font-weight:800">'+f.num+'.</span> '+f.nome+'</td>';
     weeks.forEach(w=>{
       const wEnd=new Date(w.getTime()+6*86400000);
       const itw=today>=w&&today<new Date(w.getTime()+7*86400000);
-      const bg=itw?'background:rgba(14,165,233,.05)':'';
-      if(d.inicio&&d.fim){
-        const fi=new Date(d.inicio),ff=new Date(d.fim);
-        if(fi<=wEnd&&ff>=w){
-          const isSt=toYMD(w)<=d.inicio&&toYMD(wEnd)>=d.inicio;
-          const isEn=toYMD(w)<=d.fim&&toYMD(wEnd)>=d.fim;
+      const bgCell=itw?'background:rgba(14,165,233,.05)':'';
+      // Find all date ranges that overlap this week
+      const matching=activeDts.filter(dt=>{
+        const fi=new Date(dt.inicio),ff=new Date(dt.fim);
+        return fi<=wEnd&&ff>=w;
+      });
+      if(matching.length>0){
+        const barH=matching.length>1?10:18;
+        const bars=matching.map((dt,mi)=>{
+          const isSt=toYMD(w)<=dt.inicio&&toYMD(wEnd)>=dt.inicio;
+          const isEn=toYMD(w)<=dt.fim&&toYMD(wEnd)>=dt.fim;
           const rad=isSt&&isEn?'3px':isSt?'3px 0 0 3px':isEn?'0 3px 3px 0':'0';
-          h+='<td style="padding:2px 1px;border-bottom:1px solid var(--border)"><div style="height:18px;background:'+f.cor+';border-radius:'+rad+';opacity:.9;display:flex;align-items:center;padding:0 3px;font-size:8px;color:#fff;font-weight:700">'+(isSt?f.num:'')+'</div></td>';
-          return;
-        }
+          const op=mi===0?0.9:0.65;
+          return `<div style="height:${barH}px;background:${f.cor};border-radius:${rad};opacity:${op};display:flex;align-items:center;padding:0 3px;font-size:7px;color:#fff;font-weight:700;margin-bottom:1px">${isSt&&mi===0?f.num:''}</div>`;
+        }).join('');
+        h+=`<td style="padding:2px 1px;border-bottom:1px solid var(--border);${bgCell}">${bars}</td>`;
+      } else {
+        h+=`<td style="border-bottom:1px solid var(--border);${bgCell}"></td>`;
       }
-      h+='<td style="border-bottom:1px solid var(--border);'+bg+'"></td>';
     });
     h+='</tr>';
   });
@@ -6263,7 +6329,7 @@ function plnAtualizarGantt(){
 
 function plnAtualizarStatus(){
   const el=document.getElementById('pln-status-row');if(!el)return;
-  const filled=plnDatas.filter(d=>d.inicio&&d.fim).length;
+  const filled=plnDatas.filter(d=>(d.datas||[]).some(dt=>dt.inicio&&dt.fim)).length;
   // Pull hours and rate from linked project if available
   const proj=plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
   const totalH=proj?.totalHours?parseFloat(proj.totalHours)||180:PLN_FASES.reduce((a,f)=>a+f.horas,0);
@@ -6272,8 +6338,9 @@ function plnAtualizarStatus(){
   let html='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+filled+'/'+PLN_FASES.length+' fases</span>';
   html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+totalH+'h · R$ '+totalR.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>';
   if(filled===PLN_FASES.length){
-    const fi=plnDatas.map(d=>d.inicio).filter(Boolean).sort()[0];
-    const ff=plnDatas.map(d=>d.fim).filter(Boolean).sort().reverse()[0];
+    const allDts=plnDatas.flatMap(d=>(d.datas||[]));
+    const fi=allDts.filter(dt=>dt.inicio).map(dt=>dt.inicio).sort()[0];
+    const ff=allDts.filter(dt=>dt.fim).map(dt=>dt.fim).sort().reverse()[0];
     if(fi&&ff){const d=Math.round((new Date(ff)-new Date(fi))/86400000)+1;
       html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(34,197,94,.1);color:var(--green);font-weight:700">⏱ '+(d/30).toFixed(1)+' meses</span>';
     }
@@ -6283,12 +6350,15 @@ function plnAtualizarStatus(){
 }
 
 function plnSalvar(){
-  const plano={versao:'1.0',geradoEm:new Date().toISOString(),
+  const plano={versao:'2.0',geradoEm:new Date().toISOString(),
     cliente:document.getElementById('pln-cliente')?.value||'',
     responsavel:document.getElementById('pln-resp')?.value||'',
     inicio:document.getElementById('pln-inicio')?.value||'',
     consultor:document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
-    fases:PLN_FASES.map((f,i)=>({num:f.num,nome:f.nome,horas:f.horas,...plnDatas[i]}))};
+    fases:PLN_FASES.map((f,i)=>({
+      num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas,
+      datas:(plnDatas[i]?.datas||[])
+    }))};
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(plano,null,2)],{type:'application/json'}));
   a.download='Planejamento_WMS_'+(plano.cliente||'Cliente').replace(/\s+/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.json';
@@ -6306,12 +6376,62 @@ function plnCarregar(){
         if(document.getElementById('pln-resp'))document.getElementById('pln-resp').value=p.responsavel||'';
         if(document.getElementById('pln-inicio'))document.getElementById('pln-inicio').value=p.inicio||'';
         if(document.getElementById('pln-consultor'))document.getElementById('pln-consultor').value=p.consultor||'Alexsandro C. Lopes';
-        p.fases.forEach((f,i)=>{plnDatas[i]={inicio:f.inicio||'',fim:f.fim||'',obs:f.obs||''};});
+        // Restore fases and dates
+        if(p.fases&&p.fases.length){
+          // If versao >= 2.0, fases have full info; otherwise legacy compat
+          PLN_FASES.length=0;
+          plnDatas.length=0;
+          p.fases.forEach(f=>{
+            PLN_FASES.push({num:f.num||'', nome:f.nome||'', horas:f.horas||0, cor:f.cor||'#2E6DA4', semanas:f.semanas||2});
+            // Support legacy single-date (v1.0) or new multi-date (v2.0)
+            const datas=f.datas?f.datas:[{inicio:f.inicio||'',fim:f.fim||'',obs:f.obs||''}];
+            plnDatas.push({datas});
+          });
+        }
         plnRenderFases();plnAtualizarGantt();toast('Planejamento carregado ✓','ok');
       }catch(err){toast('Erro: '+err.message,'err');}
     };
     reader.readAsText(e.target.files[0]);
   };input.click();
+}
+
+// ════════════════════════════════════════════════
+// FUNÇÕES: ADICIONAR / REMOVER FASES E DATAS
+// ════════════════════════════════════════════════
+function plnAddFase(){
+  const newNum=String(PLN_FASES.length+1).padStart(2,'0');
+  const cores=['#1E3A5F','#2E6DA4','#0891B2','#7C3AED','#D97706','#16A34A','#6B7280','#E11D48','#059669','#B45309'];
+  PLN_FASES.push({num:newNum,nome:'Nova Fase',horas:16,cor:cores[PLN_FASES.length%cores.length],semanas:2});
+  plnDatas.push({datas:[{inicio:'',fim:'',obs:''}]});
+  plnRenderFases();
+  plnAtualizarStatus();
+  toast('✅ Nova fase adicionada','ok');
+}
+
+function plnRemoveFase(i){
+  if(PLN_FASES.length<=1){toast('O planejamento deve ter ao menos uma fase','err');return;}
+  if(!confirm('Remover a fase "'+PLN_FASES[i].nome+'" e todos os seus períodos?'))return;
+  PLN_FASES.splice(i,1);
+  plnDatas.splice(i,1);
+  plnRenderFases();
+  plnAtualizarGantt();
+  toast('Fase removida','warn');
+}
+
+function plnAddDataFase(i){
+  if(!plnDatas[i])return;
+  plnDatas[i].datas.push({inicio:'',fim:'',obs:''});
+  plnRenderFases();
+  toast('📅 Novo período adicionado à fase','ok');
+}
+
+function plnRemoveDataFase(i,j){
+  if(!plnDatas[i]||!plnDatas[i].datas)return;
+  if(plnDatas[i].datas.length<=1){toast('A fase deve ter ao menos um período','err');return;}
+  plnDatas[i].datas.splice(j,1);
+  plnRenderFases();
+  plnAtualizarGantt();
+  toast('Período removido','warn');
 }
 
 // ════════════════════════════════════════════════
@@ -6386,23 +6506,29 @@ function buildEscopoHTML(){
   const fasesHTML=PLN_FASES.map((f,fi)=>{
     const det=PLN_FASES_DET[fi];
     const d=plnDatas[fi];
+    const firstDt=(d?.datas||[]).find(dt=>dt.inicio)||{inicio:'',fim:'',obs:''};
+    const allDts=(d?.datas||[]).filter(dt=>dt.inicio);
+    const datesLabel=allDts.length>1
+      ?allDts.map((dt,idx)=>'<span style="font-size:11px;font-weight:600;color:'+f.cor+';margin-left:6px">📅 P'+(idx+1)+': '+new Date(dt.inicio+'T00:00:00').toLocaleDateString('pt-BR')+(dt.fim?' → '+new Date(dt.fim+'T00:00:00').toLocaleDateString('pt-BR'):'')+'</span>').join('')
+      :(firstDt.inicio?'<span style="font-size:11px;font-weight:600;color:'+f.cor+';margin-left:8px">📅 '+new Date(firstDt.inicio+'T00:00:00').toLocaleDateString('pt-BR')+' → '+(firstDt.fim?new Date(firstDt.fim+'T00:00:00').toLocaleDateString('pt-BR'):'?')+'</span>':'');
     return '<div style="margin-bottom:14px;border-left:4px solid '+f.cor+';background:#f8fafc;border-radius:0 6px 6px 0;padding:12px 16px">'
       +'<div style="font-size:13px;font-weight:800;color:#1E3A5F;margin-bottom:6px">FASE '+f.num+' — '+f.nome
       +'<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:8px">'+f.horas+'h · '+cur(f.horas*valorH)+'</span>'
-      +(d.inicio?'<span style="font-size:11px;font-weight:600;color:'+f.cor+';margin-left:8px">📅 '+new Date(d.inicio+'T00:00:00').toLocaleDateString('pt-BR')+' → '+(d.fim?new Date(d.fim+'T00:00:00').toLocaleDateString('pt-BR'):'?')+'</span>':'')
+      +datesLabel
       +'</div>'
-      +'<ul style="margin:0;padding-left:18px">'+det.atividades.map(a=>'<li style="font-size:12px;color:#334155;line-height:1.7">'+a+'</li>').join('')+'</ul>'
-      +(d.obs?'<div style="font-size:11px;color:#7C3AED;margin-top:6px;font-style:italic">📝 '+d.obs+'</div>':'')
+      +'<ul style="margin:0;padding-left:18px">'+(det?det.atividades.map(a=>'<li style="font-size:12px;color:#334155;line-height:1.7">'+a+'</li>').join(''):'<li style="font-size:12px;color:#334155">Atividades desta fase.</li>')+'</ul>'
+      +(firstDt.obs?'<div style="font-size:11px;color:#7C3AED;margin-top:6px;font-style:italic">📝 '+firstDt.obs+'</div>':'')
       +'</div>';
   }).join('');
 
   const resumo=PLN_FASES.map((f,fi)=>{
     const d=plnDatas[fi];
+    const firstDt=(d?.datas||[]).find(dt=>dt.inicio)||{inicio:'',fim:''};
     return '<tr style="background:'+(fi%2===0?'#f8fafc':'#fff')+'">'
       +'<td style="padding:8px 12px;font-size:12px">'+f.num+'. '+f.nome+'</td>'
       +'<td style="padding:8px 12px;text-align:center;font-size:12px;font-weight:700;color:#2E6DA4">'+f.horas+'h</td>'
-      +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(d.inicio?new Date(d.inicio+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
-      +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(d.fim?new Date(d.fim+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
+      +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(firstDt.inicio?new Date(firstDt.inicio+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
+      +'<td style="padding:8px 12px;text-align:center;font-size:12px">'+(firstDt.fim?new Date(firstDt.fim+'T00:00:00').toLocaleDateString('pt-BR'):'—')+'</td>'
       +'<td style="padding:8px 12px;text-align:right;font-size:12px;font-weight:700;color:#16a34a">'+cur(f.horas*valorH)+'</td>'
       +'</tr>';
   }).join('');
