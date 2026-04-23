@@ -242,6 +242,19 @@ textarea.fc{resize:vertical;min-height:60px}
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:290px;display:block}
 .cg-tip .tip-row{display:flex;align-items:center;gap:6px;color:var(--mid);font-size:11px}
 .cg-tip .tip-val{color:var(--text)}
+/* ── PLANNING GANTT TOOLTIP ── */
+.pln-bar-cell{position:relative}
+.pln-bar-cell:hover .pln-tip{display:block}
+.pln-tip{display:none;position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+  background:var(--bg2);border:1px solid var(--border2);border-radius:8px;
+  padding:10px 14px;font-size:12px;color:var(--text);white-space:nowrap;
+  z-index:9999;box-shadow:0 6px 24px rgba(0,0,0,.6);pointer-events:none;
+  min-width:220px;max-width:340px;line-height:1.6}
+.pln-tip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);
+  border:6px solid transparent;border-top-color:var(--border2)}
+.pln-tip-fase{font-weight:800;font-size:12px;margin-bottom:5px;display:flex;align-items:center;gap:6px}
+.pln-tip-row{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--mid);margin-top:2px}
+.pln-tip-val{color:var(--text);font-weight:600}
 .add-sub-btn{display:flex;align-items:center;gap:8px;padding:6px 13px;border:1px dashed var(--border);border-radius:6px;cursor:pointer;color:var(--dim);font-size:12px;transition:all .15s;margin-top:3px}
 .add-sub-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(14,165,233,.05)}
 .add-root-btn{display:flex;align-items:center;gap:10px;padding:12px 15px;border:1.5px dashed var(--border);border-radius:var(--r);cursor:pointer;color:var(--dim);font-size:13px;font-weight:500;transition:all .15s;margin-top:8px}
@@ -908,10 +921,12 @@ datalist{display:none}
             <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">📊 Planejamento de Implantação WMS</div>
             <div style="font-size:12px;color:var(--mid)">Defina as datas e gere o Gantt para o cliente</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <span id="pln-autosave-badge" style="font-size:10px;color:var(--dim);display:none;align-items:center;gap:4px">💾 <span id="pln-autosave-txt">Salvo</span></span>
             <button class="btn btn-ghost" style="font-size:12px" onclick="plnPropagarDatas()">⚡ Auto-Preencher Datas</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="plnSalvar()">💾 Salvar</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="plnCarregar()">📂 Carregar</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnExportarJSON()" title="Exportar planejamento como arquivo JSON">📤 Exportar JSON</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnImportarJSON()" title="Importar planejamento de arquivo JSON">📥 Importar JSON</button>
+            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--red)" onclick="plnLimparAutoSave()" title="Limpar planejamento salvo e reiniciar">🗑 Limpar</button>
             <button class="btn btn-ghost" style="font-size:12px" onclick="showPage('escopo')">📄 Ver Escopo</button>
             <button class="btn btn-primary" style="font-size:12px" id="btn-aprovar-escopo" onclick="plnAprovarELancar()" style="background:#16a34a">✅ Aprovar e Lançar Etapas</button>
           </div>
@@ -927,12 +942,12 @@ datalist{display:none}
                 <option value="__novo__">+ Criar novo projeto</option>
               </select>
             </div>
-            <div class="fg"><label class="fl">Cliente / Empresa</label><input class="fc" id="pln-cliente" placeholder="Preenchido pelo projeto" oninput="plnAtualizarGantt()"></div>
-            <div class="fg"><label class="fl">Responsável no Cliente</label><input class="fc" id="pln-resp" placeholder="Nome do responsável" oninput="plnAtualizarGantt()"></div>
+            <div class="fg"><label class="fl">Cliente / Empresa</label><input class="fc" id="pln-cliente" placeholder="Preenchido pelo projeto" oninput="plnAtualizarGantt();plnAutoSave()"></div>
+            <div class="fg"><label class="fl">Responsável no Cliente</label><input class="fc" id="pln-resp" placeholder="Nome do responsável" oninput="plnAtualizarGantt();plnAutoSave()"></div>
           </div>
           <div class="frow">
-            <div class="fg"><label class="fl">📅 Início do Projeto</label><input class="fc" type="date" id="pln-inicio" onchange="plnPropagarDatas()"></div>
-            <div class="fg"><label class="fl">Consultor AXL</label><input class="fc" id="pln-consultor" value="Alexsandro C. Lopes"></div>
+            <div class="fg"><label class="fl">📅 Início do Projeto</label><input class="fc" type="date" id="pln-inicio" onchange="plnPropagarDatas();plnAutoSave()"></div>
+            <div class="fg"><label class="fl">Consultor AXL</label><input class="fc" id="pln-consultor" value="Alexsandro C. Lopes" oninput="plnAutoSave()"></div>
             <div class="fg"><label class="fl">Status do Escopo</label>
               <div id="pln-escopo-status" style="padding:7px 10px;border-radius:6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);font-size:12px;font-weight:700;color:var(--amber)">⏳ Aguardando aprovação</div>
             </div>
@@ -5898,6 +5913,7 @@ let plnProjId = null;
 
 function renderPlanejamentoWMS(){
   plnPopularProjetos();
+  plnAutoLoad();   // restaura do localStorage ao abrir a página
   plnRenderFases();
   plnAtualizarGantt();
 }
@@ -6186,17 +6202,17 @@ function plnRenderFases(){
     const d=plnDatas[i]||{datas:[{inicio:'',fim:'',obs:''}]};
     const totalDts=(d.datas||[]).length;
     // ── Linha da FASE (editável) ──
-    const colorSwatches=PLN_COLORS.map(c=>`<span onclick="PLN_FASES[${i}].cor='${c}';plnRenderFases();plnAtualizarGantt()" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${f.cor===c?'#fff':'transparent'};vertical-align:middle;margin:0 1px;flex-shrink:0"></span>`).join('');
+    const colorSwatches=PLN_COLORS.map(c=>`<span onclick="PLN_FASES[${i}].cor='${c}';plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${c};cursor:pointer;border:2px solid ${f.cor===c?'#fff':'transparent'};vertical-align:middle;margin:0 1px;flex-shrink:0"></span>`).join('');
     html+=`<tr style="background:var(--bg3);border-top:2px solid var(--border2)">
       <td style="padding:6px 8px;width:65px">
-        <input class="fc" value="${esc(f.num)}" onchange="PLN_FASES[${i}].num=this.value;plnAtualizarGantt()" style="font-size:11px;font-weight:800;width:52px;padding:4px 6px;color:${f.cor}">
+        <input class="fc" value="${esc(f.num)}" onchange="PLN_FASES[${i}].num=this.value;plnAtualizarGantt();plnAutoSave()" style="font-size:11px;font-weight:800;width:52px;padding:4px 6px;color:${f.cor}">
       </td>
       <td style="padding:6px 8px">
-        <input class="fc" value="${esc(f.nome)}" onchange="PLN_FASES[${i}].nome=this.value;plnAtualizarGantt()" style="font-size:12px;font-weight:700;width:100%;min-width:180px">
+        <input class="fc" value="${esc(f.nome)}" onchange="PLN_FASES[${i}].nome=this.value;plnAtualizarGantt();plnAutoSave()" style="font-size:12px;font-weight:700;width:100%;min-width:180px">
       </td>
       <td style="padding:6px 8px;width:90px">
         <div style="display:flex;align-items:center;gap:4px">
-          <input class="fc" type="number" value="${f.horas}" onchange="PLN_FASES[${i}].horas=+this.value;plnAtualizarStatus()" style="font-size:12px;width:58px;padding:4px 6px" min="0">
+          <input class="fc" type="number" value="${f.horas}" onchange="PLN_FASES[${i}].horas=+this.value;plnAtualizarStatus();plnAutoSave()" style="font-size:12px;width:58px;padding:4px 6px" min="0">
           <span style="font-size:10px;color:var(--mid)">h</span>
         </div>
       </td>
@@ -6224,14 +6240,14 @@ function plnRenderFases(){
         <td style="padding:5px 10px;font-size:11px;color:var(--mid);white-space:nowrap">Período ${j+1}</td>
         <td></td>
         <td style="padding:5px 6px;text-align:center">
-          <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px">
+          <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:140px">
         </td>
         <td style="padding:5px 6px;text-align:center">
-          <input class="fc" type="date" value="${dt.fim}" onchange="plnDatas[${i}].datas[${j}].fim=this.value;plnRenderFases();plnAtualizarGantt()" style="font-size:12px;width:140px">
+          <input class="fc" type="date" value="${dt.fim}" onchange="plnDatas[${i}].datas[${j}].fim=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:140px">
         </td>
         <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--green);font-weight:700;white-space:nowrap">${dur}</td>
         <td style="padding:5px 6px">
-          <input class="fc" type="text" value="${(dt.obs||'').replace(/"/g,'&quot;')}" onchange="plnDatas[${i}].datas[${j}].obs=this.value" placeholder="Obs..." style="font-size:12px;width:100%;min-width:140px">
+          <input class="fc" type="text" value="${(dt.obs||'').replace(/"/g,'&quot;')}" onchange="plnDatas[${i}].datas[${j}].obs=this.value;plnAutoSave()" placeholder="Obs..." style="font-size:12px;width:100%;min-width:140px">
         </td>
         <td style="padding:5px 8px;text-align:right">
           ${totalDts>1?`<button class="btn btn-ghost btn-xs" onclick="plnRemoveDataFase(${i},${j})" style="color:var(--red)" title="Remover período">✕</button>`:''}
@@ -6257,6 +6273,7 @@ function plnPropagarDatas(){
     cur=new Date(d2);cur.setDate(cur.getDate()+3);
   });
   plnRenderFases();plnAtualizarGantt();
+  plnAutoSave();
   toast('Datas preenchidas automaticamente ✓','ok');
 }
 
@@ -6302,7 +6319,7 @@ function plnAtualizarGantt(){
       const itw=today>=w&&today<new Date(w.getTime()+7*86400000);
       const bgCell=itw?'background:rgba(14,165,233,.05)':'';
       // Find all date ranges that overlap this week
-      const matching=activeDts.filter(dt=>{
+      const matching=activeDts.filter((dt,dtIdx)=>{
         const fi=new Date(dt.inicio),ff=new Date(dt.fim);
         return fi<=wEnd&&ff>=w;
       });
@@ -6313,9 +6330,24 @@ function plnAtualizarGantt(){
           const isEn=toYMD(w)<=dt.fim&&toYMD(wEnd)>=dt.fim;
           const rad=isSt&&isEn?'3px':isSt?'3px 0 0 3px':isEn?'0 3px 3px 0':'0';
           const op=mi===0?0.9:0.65;
-          return `<div style="height:${barH}px;background:${f.cor};border-radius:${rad};opacity:${op};display:flex;align-items:center;padding:0 3px;font-size:7px;color:#fff;font-weight:700;margin-bottom:1px">${isSt&&mi===0?f.num:''}</div>`;
+          const iniLabel=new Date(dt.inicio+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+          const fimLabel=new Date(dt.fim+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+          const dias=Math.round((new Date(dt.fim)-new Date(dt.inicio))/86400000)+1;
+          const durLabel=dias+'d / '+Math.ceil(dias/7)+'sem';
+          const perLabel=activeDts.length>1?'Período '+(mi+1)+' de '+activeDts.length:'Período único';
+          const obsSnip=dt.obs?`<div class="pln-tip-row">📝 <span class="pln-tip-val">${dt.obs.substring(0,40)+(dt.obs.length>40?'…':'')}</span></div>`:'';
+          const tip=`<div class="pln-tip">
+            <div class="pln-tip-fase"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${f.cor};flex-shrink:0"></span><span style="color:${f.cor}">${f.num}.</span> ${f.nome}</div>
+            <div class="pln-tip-row">📅 <span class="pln-tip-val">${perLabel}</span></div>
+            <div class="pln-tip-row">▶️ Início: <span class="pln-tip-val">${iniLabel}</span></div>
+            <div class="pln-tip-row">🏁 Término: <span class="pln-tip-val">${fimLabel}</span></div>
+            <div class="pln-tip-row">⏱ Duração: <span class="pln-tip-val">${durLabel}</span></div>
+            <div class="pln-tip-row">📋 Horas: <span class="pln-tip-val">${f.horas}h</span></div>
+            ${obsSnip}
+          </div>`;
+          return `<div style="height:${barH}px;background:${f.cor};border-radius:${rad};opacity:${op};display:flex;align-items:center;padding:0 3px;font-size:7px;color:#fff;font-weight:700;margin-bottom:1px;cursor:default">${isSt&&mi===0?f.num:''}${tip}</div>`;
         }).join('');
-        h+=`<td style="padding:2px 1px;border-bottom:1px solid var(--border);${bgCell}">${bars}</td>`;
+        h+=`<td class="pln-bar-cell" style="padding:2px 1px;border-bottom:1px solid var(--border);${bgCell}">${bars}</td>`;
       } else {
         h+=`<td style="border-bottom:1px solid var(--border);${bgCell}"></td>`;
       }
@@ -6349,51 +6381,161 @@ function plnAtualizarStatus(){
   el.innerHTML=html;
 }
 
-function plnSalvar(){
-  const plano={versao:'2.0',geradoEm:new Date().toISOString(),
-    cliente:document.getElementById('pln-cliente')?.value||'',
+// ════════════════════════════════════════════════
+// AUTO-SAVE / AUTO-LOAD (localStorage)
+// ════════════════════════════════════════════════
+const PLN_LS_KEY = 'axl_pln_wms_v2';
+let _plnSaveTimer = null;
+
+function plnAutoSave(){
+  // Debounce 600ms
+  clearTimeout(_plnSaveTimer);
+  _plnSaveTimer = setTimeout(()=>{
+    const badge = document.getElementById('pln-autosave-badge');
+    const txt   = document.getElementById('pln-autosave-txt');
+    if(badge){ badge.style.display='inline-flex'; if(txt) txt.textContent='Salvando…'; }
+    try{
+      const data = {
+        versao:'2.0',
+        savedAt: new Date().toISOString(),
+        cliente:    document.getElementById('pln-cliente')?.value||'',
+        responsavel:document.getElementById('pln-resp')?.value||'',
+        inicio:     document.getElementById('pln-inicio')?.value||'',
+        consultor:  document.getElementById('pln-consultor')?.value||'',
+        projId:     plnProjId||'',
+        fases: PLN_FASES.map((f,i)=>({
+          num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas,
+          datas:(plnDatas[i]?.datas||[])
+        }))
+      };
+      localStorage.setItem(PLN_LS_KEY, JSON.stringify(data));
+      const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      if(badge && txt){ txt.textContent='Salvo às '+hora; }
+    }catch(e){
+      console.warn('plnAutoSave error',e);
+      const txt=document.getElementById('pln-autosave-txt');
+      if(txt) txt.textContent='⚠️ Erro ao salvar';
+    }
+  }, 600);
+}
+
+function plnAutoLoad(){
+  try{
+    const raw = localStorage.getItem(PLN_LS_KEY);
+    if(!raw) return false;
+    const p = JSON.parse(raw);
+    // Restore field values
+    const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
+    set('pln-cliente',    p.cliente);
+    set('pln-resp',       p.responsavel);
+    set('pln-inicio',     p.inicio);
+    set('pln-consultor',  p.consultor||'Alexsandro C. Lopes');
+    // Restore linked project selector
+    if(p.projId){
+      plnProjId = p.projId;
+      setTimeout(()=>{
+        const sel=document.getElementById('pln-proj-id');
+        if(sel && p.projId){ sel.value=p.projId; plnOnProjChange(p.projId); }
+      },100);
+    }
+    // Restore fases
+    if(p.fases&&p.fases.length){
+      PLN_FASES.length=0; plnDatas.length=0;
+      p.fases.forEach(f=>{
+        PLN_FASES.push({num:f.num||'', nome:f.nome||'', horas:+f.horas||0, cor:f.cor||'#2E6DA4', semanas:+f.semanas||2});
+        plnDatas.push({datas: f.datas&&f.datas.length ? f.datas : [{inicio:'',fim:'',obs:''}]});
+      });
+    }
+    // Show last saved badge
+    const badge=document.getElementById('pln-autosave-badge');
+    const txt=document.getElementById('pln-autosave-txt');
+    if(badge && p.savedAt){
+      const hora=new Date(p.savedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
+      badge.style.display='inline-flex';
+      if(txt) txt.textContent='Carregado — '+hora;
+    }
+    return true;
+  }catch(e){
+    console.warn('plnAutoLoad error',e);
+    return false;
+  }
+}
+
+function plnLimparAutoSave(){
+  if(!confirm('Limpar o planejamento salvo e reiniciar com as fases padrão?')) return;
+  localStorage.removeItem(PLN_LS_KEY);
+  // Reset to defaults
+  PLN_FASES.length=0;
+  [{num:'01',nome:'Pré-Implantação e Diagnóstico',horas:20,cor:'#1E3A5F',semanas:2},
+   {num:'02',nome:'Configuração e Parametrização WMS',horas:40,cor:'#2E6DA4',semanas:4},
+   {num:'03',nome:'Integração com ERP Sankhya',horas:30,cor:'#0891B2',semanas:3},
+   {num:'04',nome:'Treinamento de Usuários',horas:24,cor:'#7C3AED',semanas:2},
+   {num:'05',nome:'Testes e Homologação',horas:26,cor:'#D97706',semanas:3},
+   {num:'06',nome:'Go-Live e Acompanhamento',horas:24,cor:'#16A34A',semanas:2},
+   {num:'07',nome:'Encerramento do Projeto',horas:16,cor:'#6B7280',semanas:1},
+  ].forEach(f=>PLN_FASES.push(f));
+  plnDatas.length=0;
+  PLN_FASES.forEach(()=>plnDatas.push({datas:[{inicio:'',fim:'',obs:''}]}));
+  ['pln-cliente','pln-resp','pln-inicio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+  const c=document.getElementById('pln-consultor'); if(c) c.value='Alexsandro C. Lopes';
+  plnRenderFases(); plnAtualizarGantt();
+  const badge=document.getElementById('pln-autosave-badge'); if(badge) badge.style.display='none';
+  toast('Planejamento reiniciado','warn');
+}
+
+// ── Export / Import JSON (file download) ──
+function plnExportarJSON(){
+  const plano={
+    versao:'2.0', geradoEm:new Date().toISOString(),
+    cliente:    document.getElementById('pln-cliente')?.value||'',
     responsavel:document.getElementById('pln-resp')?.value||'',
-    inicio:document.getElementById('pln-inicio')?.value||'',
-    consultor:document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
-    fases:PLN_FASES.map((f,i)=>({
+    inicio:     document.getElementById('pln-inicio')?.value||'',
+    consultor:  document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
+    fases: PLN_FASES.map((f,i)=>({
       num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas,
       datas:(plnDatas[i]?.datas||[])
-    }))};
+    }))
+  };
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(plano,null,2)],{type:'application/json'}));
   a.download='Planejamento_WMS_'+(plano.cliente||'Cliente').replace(/\s+/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.json';
-  a.click();toast('Planejamento salvo ✓','ok');
+  a.click();
+  toast('📤 Planejamento exportado como JSON','ok');
 }
 
-function plnCarregar(){
-  const input=document.createElement('input');input.type='file';input.accept='.json';
+function plnImportarJSON(){
+  const input=document.createElement('input'); input.type='file'; input.accept='.json';
   input.onchange=e=>{
     const reader=new FileReader();
     reader.onload=ev=>{
       try{
         const p=JSON.parse(ev.target.result);
-        if(document.getElementById('pln-cliente'))document.getElementById('pln-cliente').value=p.cliente||'';
-        if(document.getElementById('pln-resp'))document.getElementById('pln-resp').value=p.responsavel||'';
-        if(document.getElementById('pln-inicio'))document.getElementById('pln-inicio').value=p.inicio||'';
-        if(document.getElementById('pln-consultor'))document.getElementById('pln-consultor').value=p.consultor||'Alexsandro C. Lopes';
-        // Restore fases and dates
+        const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
+        set('pln-cliente',   p.cliente);
+        set('pln-resp',      p.responsavel);
+        set('pln-inicio',    p.inicio);
+        set('pln-consultor', p.consultor||'Alexsandro C. Lopes');
         if(p.fases&&p.fases.length){
-          // If versao >= 2.0, fases have full info; otherwise legacy compat
-          PLN_FASES.length=0;
-          plnDatas.length=0;
+          PLN_FASES.length=0; plnDatas.length=0;
           p.fases.forEach(f=>{
-            PLN_FASES.push({num:f.num||'', nome:f.nome||'', horas:f.horas||0, cor:f.cor||'#2E6DA4', semanas:f.semanas||2});
-            // Support legacy single-date (v1.0) or new multi-date (v2.0)
+            PLN_FASES.push({num:f.num||'',nome:f.nome||'',horas:+f.horas||0,cor:f.cor||'#2E6DA4',semanas:+f.semanas||2});
             const datas=f.datas?f.datas:[{inicio:f.inicio||'',fim:f.fim||'',obs:f.obs||''}];
             plnDatas.push({datas});
           });
         }
-        plnRenderFases();plnAtualizarGantt();toast('Planejamento carregado ✓','ok');
-      }catch(err){toast('Erro: '+err.message,'err');}
+        plnRenderFases(); plnAtualizarGantt();
+        plnAutoSave();
+        toast('📥 Planejamento importado e salvo automaticamente','ok');
+      }catch(err){ toast('Erro ao importar: '+err.message,'err'); }
     };
     reader.readAsText(e.target.files[0]);
-  };input.click();
+  };
+  input.click();
 }
+
+// Compat aliases (removidos mas mantidos para não quebrar referências antigas)
+function plnSalvar(){ plnExportarJSON(); }
+function plnCarregar(){ plnImportarJSON(); }
 
 // ════════════════════════════════════════════════
 // FUNÇÕES: ADICIONAR / REMOVER FASES E DATAS
@@ -6405,6 +6547,7 @@ function plnAddFase(){
   plnDatas.push({datas:[{inicio:'',fim:'',obs:''}]});
   plnRenderFases();
   plnAtualizarStatus();
+  plnAutoSave();
   toast('✅ Nova fase adicionada','ok');
 }
 
@@ -6415,6 +6558,7 @@ function plnRemoveFase(i){
   plnDatas.splice(i,1);
   plnRenderFases();
   plnAtualizarGantt();
+  plnAutoSave();
   toast('Fase removida','warn');
 }
 
@@ -6422,6 +6566,7 @@ function plnAddDataFase(i){
   if(!plnDatas[i])return;
   plnDatas[i].datas.push({inicio:'',fim:'',obs:''});
   plnRenderFases();
+  plnAutoSave();
   toast('📅 Novo período adicionado à fase','ok');
 }
 
@@ -6431,6 +6576,7 @@ function plnRemoveDataFase(i,j){
   plnDatas[i].datas.splice(j,1);
   plnRenderFases();
   plnAtualizarGantt();
+  plnAutoSave();
   toast('Período removido','warn');
 }
 
