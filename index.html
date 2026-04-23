@@ -3699,6 +3699,12 @@ function saveProject(){
   }
   saveS();closeModal('modal-proj');
   if(_eProjId&&S.cur===_eProjId)renderDetail();else{renderDash();renderProjList();}
+  // Se o planejamento estiver aberto e o projeto editado é o vinculado, atualiza o status
+  if(document.getElementById('page-planejamento')?.classList.contains('on')){
+    plnAtualizarStatus();
+    // Se o projeto salvo é o vinculado ao planejamento, re-sincroniza cliente
+    if(_eProjId && plnProjId===_eProjId) plnOnProjChange(_eProjId);
+  }
   _eProjId=null;
 }
 
@@ -6363,13 +6369,18 @@ function plnAtualizarGantt(){
 function plnAtualizarStatus(){
   const el=document.getElementById('pln-status-row');if(!el)return;
   const filled=plnDatas.filter(d=>(d.datas||[]).some(dt=>dt.inicio&&dt.fim)).length;
-  // Pull hours and rate from linked project if available
+  // Total de horas SEMPRE vem da soma das fases do planejamento (não do projeto)
+  const totalH=PLN_FASES.reduce((a,f)=>a+(+f.horas||0),0);
+  // Taxa horária vem do projeto vinculado se definida e > 0
   const proj=plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
-  const totalH=proj?.totalHours?parseFloat(proj.totalHours)||180:PLN_FASES.reduce((a,f)=>a+f.horas,0);
-  const valorH=proj?.defaultRate?parseFloat(proj.defaultRate)||110:110;
+  const valorH=proj&&parseFloat(proj.defaultRate)>0?parseFloat(proj.defaultRate):0;
   const totalR=totalH*valorH;
   let html='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+filled+'/'+PLN_FASES.length+' fases</span>';
-  html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+totalH+'h · R$ '+totalR.toLocaleString('pt-BR',{minimumFractionDigits:2})+'</span>';
+  const valorStr=valorH>0?(' · R$ '+totalR.toLocaleString('pt-BR',{minimumFractionDigits:2})):'';
+  html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+totalH+'h'+valorStr+'</span>';
+  if(valorH<=0){
+    html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(245,158,11,.08);color:var(--amber);font-weight:600" title="Defina Valor/Hora no projeto para calcular o investimento">💡 Defina Valor/Hora no projeto</span>';
+  }
   if(filled===PLN_FASES.length){
     const allDts=plnDatas.flatMap(d=>(d.datas||[]));
     const fi=allDts.filter(dt=>dt.inicio).map(dt=>dt.inicio).sort()[0];
@@ -6547,6 +6558,9 @@ function plnExportarCronograma(){
   const consultor  = document.getElementById('pln-consultor')?.value|| 'Alexsandro C. Lopes';
   const inicioPrj  = document.getElementById('pln-inicio')?.value   || '';
   const geradoEm   = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  // Horas: soma das fases do planejamento; Taxa: do projeto vinculado se > 0
+  const projExport = plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
+  const valorHExport = projExport&&parseFloat(projExport.defaultRate)>0?parseFloat(projExport.defaultRate):0;
 
   const fasesData = PLN_FASES.map((f,i)=>({
     num: f.num, nome: f.nome, horas: f.horas, cor: f.cor, semanas: f.semanas,
@@ -6823,6 +6837,7 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
 <script>
 // ── DADOS EMBUTIDOS ──
 const FASES = ${dataJSON};
+const VALOR_HORA = ${valorHExport}; // Taxa horária do projeto (0 = não definida)
 let changed = false;
 const LS_KEY = 'axl_cronograma_${cliente.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')}';
 
@@ -7020,18 +7035,22 @@ function renderResumo(){
   const ini=allInicio[0], fim=allFim[0];
   const meses=ini&&fim?((new Date(fim)-new Date(ini))/86400000/30).toFixed(1):'—';
   const totalPer=FASES.reduce((a,f)=>a+f.datas.filter(d=>d.inicio&&d.fim).length,0);
+  const investimento=VALOR_HORA>0?'R$ '+(totalH*VALOR_HORA).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
+  const taxaHora=VALOR_HORA>0?'R$ '+VALOR_HORA.toLocaleString('pt-BR',{minimumFractionDigits:2})+'/h':'—';
   const chips=[
     {icon:'📦',label:'Total de Fases',val:FASES.length},
     {icon:'📅',label:'Períodos Agendados',val:totalPer},
     {icon:'📋',label:'Total de Horas',val:totalH+'h'},
+    {icon:'💰',label:'Taxa Horária',val:taxaHora},
+    {icon:'🏦',label:'Investimento Total',val:investimento},
     {icon:'▶️',label:'Início Previsto',val:ini?fD(ini):'—'},
     {icon:'🏁',label:'Término Previsto',val:fim?fD(fim):'—'},
     {icon:'⏱',label:'Duração Total',val:meses!=='—'?meses+' meses':'—'},
   ];
-  box.innerHTML=chips.map(c=>\`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;min-width:150px;flex:1">
+  box.innerHTML=chips.map(c=>\`<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;min-width:140px;flex:1">
     <div style="font-size:18px;margin-bottom:4px">\${c.icon}</div>
     <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">\${c.label}</div>
-    <div style="font-size:16px;font-weight:800;color:#1E3A5F">\${c.val}</div>
+    <div style="font-size:15px;font-weight:800;color:#1E3A5F">\${c.val}</div>
   </div>\`).join('');
 }
 
@@ -7176,21 +7195,23 @@ function buildEscopoHTML(){
 
   // Dates: use project dates if set, else from planning Gantt
   const iniValProj = proj?.startDate || document.getElementById('pln-inicio')?.value || '';
-  const firstFase  = plnDatas.map(d=>d.inicio).filter(Boolean).sort()[0] || '';
+  const allDtsEsc  = plnDatas.flatMap(d=>(d.datas||[]));
+  const firstFase  = allDtsEsc.filter(dt=>dt.inicio).map(dt=>dt.inicio).sort()[0] || '';
   const iniVal     = iniValProj || firstFase;
   const iniFmt     = iniVal ? new Date(iniVal+'T00:00:00').toLocaleDateString('pt-BR') : '_______ / _______ / _________';
 
-  const lastFim    = plnDatas.map(d=>d.fim).filter(Boolean).sort().reverse()[0]
-                     || proj?.endDate || '';
+  const lastFim    = allDtsEsc.filter(dt=>dt.fim).map(dt=>dt.fim).sort().reverse()[0] || proj?.endDate || '';
   const fimFmt     = lastFim ? new Date(lastFim+'T00:00:00').toLocaleDateString('pt-BR') : '_______ / _______ / _________';
 
   const hoje    = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
 
-  // Hours and rate from project
-  const totalH  = proj?.totalHours ? parseFloat(proj.totalHours)||180 : PLN_FASES.reduce((a,f)=>a+f.horas,0);
-  const valorH  = proj?.defaultRate ? parseFloat(proj.defaultRate)||110 : 110;
+  // Horas SEMPRE da soma das fases do planejamento; Taxa do projeto se definida e > 0
+  const totalH  = PLN_FASES.reduce((a,f)=>a+(+f.horas||0),0);
+  const valorH  = proj&&parseFloat(proj.defaultRate)>0 ? parseFloat(proj.defaultRate) : 0;
   const totalR=totalH*valorH;
-  const cur=v=>'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  const cur=v=>valorH>0?'R$ '+v.toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
+  const valorHFmt=valorH>0?'R$ '+valorH.toLocaleString('pt-BR',{minimumFractionDigits:2}):'Não definido';
+  const totalRFmt=valorH>0?cur(totalR):'Não definido';
 
   const fasesHTML=PLN_FASES.map((f,fi)=>{
     const det=PLN_FASES_DET[fi];
@@ -7200,9 +7221,10 @@ function buildEscopoHTML(){
     const datesLabel=allDts.length>1
       ?allDts.map((dt,idx)=>'<span style="font-size:11px;font-weight:600;color:'+f.cor+';margin-left:6px">📅 P'+(idx+1)+': '+new Date(dt.inicio+'T00:00:00').toLocaleDateString('pt-BR')+(dt.fim?' → '+new Date(dt.fim+'T00:00:00').toLocaleDateString('pt-BR'):'')+'</span>').join('')
       :(firstDt.inicio?'<span style="font-size:11px;font-weight:600;color:'+f.cor+';margin-left:8px">📅 '+new Date(firstDt.inicio+'T00:00:00').toLocaleDateString('pt-BR')+' → '+(firstDt.fim?new Date(firstDt.fim+'T00:00:00').toLocaleDateString('pt-BR'):'?')+'</span>':'');
+    const horasValor=valorH>0?f.horas+'h · '+cur(f.horas*valorH):f.horas+'h';
     return '<div style="margin-bottom:14px;border-left:4px solid '+f.cor+';background:#f8fafc;border-radius:0 6px 6px 0;padding:12px 16px">'
       +'<div style="font-size:13px;font-weight:800;color:#1E3A5F;margin-bottom:6px">FASE '+f.num+' — '+f.nome
-      +'<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:8px">'+f.horas+'h · '+cur(f.horas*valorH)+'</span>'
+      +'<span style="font-size:11px;font-weight:400;color:#64748b;margin-left:8px">'+horasValor+'</span>'
       +datesLabel
       +'</div>'
       +'<ul style="margin:0;padding-left:18px">'+(det?det.atividades.map(a=>'<li style="font-size:12px;color:#334155;line-height:1.7">'+a+'</li>').join(''):'<li style="font-size:12px;color:#334155">Atividades desta fase.</li>')+'</ul>'
@@ -7245,7 +7267,7 @@ function buildEscopoHTML(){
       +'</div>'
       +'<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:16px">'
         +'<div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Dados da Proposta</div>'
-        +[['Consultor',consultor],['Horas Estimadas',totalH+'h'],['Valor/Hora','R$ '+valorH.toLocaleString('pt-BR',{minimumFractionDigits:2})],['Investimento Total',cur(totalR)],['Início Previsto',iniFmt],['Término Previsto',fimFmt],['Prazo','3 a 4 meses'],['Validade','30 dias']].map(r=>
+        +[['Consultor',consultor],['Horas Estimadas',totalH+'h'],['Valor/Hora',valorHFmt],['Investimento Total',totalRFmt],['Início Previsto',iniFmt],['Término Previsto',fimFmt],['Prazo','3 a 4 meses'],['Validade','30 dias']].map(r=>
           '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #e2e8f0;font-size:12px"><span style="color:#64748b">'+r[0]+'</span><span style="font-weight:700;color:#1e293b">'+r[1]+'</span></div>'
         ).join('')
       +'</div>'
