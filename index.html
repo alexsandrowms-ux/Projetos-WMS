@@ -916,20 +916,33 @@ datalist{display:none}
 
       <!-- PLANEJAMENTO WMS -->
       <div class="page" id="page-planejamento">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
           <div>
             <div style="font-family:var(--display);font-size:20px;font-weight:800;margin-bottom:2px">📊 Planejamento de Implantação WMS</div>
             <div style="font-size:12px;color:var(--mid)">Defina as datas e gere o Gantt para o cliente</div>
           </div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-            <span id="pln-autosave-badge" style="font-size:10px;color:var(--dim);display:none;align-items:center;gap:4px">💾 <span id="pln-autosave-txt">Salvo</span></span>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="plnPropagarDatas()">⚡ Auto-Preencher Datas</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="plnExportarJSON()" title="Exportar planejamento como arquivo JSON">📤 Exportar JSON</button>
-            <button class="btn btn-ghost" style="font-size:12px" onclick="plnImportarJSON()" title="Importar planejamento de arquivo JSON">📥 Importar JSON</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnPropagarDatas()">⚡ Auto-Preencher</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnExportarJSON()">📤 JSON</button>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="plnImportarJSON()">📥 Importar</button>
             <button class="btn btn-primary" style="font-size:12px" onclick="plnExportarCronograma()">📋 Exportar Cronograma</button>
-            <button class="btn btn-ghost btn-sm" style="font-size:11px;color:var(--red)" onclick="plnLimparAutoSave()" title="Limpar planejamento salvo e reiniciar">🗑 Limpar</button>
             <button class="btn btn-ghost" style="font-size:12px" onclick="showPage('escopo')">📄 Ver Escopo</button>
-            <button class="btn btn-primary" style="font-size:12px" id="btn-aprovar-escopo" onclick="plnAprovarELancar()" style="background:#16a34a">✅ Aprovar e Lançar Etapas</button>
+            <button class="btn btn-primary" style="font-size:12px" id="btn-aprovar-escopo" onclick="plnAprovarELancar()">✅ Aprovar e Lançar</button>
+          </div>
+        </div>
+
+        <!-- BARRA DE VERSÕES -->
+        <div class="card" style="padding:12px 16px;margin-bottom:12px;border:1px solid var(--border2)">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <span style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">📁 Versões:</span>
+            <div id="pln-versoes-chips" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
+            <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
+              <span id="pln-autosave-badge" style="font-size:10px;color:var(--dim);display:none;align-items:center;gap:4px">💾 <span id="pln-autosave-txt">Salvo</span></span>
+              <button class="btn btn-ghost btn-xs" onclick="plnNovaVersao()" style="font-size:11px;color:var(--accent)">＋ Nova Versão</button>
+              <button class="btn btn-ghost btn-xs" onclick="plnDuplicarVersao()" style="font-size:11px" title="Duplicar versão atual">⧉ Duplicar</button>
+              <button class="btn btn-ghost btn-xs" onclick="plnRenomearVersao()" style="font-size:11px" title="Renomear versão atual">✏️ Renomear</button>
+              <button class="btn btn-ghost btn-xs" onclick="plnExcluirVersao()" style="font-size:11px;color:var(--red)" title="Excluir versão atual">🗑</button>
+            </div>
           </div>
         </div>
 
@@ -5920,7 +5933,19 @@ let plnProjId = null;
 
 function renderPlanejamentoWMS(){
   plnPopularProjetos();
-  plnAutoLoad();   // restaura do localStorage ao abrir a página
+  const carregou = plnAutoLoad();
+  if(!carregou){
+    // Primeira vez: cria uma versão padrão automaticamente
+    const vs=_plnGetVersoes();
+    if(!vs.length){
+      const novaV={id:uid(),nome:'Versão 1',criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString(),
+        cliente:'',resp:'',inicio:'',consultor:'Alexsandro C. Lopes',projId:'',fases:_plnFasesDefault()};
+      vs.push(novaV);_plnSaveVersoes(vs);
+      plnVersaoAtualId=novaV.id;
+      _plnAplicarVersao(novaV);
+    }
+  }
+  plnRenderVersoes();
   plnRenderFases();
   plnAtualizarGantt();
 }
@@ -5973,7 +5998,7 @@ function plnPopularProjetos(){
   if(cur) sel.value = cur;
 }
 
-function plnOnProjChange(projId){
+function plnOnProjChange(projId, triggerSave=true){
   plnProjId = projId;
   const statusEl = document.getElementById('pln-escopo-status');
   const clienteEl = document.getElementById('pln-cliente');
@@ -6001,6 +6026,8 @@ function plnOnProjChange(projId){
   } else {
     plnSetStatus('⏳ Projeto vinculado — escopo pendente','var(--amber)','rgba(245,158,11,.1)','rgba(245,158,11,.2)');
   }
+  plnAtualizarStatus();
+  if(triggerSave) plnAutoSave();
 }
 
 function plnSetStatus(txt,color,bg,border){
@@ -6394,158 +6421,267 @@ function plnAtualizarStatus(){
 }
 
 // ════════════════════════════════════════════════
-// AUTO-SAVE / AUTO-LOAD (localStorage)
+// SISTEMA DE VERSÕES DE PLANEJAMENTO
 // ════════════════════════════════════════════════
-const PLN_LS_KEY = 'axl_pln_wms_v2';
-let _plnSaveTimer = null;
+// Estrutura: localStorage['axl_pln_versoes'] = [{id, nome, criadoEm, atualizadoEm, cliente, resp, inicio, consultor, projId, fases:[{num,nome,horas,cor,semanas,datas}]}]
+const PLN_VERSOES_KEY = 'axl_pln_versoes';
+let plnVersaoAtualId  = null;   // id da versão carregada
+let _plnSaveTimer     = null;
 
-function plnAutoSave(){
-  // Debounce 600ms
-  clearTimeout(_plnSaveTimer);
-  _plnSaveTimer = setTimeout(()=>{
-    const badge = document.getElementById('pln-autosave-badge');
-    const txt   = document.getElementById('pln-autosave-txt');
-    if(badge){ badge.style.display='inline-flex'; if(txt) txt.textContent='Salvando…'; }
-    try{
-      const data = {
-        versao:'2.0',
-        savedAt: new Date().toISOString(),
-        cliente:    document.getElementById('pln-cliente')?.value||'',
-        responsavel:document.getElementById('pln-resp')?.value||'',
-        inicio:     document.getElementById('pln-inicio')?.value||'',
-        consultor:  document.getElementById('pln-consultor')?.value||'',
-        projId:     plnProjId||'',
-        fases: PLN_FASES.map((f,i)=>({
-          num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas,
-          datas:(plnDatas[i]?.datas||[])
-        }))
-      };
-      localStorage.setItem(PLN_LS_KEY, JSON.stringify(data));
-      const hora = new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      if(badge && txt){ txt.textContent='Salvo às '+hora; }
-    }catch(e){
-      console.warn('plnAutoSave error',e);
-      const txt=document.getElementById('pln-autosave-txt');
-      if(txt) txt.textContent='⚠️ Erro ao salvar';
-    }
-  }, 600);
-}
+// ── Helpers de persistência ──
+function _plnGetVersoes(){ try{ return JSON.parse(localStorage.getItem(PLN_VERSOES_KEY)||'[]'); }catch{return [];} }
+function _plnSaveVersoes(vs){ localStorage.setItem(PLN_VERSOES_KEY, JSON.stringify(vs)); }
 
-function plnAutoLoad(){
-  try{
-    const raw = localStorage.getItem(PLN_LS_KEY);
-    if(!raw) return false;
-    const p = JSON.parse(raw);
-    // Restore field values
-    const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
-    set('pln-cliente',    p.cliente);
-    set('pln-resp',       p.responsavel);
-    set('pln-inicio',     p.inicio);
-    set('pln-consultor',  p.consultor||'Alexsandro C. Lopes');
-    // Restore linked project selector
-    if(p.projId){
-      plnProjId = p.projId;
-      setTimeout(()=>{
-        const sel=document.getElementById('pln-proj-id');
-        if(sel && p.projId){ sel.value=p.projId; plnOnProjChange(p.projId); }
-      },100);
-    }
-    // Restore fases
-    if(p.fases&&p.fases.length){
-      PLN_FASES.length=0; plnDatas.length=0;
-      p.fases.forEach(f=>{
-        PLN_FASES.push({num:f.num||'', nome:f.nome||'', horas:+f.horas||0, cor:f.cor||'#2E6DA4', semanas:+f.semanas||2});
-        plnDatas.push({datas: f.datas&&f.datas.length ? f.datas : [{inicio:'',fim:'',obs:''}]});
-      });
-    }
-    // Show last saved badge
-    const badge=document.getElementById('pln-autosave-badge');
-    const txt=document.getElementById('pln-autosave-txt');
-    if(badge && p.savedAt){
-      const hora=new Date(p.savedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'});
-      badge.style.display='inline-flex';
-      if(txt) txt.textContent='Carregado — '+hora;
-    }
-    return true;
-  }catch(e){
-    console.warn('plnAutoLoad error',e);
-    return false;
-  }
-}
-
-function plnLimparAutoSave(){
-  if(!confirm('Limpar o planejamento salvo e reiniciar com as fases padrão?')) return;
-  localStorage.removeItem(PLN_LS_KEY);
-  // Reset to defaults
-  PLN_FASES.length=0;
-  [{num:'01',nome:'Pré-Implantação e Diagnóstico',horas:20,cor:'#1E3A5F',semanas:2},
-   {num:'02',nome:'Configuração e Parametrização WMS',horas:40,cor:'#2E6DA4',semanas:4},
-   {num:'03',nome:'Integração com ERP Sankhya',horas:30,cor:'#0891B2',semanas:3},
-   {num:'04',nome:'Treinamento de Usuários',horas:24,cor:'#7C3AED',semanas:2},
-   {num:'05',nome:'Testes e Homologação',horas:26,cor:'#D97706',semanas:3},
-   {num:'06',nome:'Go-Live e Acompanhamento',horas:24,cor:'#16A34A',semanas:2},
-   {num:'07',nome:'Encerramento do Projeto',horas:16,cor:'#6B7280',semanas:1},
-  ].forEach(f=>PLN_FASES.push(f));
-  plnDatas.length=0;
-  PLN_FASES.forEach(()=>plnDatas.push({datas:[{inicio:'',fim:'',obs:''}]}));
-  ['pln-cliente','pln-resp','pln-inicio'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
-  const c=document.getElementById('pln-consultor'); if(c) c.value='Alexsandro C. Lopes';
-  plnRenderFases(); plnAtualizarGantt();
-  const badge=document.getElementById('pln-autosave-badge'); if(badge) badge.style.display='none';
-  toast('Planejamento reiniciado','warn');
-}
-
-// ── Export / Import JSON (file download) ──
-function plnExportarJSON(){
-  const plano={
-    versao:'2.0', geradoEm:new Date().toISOString(),
+function _plnEstadoAtual(){
+  return {
     cliente:    document.getElementById('pln-cliente')?.value||'',
-    responsavel:document.getElementById('pln-resp')?.value||'',
+    resp:       document.getElementById('pln-resp')?.value||'',
     inicio:     document.getElementById('pln-inicio')?.value||'',
-    consultor:  document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
+    consultor:  document.getElementById('pln-consultor')?.value||'',
+    projId:     plnProjId||'',
     fases: PLN_FASES.map((f,i)=>({
       num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas,
       datas:(plnDatas[i]?.datas||[])
     }))
   };
+}
+
+function _plnFasesDefault(){
+  return [
+    {num:'01',nome:'Pré-Implantação e Diagnóstico',     horas:20,cor:'#1E3A5F',semanas:2},
+    {num:'02',nome:'Configuração e Parametrização WMS', horas:40,cor:'#2E6DA4',semanas:4},
+    {num:'03',nome:'Integração com ERP Sankhya',        horas:30,cor:'#0891B2',semanas:3},
+    {num:'04',nome:'Treinamento de Usuários',           horas:24,cor:'#7C3AED',semanas:2},
+    {num:'05',nome:'Testes e Homologação',              horas:26,cor:'#D97706',semanas:3},
+    {num:'06',nome:'Go-Live e Acompanhamento',          horas:24,cor:'#16A34A',semanas:2},
+    {num:'07',nome:'Encerramento do Projeto',           horas:16,cor:'#6B7280',semanas:1},
+  ].map(f=>({...f, datas:[{inicio:'',fim:'',obs:''}]}));
+}
+
+// ── Carregar versão nos globals PLN_FASES / plnDatas ──
+function _plnAplicarVersao(v){
+  PLN_FASES.length=0; plnDatas.length=0;
+  (v.fases||_plnFasesDefault()).forEach(f=>{
+    PLN_FASES.push({num:f.num||'',nome:f.nome||'',horas:+f.horas||0,cor:f.cor||'#2E6DA4',semanas:+f.semanas||2});
+    plnDatas.push({datas:f.datas&&f.datas.length?f.datas:[{inicio:'',fim:'',obs:''}]});
+  });
+  const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
+  set('pln-cliente',   v.cliente);
+  set('pln-resp',      v.resp);
+  set('pln-inicio',    v.inicio);
+  set('pln-consultor', v.consultor||'Alexsandro C. Lopes');
+  if(v.projId){
+    plnProjId=v.projId;
+    setTimeout(()=>{
+      const sel=document.getElementById('pln-proj-id');
+      if(sel){sel.value=v.projId;plnOnProjChange(v.projId,false);}
+    },80);
+  }
+}
+
+// ── Render chips de versão ──
+function plnRenderVersoes(){
+  const chips=document.getElementById('pln-versoes-chips');
+  if(!chips)return;
+  const vs=_plnGetVersoes();
+  if(!vs.length){chips.innerHTML='<span style="font-size:11px;color:var(--dim)">Nenhuma versão salva</span>';return;}
+  chips.innerHTML=vs.map(v=>{
+    const ativa=v.id===plnVersaoAtualId;
+    const hora=v.atualizadoEm?new Date(v.atualizadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    return `<button onclick="plnCarregarVersao('${v.id}')" title="Atualizado: ${hora}"
+      style="font-size:11px;padding:4px 12px;border-radius:20px;border:2px solid ${ativa?'var(--accent)':'var(--border2)'};
+      background:${ativa?'rgba(14,165,233,.12)':'var(--bg3)'};color:${ativa?'var(--accent)':'var(--text)'};
+      cursor:pointer;font-weight:${ativa?'700':'500'};white-space:nowrap;transition:all .15s">
+      ${ativa?'●&nbsp;':''}${esc(v.nome)}
+      <span style="font-size:9px;opacity:.6;margin-left:4px">${hora}</span>
+    </button>`;
+  }).join('');
+}
+
+// ── Auto-save (salva na versão atual) ──
+function plnAutoSave(){
+  clearTimeout(_plnSaveTimer);
+  _plnSaveTimer=setTimeout(()=>{
+    const badge=document.getElementById('pln-autosave-badge');
+    const txt=document.getElementById('pln-autosave-txt');
+    if(badge){badge.style.display='inline-flex';if(txt)txt.textContent='Salvando…';}
+    try{
+      const vs=_plnGetVersoes();
+      let idx=vs.findIndex(v=>v.id===plnVersaoAtualId);
+      if(idx<0){
+        // Cria versão se não existe ainda
+        const novaV={id:uid(),nome:'Versão 1',criadoEm:new Date().toISOString(),..._plnEstadoAtual(),atualizadoEm:new Date().toISOString()};
+        vs.push(novaV);
+        plnVersaoAtualId=novaV.id;
+        idx=vs.length-1;
+      } else {
+        vs[idx]={...vs[idx],..._plnEstadoAtual(),atualizadoEm:new Date().toISOString()};
+      }
+      _plnSaveVersoes(vs);
+      const hora=new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      if(badge&&txt)txt.textContent='Salvo às '+hora;
+      plnRenderVersoes();
+    }catch(e){const txt=document.getElementById('pln-autosave-txt');if(txt)txt.textContent='⚠️ Erro';}
+  },600);
+}
+
+// ── Auto-load (ao abrir a página, carrega versão mais recente) ──
+function plnAutoLoad(){
+  const vs=_plnGetVersoes();
+  if(!vs.length)return false;
+  // Carrega a última versão atualizada
+  const ultima=vs.slice().sort((a,b)=>new Date(b.atualizadoEm||0)-new Date(a.atualizadoEm||0))[0];
+  plnVersaoAtualId=ultima.id;
+  _plnAplicarVersao(ultima);
+  const badge=document.getElementById('pln-autosave-badge');
+  const txt=document.getElementById('pln-autosave-txt');
+  if(badge&&ultima.atualizadoEm){
+    const hora=new Date(ultima.atualizadoEm).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    badge.style.display='inline-flex';if(txt)txt.textContent='Carregado — '+hora;
+  }
+  return true;
+}
+
+// ── Carregar versão específica ──
+function plnCarregarVersao(id){
+  if(id===plnVersaoAtualId)return;
+  const vs=_plnGetVersoes();
+  const v=vs.find(x=>x.id===id);
+  if(!v)return;
+  plnVersaoAtualId=id;
+  _plnAplicarVersao(v);
+  plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
+  toast('📁 Versão "'+v.nome+'" carregada','ok');
+}
+
+// ── Nova versão em branco ──
+function plnNovaVersao(){
+  const nome=prompt('Nome da nova versão:','Versão '+((_plnGetVersoes().length)+1));
+  if(!nome)return;
+  const vs=_plnGetVersoes();
+  const novaV={id:uid(),nome:nome.trim(),criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString(),
+    cliente:'',resp:'',inicio:'',consultor:'Alexsandro C. Lopes',projId:'',
+    fases:_plnFasesDefault()};
+  vs.push(novaV);
+  _plnSaveVersoes(vs);
+  plnVersaoAtualId=novaV.id;
+  _plnAplicarVersao(novaV);
+  ['pln-cliente','pln-resp','pln-inicio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
+  toast('✅ Nova versão "'+novaV.nome+'" criada','ok');
+}
+
+// ── Duplicar versão atual ──
+function plnDuplicarVersao(){
+  const vs=_plnGetVersoes();
+  const atual=vs.find(v=>v.id===plnVersaoAtualId);
+  const base=atual||{nome:'Versão'};
+  const nome=prompt('Nome da versão duplicada:',base.nome+' (cópia)');
+  if(!nome)return;
+  const novaV={...JSON.parse(JSON.stringify(atual||_plnEstadoAtual())),
+    id:uid(),nome:nome.trim(),criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString()};
+  // Garante que os dados atuais (podem ter sido editados sem salvar) vão junto
+  Object.assign(novaV,_plnEstadoAtual());
+  novaV.id=uid();novaV.nome=nome.trim();novaV.criadoEm=new Date().toISOString();novaV.atualizadoEm=new Date().toISOString();
+  vs.push(novaV);
+  _plnSaveVersoes(vs);
+  plnVersaoAtualId=novaV.id;
+  plnRenderVersoes();
+  toast('⧉ Versão "'+novaV.nome+'" criada como cópia','ok');
+}
+
+// ── Renomear versão atual ──
+function plnRenomearVersao(){
+  const vs=_plnGetVersoes();
+  const idx=vs.findIndex(v=>v.id===plnVersaoAtualId);
+  if(idx<0){toast('Salve primeiro para renomear','warn');return;}
+  const nome=prompt('Novo nome:',vs[idx].nome);
+  if(!nome||nome.trim()===vs[idx].nome)return;
+  vs[idx].nome=nome.trim();
+  _plnSaveVersoes(vs);
+  plnRenderVersoes();
+  toast('✏️ Renomeada para "'+vs[idx].nome+'"','ok');
+}
+
+// ── Excluir versão atual ──
+function plnExcluirVersao(){
+  const vs=_plnGetVersoes();
+  if(vs.length<=1){toast('É necessário ter ao menos uma versão','err');return;}
+  const atual=vs.find(v=>v.id===plnVersaoAtualId);
+  if(!confirm('Excluir versão "'+(atual?.nome||'?')+'"? Esta ação é irreversível.'))return;
+  const novas=vs.filter(v=>v.id!==plnVersaoAtualId);
+  _plnSaveVersoes(novas);
+  // Carrega a mais recente restante
+  const prox=novas.slice().sort((a,b)=>new Date(b.atualizadoEm||0)-new Date(a.atualizadoEm||0))[0];
+  plnVersaoAtualId=prox.id;
+  _plnAplicarVersao(prox);
+  plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
+  toast('Versão excluída','warn');
+}
+
+// ── Limpar tudo (reset completo) ──
+function plnLimparAutoSave(){
+  if(!confirm('Apagar TODAS as versões e reiniciar do zero?'))return;
+  localStorage.removeItem(PLN_VERSOES_KEY);
+  plnVersaoAtualId=null;
+  PLN_FASES.length=0;
+  _plnFasesDefault().forEach(f=>{
+    const {datas,...fase}=f;
+    PLN_FASES.push(fase);
+  });
+  plnDatas.length=0;PLN_FASES.forEach(()=>plnDatas.push({datas:[{inicio:'',fim:'',obs:''}]}));
+  ['pln-cliente','pln-resp','pln-inicio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const c=document.getElementById('pln-consultor');if(c)c.value='Alexsandro C. Lopes';
+  plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
+  const badge=document.getElementById('pln-autosave-badge');if(badge)badge.style.display='none';
+  toast('Planejamento reiniciado','warn');
+}
+
+// ── Export / Import JSON (file download) ──
+function plnExportarJSON(){
+  const vs=_plnGetVersoes();
+  const atual=vs.find(v=>v.id===plnVersaoAtualId)||_plnEstadoAtual();
+  const plano={versao:'3.0',geradoEm:new Date().toISOString(),nomeVersao:atual.nome||'',
+    cliente:document.getElementById('pln-cliente')?.value||'',
+    responsavel:document.getElementById('pln-resp')?.value||'',
+    inicio:document.getElementById('pln-inicio')?.value||'',
+    consultor:document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
+    fases:PLN_FASES.map((f,i)=>({num:f.num,nome:f.nome,horas:f.horas,cor:f.cor,semanas:f.semanas,datas:(plnDatas[i]?.datas||[])}))};
   const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([JSON.stringify(plano,null,2)],{type:'application/json'}));
-  a.download='Planejamento_WMS_'+(plano.cliente||'Cliente').replace(/\s+/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.json';
-  a.click();
-  toast('📤 Planejamento exportado como JSON','ok');
+  a.download='Planejamento_WMS_'+(plano.cliente||'Cliente').replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')+'_'+(atual.nome||'v1').replace(/\s+/g,'_')+'_'+new Date().toISOString().split('T')[0]+'.json';
+  a.click();toast('📤 Versão exportada como JSON','ok');
 }
 
 function plnImportarJSON(){
-  const input=document.createElement('input'); input.type='file'; input.accept='.json';
+  const input=document.createElement('input');input.type='file';input.accept='.json';
   input.onchange=e=>{
     const reader=new FileReader();
     reader.onload=ev=>{
       try{
         const p=JSON.parse(ev.target.result);
-        const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.value=v||''; };
-        set('pln-cliente',   p.cliente);
-        set('pln-resp',      p.responsavel);
-        set('pln-inicio',    p.inicio);
-        set('pln-consultor', p.consultor||'Alexsandro C. Lopes');
-        if(p.fases&&p.fases.length){
-          PLN_FASES.length=0; plnDatas.length=0;
-          p.fases.forEach(f=>{
-            PLN_FASES.push({num:f.num||'',nome:f.nome||'',horas:+f.horas||0,cor:f.cor||'#2E6DA4',semanas:+f.semanas||2});
-            const datas=f.datas?f.datas:[{inicio:f.inicio||'',fim:f.fim||'',obs:f.obs||''}];
-            plnDatas.push({datas});
-          });
-        }
-        plnRenderFases(); plnAtualizarGantt();
-        plnAutoSave();
-        toast('📥 Planejamento importado e salvo automaticamente','ok');
-      }catch(err){ toast('Erro ao importar: '+err.message,'err'); }
+        // Cria nova versão a partir do arquivo
+        const nome=p.nomeVersao||(p.cliente?p.cliente+' (importado)':'Importado '+new Date().toLocaleDateString('pt-BR'));
+        const fases=(p.fases||[]).map(f=>{
+          const datas=f.datas?f.datas:[{inicio:f.inicio||'',fim:f.fim||'',obs:f.obs||''}];
+          return{num:f.num||'',nome:f.nome||'',horas:+f.horas||0,cor:f.cor||'#2E6DA4',semanas:+f.semanas||2,datas};
+        });
+        const novaV={id:uid(),nome,criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString(),
+          cliente:p.cliente||'',resp:p.responsavel||'',inicio:p.inicio||'',
+          consultor:p.consultor||'Alexsandro C. Lopes',projId:'',fases};
+        const vs=_plnGetVersoes();
+        vs.push(novaV);_plnSaveVersoes(vs);
+        plnVersaoAtualId=novaV.id;
+        _plnAplicarVersao(novaV);
+        plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
+        toast('📥 Importado como versão "'+nome+'"','ok');
+      }catch(err){toast('Erro ao importar: '+err.message,'err');}
     };
     reader.readAsText(e.target.files[0]);
-  };
-  input.click();
+  };input.click();
 }
 
-// Compat aliases (removidos mas mantidos para não quebrar referências antigas)
+// Compat aliases
 function plnSalvar(){ plnExportarJSON(); }
 function plnCarregar(){ plnImportarJSON(); }
 
