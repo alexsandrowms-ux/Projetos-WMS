@@ -978,7 +978,8 @@ datalist{display:none}
                 <tr style="background:var(--bg3)">
                   <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:65px">#</th>
                   <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Módulo / Período</th>
-                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:90px">Horas</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:90px">Horas FAP</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:90px">H/Dia</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Início</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Término</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Duração</th>
@@ -6272,7 +6273,14 @@ function plnRenderFases(){
       html+=`<tr style="border-bottom:1px solid var(--border);background:var(--bg)">
         <td style="padding:5px 8px 5px 14px;color:${f.cor};font-size:10px;font-weight:800;white-space:nowrap">📅 ${j+1}</td>
         <td style="padding:5px 10px;font-size:11px;color:var(--mid);white-space:nowrap">Período ${j+1}</td>
-        <td></td>
+        <td style="padding:5px 6px">
+          <div style="display:flex;align-items:center;gap:4px">
+            <select class="fc" onchange="plnDatas[${i}].datas[${j}].hPorDia=+this.value;plnRenderFases();plnAtualizarStatus();plnAutoSave()"
+              style="font-size:11px;width:80px;padding:4px 5px" title="Horas por agenda (dia)">
+              ${[4,6,8].map(h=>`<option value="${h}"${+(dt.hPorDia||8)===h?' selected':''}>${h}h ${h===4?'(½)':h===6?'(¾)':'(dia)'}</option>`).join('')}
+            </select>
+          </div>
+        </td>
         <td style="padding:5px 6px;text-align:center">
           <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:140px">
         </td>
@@ -6368,6 +6376,8 @@ function plnAtualizarGantt(){
           const fimLabel=new Date(dt.fim+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
           const dias=Math.round((new Date(dt.fim)-new Date(dt.inicio))/86400000)+1;
           const durLabel=dias+'d / '+Math.ceil(dias/7)+'sem';
+          const hPorDia=+(dt.hPorDia||8);
+          const diasUtLabel=plnDiasUteis(dt.inicio,dt.fim);
           const perLabel=activeDts.length>1?'Período '+(mi+1)+' de '+activeDts.length:'Período único';
           const obsSnip=dt.obs?`<div class="pln-tip-row">📝 <span class="pln-tip-val">${dt.obs.substring(0,40)+(dt.obs.length>40?'…':'')}</span></div>`:'';
           const tip=`<div class="pln-tip">
@@ -6376,7 +6386,8 @@ function plnAtualizarGantt(){
             <div class="pln-tip-row">▶️ Início: <span class="pln-tip-val">${iniLabel}</span></div>
             <div class="pln-tip-row">🏁 Término: <span class="pln-tip-val">${fimLabel}</span></div>
             <div class="pln-tip-row">⏱ Duração: <span class="pln-tip-val">${durLabel}</span></div>
-            <div class="pln-tip-row">📋 Horas: <span class="pln-tip-val">${f.horas}h</span></div>
+            <div class="pln-tip-row">🗓️ Agendas: <span class="pln-tip-val">${diasUtLabel} dia${diasUtLabel!==1?'s':''} úteis × ${hPorDia}h = ${diasUtLabel*hPorDia}h</span></div>
+            ${hPorDia<8?`<div class="pln-tip-row">⚡ <span class="pln-tip-val" style="color:#f59e0b">${hPorDia===4?'Meio período (4h)':'Período parcial ('+hPorDia+'h)'}</span></div>`:''}
             ${obsSnip}
           </div>`;
           return `<div style="height:${barH}px;background:${f.cor};border-radius:${rad};opacity:${op};display:flex;align-items:center;padding:0 3px;font-size:7px;color:#fff;font-weight:700;margin-bottom:1px;cursor:default">${isSt&&mi===0?f.num:''}${tip}</div>`;
@@ -6393,31 +6404,118 @@ function plnAtualizarGantt(){
   plnAtualizarStatus();
 }
 
+// ── Contar dias úteis (seg–sex) em um range de datas ──
+function plnDiasUteis(inicio, fim){
+  if(!inicio||!fim) return 0;
+  let cur=new Date(inicio+'T00:00:00'), end=new Date(fim+'T00:00:00'), count=0;
+  if(cur>end) return 0;
+  while(cur<=end){
+    const dow=cur.getDay();
+    if(dow!==0&&dow!==6) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  return count;
+}
+
+// ── Calcular totais de agendas do planejamento ──
+function plnCalcAgendas(){
+  let totalDias=0, totalHoras=0;
+  const porFase=PLN_FASES.map((f,i)=>{
+    let dias=0, horas=0;
+    (plnDatas[i]?.datas||[]).forEach(dt=>{
+      if(dt.inicio&&dt.fim){
+        const d=plnDiasUteis(dt.inicio,dt.fim);
+        const h=+(dt.hPorDia||8);
+        dias+=d;
+        horas+=d*h;
+      }
+    });
+    totalDias+=dias; totalHoras+=horas;
+    return {nome:f.nome,num:f.num,cor:f.cor,dias,agendas:dias,horas};
+  });
+  return {totalDias, totalAgendas:totalDias, totalHorasAgendadas:totalHoras, porFase};
+}
+
 function plnAtualizarStatus(){
   const el=document.getElementById('pln-status-row');if(!el)return;
   const filled=plnDatas.filter(d=>(d.datas||[]).some(dt=>dt.inicio&&dt.fim)).length;
-  // Total de horas SEMPRE vem da soma das fases do planejamento (não do projeto)
   const totalH=PLN_FASES.reduce((a,f)=>a+(+f.horas||0),0);
-  // Taxa horária vem do projeto vinculado se definida e > 0
   const proj=plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
   const valorH=proj&&parseFloat(proj.defaultRate)>0?parseFloat(proj.defaultRate):0;
   const totalR=totalH*valorH;
-  let html='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+filled+'/'+PLN_FASES.length+' fases</span>';
-  const valorStr=valorH>0?(' · R$ '+totalR.toLocaleString('pt-BR',{minimumFractionDigits:2})):'';
-  html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">'+totalH+'h'+valorStr+'</span>';
-  if(valorH<=0){
-    html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(245,158,11,.08);color:var(--amber);font-weight:600" title="Defina Valor/Hora no projeto para calcular o investimento">💡 Defina Valor/Hora no projeto</span>';
+  const ag=plnCalcAgendas();
+
+  let html='';
+
+  // ── Card: Fases preenchidas ──
+  html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">${filled}/${PLN_FASES.length} fases</span>`;
+
+  // ── Card: Horas + valor ──
+  const valorStr=valorH>0?' · R$ '+totalR.toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
+  html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">${totalH}h${valorStr}</span>`;
+
+  // ── Card: Totalizador de Agendas ──
+  if(ag.totalAgendas>0){
+    const agTooltip=ag.porFase.filter(f=>f.dias>0).map(f=>`${f.num}. ${f.nome}: ${f.dias} agenda${f.dias!==1?'s':''}`).join(' | ');
+    html+=`<span title="${agTooltip}"
+      style="font-size:11px;padding:4px 14px;border-radius:10px;background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(8,145,178,.12));
+      border:1px solid rgba(124,58,237,.25);color:#a78bfa;font-weight:800;cursor:help;display:inline-flex;align-items:center;gap:6px">
+      📅 <span>Total de agendas: <strong style="font-size:13px;color:#c4b5fd">${ag.totalAgendas}</strong></span>
+      <span style="font-size:9px;font-weight:500;opacity:.75">(${ag.totalHorasAgendadas}h agendadas)</span>
+    </span>`;
   }
+
+  if(valorH<=0){
+    html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(245,158,11,.08);color:var(--amber);font-weight:600" title="Defina Valor/Hora no projeto para calcular o investimento">💡 Defina Valor/Hora no projeto</span>`;
+  }
+
   if(filled===PLN_FASES.length){
     const allDts=plnDatas.flatMap(d=>(d.datas||[]));
     const fi=allDts.filter(dt=>dt.inicio).map(dt=>dt.inicio).sort()[0];
     const ff=allDts.filter(dt=>dt.fim).map(dt=>dt.fim).sort().reverse()[0];
     if(fi&&ff){const d=Math.round((new Date(ff)-new Date(fi))/86400000)+1;
-      html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(34,197,94,.1);color:var(--green);font-weight:700">⏱ '+(d/30).toFixed(1)+' meses</span>';
+      html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(34,197,94,.1);color:var(--green);font-weight:700">⏱ ${(d/30).toFixed(1)} meses</span>`;
     }
-    html+='<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(34,197,94,.1);color:var(--green);font-weight:700">✅ Pronto para envio</span>';
+    html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(34,197,94,.1);color:var(--green);font-weight:700">✅ Pronto para envio</span>`;
   }
   el.innerHTML=html;
+
+  // ── Atualizar painel de agendas por fase ──
+  plnRenderAgendas(ag);
+}
+
+function plnRenderAgendas(ag){
+  let panel=document.getElementById('pln-agendas-panel');
+  if(!ag||ag.totalAgendas===0){if(panel)panel.style.display='none';return;}
+  if(!panel){
+    // Cria o painel abaixo do status row, dentro do mesmo card
+    const statusRow=document.getElementById('pln-status-row');
+    if(!statusRow)return;
+    panel=document.createElement('div');
+    panel.id='pln-agendas-panel';
+    statusRow.parentNode.insertBefore(panel,statusRow.nextSibling);
+  }
+  panel.style.display='block';
+  panel.style.cssText='margin-top:12px;padding:12px 14px;border-radius:8px;background:rgba(124,58,237,.06);border:1px solid rgba(124,58,237,.18)';
+
+  const rows=ag.porFase.filter(f=>f.dias>0).map(f=>`
+    <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(124,58,237,.1)">
+      <span style="width:8px;height:8px;border-radius:50%;background:${f.cor};flex-shrink:0;display:inline-block"></span>
+      <span style="font-size:11px;font-weight:700;color:var(--mid);min-width:28px">${f.num}</span>
+      <span style="font-size:11px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${f.nome}</span>
+      <span style="font-size:11px;font-weight:700;color:#a78bfa;white-space:nowrap">${f.agendas} agenda${f.agendas!==1?'s':''}</span>
+      <span style="font-size:10px;color:var(--dim);white-space:nowrap">${f.horas}h</span>
+    </div>`).join('');
+
+  panel.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+      <span style="font-size:10px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:.07em">📅 Agendas por Fase</span>
+      <span style="font-size:12px;font-weight:900;color:#c4b5fd">Total: ${ag.totalAgendas} agendas · ${ag.totalHorasAgendadas}h</span>
+    </div>
+    <div>${rows}</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--dim)">
+      ℹ️ Cada agenda = 1 dia útil (seg–sex) · Meio período = 4h · Fds não contabilizados
+    </div>`;
 }
 
 // ════════════════════════════════════════════════
@@ -6876,10 +6974,12 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
           <tr>
             <th style="width:52px">#</th>
             <th>Fase / Período</th>
-            <th style="width:90px;text-align:center">Horas</th>
+            <th style="width:80px;text-align:center">Horas FAP</th>
+            <th style="width:95px;text-align:center">H/Dia</th>
             <th style="width:145px;text-align:center">Início</th>
             <th style="width:145px;text-align:center">Término</th>
-            <th style="width:90px;text-align:center">Duração</th>
+            <th style="width:80px;text-align:center">Duração</th>
+            <th style="width:120px;text-align:center">Agendas</th>
             <th>Observação</th>
           </tr>
         </thead>
@@ -6990,15 +7090,16 @@ function markChanged(){
 
 // ── SAVE / LOAD ──
 function salvarAlteracoes(){
-  // Collect current state from inputs
   FASES.forEach((f,fi)=>{
     f.datas.forEach((dt,di)=>{
       const s=document.getElementById('inp-s-'+fi+'-'+di);
       const e=document.getElementById('inp-e-'+fi+'-'+di);
       const o=document.getElementById('inp-o-'+fi+'-'+di);
+      const h=document.getElementById('inp-h-'+fi+'-'+di);
       if(s)dt.inicio=s.value;
       if(e)dt.fim=e.value;
       if(o)dt.obs=o.value;
+      if(h)dt.hPorDia=+h.value;
     });
   });
   const apvData={
@@ -7060,13 +7161,21 @@ function renderTable(){
     </tr>\`;
     f.datas.forEach((dt,di)=>{
       const d=dur(dt.inicio,dt.fim);
+      const hpd=+(dt.hPorDia||8);
+      const agLabel=dt.inicio&&dt.fim?(()=>{const du=diasUteis(dt.inicio,dt.fim);return du+' agenda'+(du!==1?'s':'')+' · '+(du*hpd)+'h';})():'—';
       html+=\`<tr class="dt-row">
         <td class="dt-period" style="color:\${f.cor}">📅 \${di+1}</td>
         <td class="dt-period" style="color:#64748b">Período \${di+1}</td>
-        <td class="dt-td"><span class="hbadge">\${fi===0&&di===0?f.horas+'h':di===0?f.horas+'h':''}</span></td>
+        <td class="dt-td"><span class="hbadge">\${di===0?f.horas+'h FAP':''}</span></td>
+        <td class="dt-td">
+          <select class="dt-inp" id="inp-h-\${fi}-\${di}" style="width:90px;cursor:pointer" onchange="onHpDiaChange(\${fi},\${di},this.value)" title="Horas por agenda (dia)">
+            \${[4,6,8].map(h=>\`<option value="\${h}"\${hpd===h?' selected':''}>\${h}h\${h===4?' (½ dia)':h===6?' (¾)':' (dia)'}</option>\`).join('')}
+          </select>
+        </td>
         <td class="dt-td"><input class="dt-inp" type="date" id="inp-s-\${fi}-\${di}" value="\${esc(dt.inicio)}" onchange="onDateChange(\${fi},\${di},'inicio',this.value)"></td>
         <td class="dt-td"><input class="dt-inp" type="date" id="inp-e-\${fi}-\${di}" value="\${esc(dt.fim)}" onchange="onDateChange(\${fi},\${di},'fim',this.value)"></td>
         <td class="dt-td"><span class="dur-chip" id="dur-\${fi}-\${di}">\${d||'—'}</span></td>
+        <td class="dt-td"><span class="dur-chip" id="ag-\${fi}-\${di}" style="background:#ede9fe;color:#7c3aed">\${agLabel}</span></td>
         <td class="dt-td" style="padding:6px 8px"><input class="obs-inp" id="inp-o-\${fi}-\${di}" value="\${esc(dt.obs)}" placeholder="Observação..." oninput="onObsChange(\${fi},\${di},this.value)"></td>
       </tr>\`;
     });
@@ -7079,10 +7188,26 @@ function onDateChange(fi,di,field,val){
   const d=dur(FASES[fi].datas[di].inicio, FASES[fi].datas[di].fim);
   const dc=document.getElementById('dur-'+fi+'-'+di);
   if(dc)dc.textContent=d||'—';
+  _updateAgendaChip(fi,di);
   renderGantt();
   renderResumo();
   markChanged();
 }
+function onHpDiaChange(fi,di,val){
+  FASES[fi].datas[di].hPorDia=+val;
+  _updateAgendaChip(fi,di);
+  renderResumo();
+  markChanged();
+}
+
+function _updateAgendaChip(fi,di){
+  const dt=FASES[fi].datas[di];
+  const hpd=+(dt.hPorDia||8);
+  const du=dt.inicio&&dt.fim?diasUteis(dt.inicio,dt.fim):0;
+  const chip=document.getElementById('ag-'+fi+'-'+di);
+  if(chip) chip.textContent=du>0?du+' agenda'+(du!==1?'s':'')+' · '+(du*hpd)+'h':'—';
+}
+
 function onObsChange(fi,di,val){ FASES[fi].datas[di].obs=val; markChanged(); }
 
 // ── RENDER GANTT ──
@@ -7171,12 +7296,23 @@ function renderResumo(){
   const ini=allInicio[0], fim=allFim[0];
   const meses=ini&&fim?((new Date(fim)-new Date(ini))/86400000/30).toFixed(1):'—';
   const totalPer=FASES.reduce((a,f)=>a+f.datas.filter(d=>d.inicio&&d.fim).length,0);
+  // Calcular dias úteis (agendas)
+  function diasUteis(ini,fim){
+    if(!ini||!fim)return 0;
+    let cur=new Date(ini+'T00:00:00'),end=new Date(fim+'T00:00:00'),n=0;
+    if(cur>end)return 0;
+    while(cur<=end){const d=cur.getDay();if(d!==0&&d!==6)n++;cur.setDate(cur.getDate()+1);}
+    return n;
+  }
+  const totalAgendas=FASES.reduce((a,f)=>a+f.datas.reduce((b,d)=>b+(d.inicio&&d.fim?diasUteis(d.inicio,d.fim):0),0),0);
+  const totalHorasAg=FASES.reduce((a,f)=>a+f.datas.reduce((b,d)=>b+(d.inicio&&d.fim?diasUteis(d.inicio,d.fim)*(+(d.hPorDia||8)):0),0),0);
   const investimento=VALOR_HORA>0?'R$ '+(totalH*VALOR_HORA).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
   const taxaHora=VALOR_HORA>0?'R$ '+VALOR_HORA.toLocaleString('pt-BR',{minimumFractionDigits:2})+'/h':'—';
   const chips=[
     {icon:'📦',label:'Total de Fases',val:FASES.length},
     {icon:'📅',label:'Períodos Agendados',val:totalPer},
-    {icon:'📋',label:'Total de Horas',val:totalH+'h'},
+    {icon:'🗓️',label:'Total de Agendas',val:totalAgendas+' agendas · '+totalHorasAg+'h'},
+    {icon:'📋',label:'Total de Horas (FAP)',val:totalH+'h'},
     {icon:'💰',label:'Taxa Horária',val:taxaHora},
     {icon:'🏦',label:'Investimento Total',val:investimento},
     {icon:'▶️',label:'Início Previsto',val:ini?fD(ini):'—'},
