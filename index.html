@@ -933,6 +933,16 @@ datalist{display:none}
 
         <!-- BARRA DE VERSÕES -->
         <div class="card" style="padding:12px 16px;margin-bottom:12px;border:1px solid var(--border2)">
+          <!-- Linha 1: Seletor de Projeto -->
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid var(--border)">
+            <span style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">🗂 Projeto:</span>
+            <select id="pln-proj-picker" class="fc" onchange="plnTrocarProjeto(this.value)"
+              style="font-size:12px;font-weight:600;max-width:360px;flex:1;padding:5px 10px;border-color:var(--accent);color:var(--accent)">
+              <option value="">— Selecione um projeto —</option>
+            </select>
+            <span id="pln-proj-cliente-badge" style="font-size:11px;color:var(--mid);white-space:nowrap"></span>
+          </div>
+          <!-- Linha 2: Chips de versão + ações -->
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <span style="font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;letter-spacing:.07em;white-space:nowrap">📁 Versões:</span>
             <div id="pln-versoes-chips" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
@@ -5992,6 +6002,7 @@ function renderPlanejamentoWMS(){
     }
   }
 
+  plnPopularProjPicker();
   plnRenderVersoes();
   plnRenderFases();
   plnAtualizarGantt();
@@ -6607,8 +6618,93 @@ function _plnAplicarVersao(v){
   }
 }
 
-// ── Render chips de versão (somente do projeto atual) ──
+// ── Popular o seletor de projeto do picker ──
+function plnPopularProjPicker(){
+  const sel = document.getElementById('pln-proj-picker');
+  if(!sel) return;
+  const vs = _plnGetVersoes();
+  const projsComPlano = new Set(vs.map(v=>v.projId).filter(Boolean));
+  const projs = (S.projects||[]);
+  const cur = plnProjId||'';
+
+  sel.innerHTML = '<option value="">— Selecione um projeto —</option>'
+    + projs.map(p=>{
+        const temPlano = projsComPlano.has(p.id);
+        return `<option value="${p.id}" ${p.id===cur?'selected':''}>${temPlano?'📋 ':'📁 '}${esc(p.name)}${p.client?' — '+esc(p.client):''}${temPlano?' ✓':''}</option>`;
+      }).join('')
+    + '<option value="__zero__" style="color:var(--amber)">🆕 Novo planejamento do zero</option>';
+
+  // Badge do cliente
+  const badge = document.getElementById('pln-proj-cliente-badge');
+  if(badge){
+    const proj = projs.find(p=>p.id===cur);
+    badge.textContent = proj ? (proj.client||'') : '';
+  }
+}
+
+// ── Trocar de projeto no picker ──
+function plnTrocarProjeto(projId){
+  if(projId==='__zero__'){
+    // Reset picker visually then call novo do zero
+    const sel=document.getElementById('pln-proj-picker');
+    if(sel) sel.value = plnProjId||'';
+    plnNovoPlanejamentoZero();
+    return;
+  }
+  if(!projId){
+    const badge=document.getElementById('pln-proj-cliente-badge');
+    if(badge) badge.textContent='';
+    return;
+  }
+  // Salva o estado atual antes de trocar
+  if(plnVersaoAtualId) plnAutoSave();
+
+  _plnPendingProjId = projId;
+  plnProjId = projId;
+
+  const vs = _plnGetVersoes();
+  const proj = (S.projects||[]).find(p=>p.id===projId);
+
+  // Badge
+  const badge=document.getElementById('pln-proj-cliente-badge');
+  if(badge) badge.textContent = proj?.client||'';
+
+  // Verifica se existe versão para o projeto
+  const versaoDoProj = vs.filter(v=>v.projId===projId)
+    .sort((a,b)=>new Date(b.atualizadoEm||0)-new Date(a.atualizadoEm||0))[0];
+
+  if(versaoDoProj){
+    plnVersaoAtualId = versaoDoProj.id;
+    _plnAplicarVersao(versaoDoProj);
+    toast('📋 "'+versaoDoProj.nome+'" carregado','ok');
+  } else {
+    // Cria nova versão para este projeto
+    const nomePrj = proj?.name||'Projeto';
+    const novaV = {
+      id:uid(), nome:'Versão 1 — '+nomePrj,
+      criadoEm:new Date().toISOString(), atualizadoEm:new Date().toISOString(),
+      cliente:proj?.client||'', resp:'', inicio:proj?.startDate||'',
+      consultor:document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
+      projId, fases:_plnFasesDefault()
+    };
+    vs.push(novaV); _plnSaveVersoes(vs);
+    plnVersaoAtualId = novaV.id;
+    _plnAplicarVersao(novaV);
+    toast('✅ Novo planejamento criado para "'+nomePrj+'"','ok');
+  }
+
+  // Sync hidden project select
+  const selHidden = document.getElementById('pln-proj-id');
+  if(selHidden){ plnPopularProjetos(); selHidden.value=projId; }
+  plnOnProjChange(projId, false);
+
+  plnRenderVersoes();
+  plnRenderFases();
+  plnAtualizarGantt();
+  _plnPendingProjId = null;
+}
 function plnRenderVersoes(){
+  plnPopularProjPicker();
   const chips=document.getElementById('pln-versoes-chips');
   if(!chips)return;
   const vs=_plnGetVersoes();
