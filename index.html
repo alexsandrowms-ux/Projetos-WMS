@@ -7067,14 +7067,14 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
 /* ── PRINT ── */
 @media print{
   .topbar,.no-print{display:none!important}
-  body{background:#fff}
+  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .container{padding:0}
-  .card{box-shadow:none;border:1px solid #e2e8f0}
-  .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .gantt-table thead th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .gantt-bar{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .apv{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .card{box-shadow:none;border:1px solid #e2e8f0;page-break-inside:avoid}
+  .hero,.gantt-table thead th,.gantt-bar,.apv,
+  .fase-row,.hbadge,.dur-chip,.ft thead tr,
+  #resumo-box>div{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .gantt-bar .g-tip{display:none!important}
+  .dt-inp,.obs-inp{border:1px solid #e2e8f0!important;background:#f8fafc!important}
 }
 @media(max-width:600px){
   .hero{padding:20px}
@@ -7297,6 +7297,15 @@ function carregarAlteracoes(){
   }catch(e){}
 }
 
+// ── DIAS ÚTEIS (global — usado em renderTable, _updateAgendaChip e renderResumo) ──
+function diasUteis(ini,fim){
+  if(!ini||!fim)return 0;
+  let cur=new Date(ini+'T00:00:00'),end=new Date(fim+'T00:00:00'),n=0;
+  if(cur>end)return 0;
+  while(cur<=end){const d=cur.getDay();if(d!==0&&d!==6)n++;cur.setDate(cur.getDate()+1);}
+  return n;
+}
+
 // ── RENDER TABLE ──
 function renderTable(){
   const tbody=document.getElementById('ft-tbody');
@@ -7306,7 +7315,7 @@ function renderTable(){
     const periodos=f.datas.length;
     html+=\`<tr class="fase-row">
       <td class="fase-num" style="color:\${f.cor};\${fi===0?'border-top:none':''}">\${esc(f.num)}</td>
-      <td class="fase-nome" colspan="5">\${esc(f.nome)} <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px">\${periodos} período\${periodos!==1?'s':''}</span></td>
+      <td class="fase-nome" colspan="7">\${esc(f.nome)} <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px">\${periodos} período\${periodos!==1?'s':''}</span></td>
       <td style="padding:10px 12px;background:#f8fafc"></td>
     </tr>\`;
     f.datas.forEach((dt,di)=>{
@@ -7446,14 +7455,6 @@ function renderResumo(){
   const ini=allInicio[0], fim=allFim[0];
   const meses=ini&&fim?((new Date(fim)-new Date(ini))/86400000/30).toFixed(1):'—';
   const totalPer=FASES.reduce((a,f)=>a+f.datas.filter(d=>d.inicio&&d.fim).length,0);
-  // Calcular dias úteis (agendas)
-  function diasUteis(ini,fim){
-    if(!ini||!fim)return 0;
-    let cur=new Date(ini+'T00:00:00'),end=new Date(fim+'T00:00:00'),n=0;
-    if(cur>end)return 0;
-    while(cur<=end){const d=cur.getDay();if(d!==0&&d!==6)n++;cur.setDate(cur.getDate()+1);}
-    return n;
-  }
   const totalAgendas=FASES.reduce((a,f)=>a+f.datas.reduce((b,d)=>b+(d.inicio&&d.fim?diasUteis(d.inicio,d.fim):0),0),0);
   const totalHorasAg=FASES.reduce((a,f)=>a+f.datas.reduce((b,d)=>b+(d.inicio&&d.fim?diasUteis(d.inicio,d.fim)*(+(d.hPorDia||8)):0),0),0);
   const investimento=VALOR_HORA>0?'R$ '+(totalH*VALOR_HORA).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
@@ -7505,6 +7506,8 @@ function init(){
   if(apvData&&!apvData.value) apvData.value=new Date().toISOString().split('T')[0];
   // Warn before leaving if unsaved
   window.addEventListener('beforeunload',e=>{ if(changed){e.preventDefault();e.returnValue='';} });
+  // Garantir renderização antes de imprimir
+  window.addEventListener('beforeprint',()=>{ renderTable(); renderGantt(); renderResumo(); });
 }
 init();
 ${'<'+'/script>'}
