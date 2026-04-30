@@ -6607,13 +6607,16 @@ function _plnAplicarVersao(v){
   }
 }
 
-// ── Render chips de versão ──
+// ── Render chips de versão (somente do projeto atual) ──
 function plnRenderVersoes(){
   const chips=document.getElementById('pln-versoes-chips');
   if(!chips)return;
   const vs=_plnGetVersoes();
-  if(!vs.length){chips.innerHTML='<span style="font-size:11px;color:var(--dim)">Nenhuma versão salva</span>';return;}
-  chips.innerHTML=vs.map(v=>{
+  const projAtual=plnProjId&&plnProjId!=='__novo__'?plnProjId:'';
+  // Filtra apenas versões do projeto atual; se sem projeto, mostra só as sem projeto
+  const doProj=vs.filter(v=>v.projId===projAtual);
+  if(!doProj.length){chips.innerHTML='<span style="font-size:11px;color:var(--dim)">Nenhuma versão salva para este projeto</span>';return;}
+  chips.innerHTML=doProj.map(v=>{
     const ativa=v.id===plnVersaoAtualId;
     const hora=v.atualizadoEm?new Date(v.atualizadoEm).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
     return `<button onclick="plnCarregarVersao('${v.id}')" title="Atualizado: ${hora}"
@@ -6753,13 +6756,15 @@ function plnRenomearVersao(){
 // ── Excluir versão atual ──
 function plnExcluirVersao(){
   const vs=_plnGetVersoes();
-  if(vs.length<=1){toast('É necessário ter ao menos uma versão','err');return;}
+  const projAtual=plnProjId&&plnProjId!=='__novo__'?plnProjId:'';
+  const doProj=vs.filter(v=>v.projId===projAtual);
+  if(doProj.length<=1){toast('O projeto deve ter ao menos uma versão','err');return;}
   const atual=vs.find(v=>v.id===plnVersaoAtualId);
   if(!confirm('Excluir versão "'+(atual?.nome||'?')+'"? Esta ação é irreversível.'))return;
   const novas=vs.filter(v=>v.id!==plnVersaoAtualId);
   _plnSaveVersoes(novas);
-  // Carrega a mais recente restante
-  const prox=novas.slice().sort((a,b)=>new Date(b.atualizadoEm||0)-new Date(a.atualizadoEm||0))[0];
+  // Carrega a versão mais recente do mesmo projeto
+  const prox=novas.filter(v=>v.projId===projAtual).sort((a,b)=>new Date(b.atualizadoEm||0)-new Date(a.atualizadoEm||0))[0];
   plnVersaoAtualId=prox.id;
   _plnAplicarVersao(prox);
   plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
