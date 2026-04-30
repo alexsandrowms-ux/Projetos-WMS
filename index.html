@@ -938,9 +938,10 @@ datalist{display:none}
             <div id="pln-versoes-chips" style="display:flex;gap:6px;flex-wrap:wrap;flex:1"></div>
             <div style="display:flex;gap:6px;align-items:center;margin-left:auto">
               <span id="pln-autosave-badge" style="font-size:10px;color:var(--dim);display:none;align-items:center;gap:4px">💾 <span id="pln-autosave-txt">Salvo</span></span>
-              <button class="btn btn-ghost btn-xs" onclick="plnNovaVersao()" style="font-size:11px;color:var(--accent)">＋ Nova Versão</button>
-              <button class="btn btn-ghost btn-xs" onclick="plnDuplicarVersao()" style="font-size:11px" title="Duplicar versão atual">⧉ Duplicar</button>
+              <button class="btn btn-ghost btn-xs" onclick="plnNovaVersao()" style="font-size:11px;color:var(--accent)" title="Nova versão em branco vinculada ao projeto atual">＋ Nova Versão</button>
+              <button class="btn btn-ghost btn-xs" onclick="plnDuplicarVersao()" style="font-size:11px" title="Duplicar versão atual com todos os dados">⧉ Duplicar</button>
               <button class="btn btn-ghost btn-xs" onclick="plnRenomearVersao()" style="font-size:11px" title="Renomear versão atual">✏️ Renomear</button>
+              <button class="btn btn-ghost btn-xs" onclick="plnNovoPlanejamentoZero()" style="font-size:11px;color:var(--amber);border-color:rgba(245,158,11,.3)" title="Criar planejamento do zero — apaga tudo e começa novo">🆕 Do Zero</button>
               <button class="btn btn-ghost btn-xs" onclick="plnExcluirVersao()" style="font-size:11px;color:var(--red)" title="Excluir versão atual">🗑</button>
             </div>
           </div>
@@ -5931,21 +5932,66 @@ let plnDatas = PLN_FASES.map(()=>({datas:[{inicio:'',fim:'',obs:''}]}));
 
 // ── Vínculo planejamento ↔ projeto ──
 let plnProjId = null;
+let _plnPendingProjId = null; // usado por irParaPlanejamento para passar o projeto antes do render
 
 function renderPlanejamentoWMS(){
   plnPopularProjetos();
-  const carregou = plnAutoLoad();
-  if(!carregou){
-    // Primeira vez: cria uma versão padrão automaticamente
-    const vs=_plnGetVersoes();
-    if(!vs.length){
-      const novaV={id:uid(),nome:'Versão 1',criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString(),
-        cliente:'',resp:'',inicio:'',consultor:'Alexsandro C. Lopes',projId:'',fases:_plnFasesDefault()};
-      vs.push(novaV);_plnSaveVersoes(vs);
-      plnVersaoAtualId=novaV.id;
+
+  const pendingId = _plnPendingProjId;
+  _plnPendingProjId = null;
+
+  if(pendingId){
+    // Viemos de "Ir para Planejamento" de um projeto específico
+    // Verifica se já existe versão salva para esse projeto
+    const vs = _plnGetVersoes();
+    const versaoDoProj = vs.filter(v=>v.projId===pendingId)
+                           .sort((a,b)=>new Date(b.atualizadoEm||0)-new Date(a.atualizadoEm||0))[0];
+    if(versaoDoProj){
+      // Carrega versão existente desse projeto
+      plnVersaoAtualId = versaoDoProj.id;
+      _plnAplicarVersao(versaoDoProj);
+      toast('📁 Planejamento do projeto carregado: "'+versaoDoProj.nome+'"','ok');
+    } else {
+      // Cria versão nova vinculada a esse projeto
+      const proj = (S.projects||[]).find(p=>p.id===pendingId);
+      const nomePrj = proj?.name||'Projeto';
+      const novaV = {
+        id:uid(), nome:'Versão 1 — '+nomePrj,
+        criadoEm:new Date().toISOString(), atualizadoEm:new Date().toISOString(),
+        cliente:proj?.client||'', resp:'', inicio:proj?.startDate||'',
+        consultor:'Alexsandro C. Lopes', projId:pendingId,
+        fases:_plnFasesDefault()
+      };
+      vs.push(novaV); _plnSaveVersoes(vs);
+      plnVersaoAtualId = novaV.id;
       _plnAplicarVersao(novaV);
+      toast('✅ Novo planejamento criado para "'+nomePrj+'"','ok');
+    }
+    // Sincroniza o select do projeto
+    setTimeout(()=>{
+      const sel = document.getElementById('pln-proj-id');
+      if(sel){ sel.value = pendingId; }
+      plnOnProjChange(pendingId, false);
+      const ini = document.getElementById('pln-inicio');
+      const proj = (S.projects||[]).find(p=>p.id===pendingId);
+      if(ini && !ini.value && proj?.startDate) ini.value = proj.startDate;
+      plnRenderFases(); plnAtualizarGantt();
+    }, 80);
+  } else {
+    // Acesso normal pela sidebar — carrega última versão
+    const carregou = plnAutoLoad();
+    if(!carregou){
+      const vs = _plnGetVersoes();
+      if(!vs.length){
+        const novaV = {id:uid(),nome:'Versão 1',criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString(),
+          cliente:'',resp:'',inicio:'',consultor:'Alexsandro C. Lopes',projId:'',fases:_plnFasesDefault()};
+        vs.push(novaV); _plnSaveVersoes(vs);
+        plnVersaoAtualId = novaV.id;
+        _plnAplicarVersao(novaV);
+      }
     }
   }
+
   plnRenderVersoes();
   plnRenderFases();
   plnAtualizarGantt();
@@ -5955,36 +6001,20 @@ function irParaPlanejamento(){
   const name = document.getElementById('fp-name')?.value.trim();
   if(!name){ toast('Informe o nome do projeto','err'); return; }
 
-  // Capture the ID BEFORE saving (for edits it's _eProjId; for new it will be found by name)
-  const editingId = _eProjId; // null if new project
-
+  const editingId = _eProjId;
   saveProject();
   closeModal('modal-proj');
 
+  // Descobre o ID do projeto recém-salvo
   setTimeout(()=>{
-    showPage('planejamento');
-    plnPopularProjetos();
-
-    // Find project: by saved ID (edit) or by name (new)
     const proj = editingId
       ? (S.projects||[]).find(p=>p.id===editingId)
       : (S.projects||[]).find(p=>p.name===name);
-
     if(proj){
-      plnProjId = proj.id;
-      const sel = document.getElementById('pln-proj-id');
-      if(sel){ sel.value=proj.id; }
-
-      // Pre-fill planning fields from project
-      plnOnProjChange(proj.id);
-
-      // Pre-fill start date from project if not yet set
-      const ini = document.getElementById('pln-inicio');
-      if(ini && !ini.value && proj.startDate) ini.value = proj.startDate;
-
-      toast('Projeto "'+proj.name+'" selecionado no planejamento','ok');
+      _plnPendingProjId = proj.id; // passa o ID antes de showPage chamar renderPlanejamentoWMS
     }
-  }, 350);
+    showPage('planejamento');
+  }, 150);
 }
 
 function plnPopularProjetos(){
@@ -6652,21 +6682,40 @@ function plnCarregarVersao(id){
   toast('📁 Versão "'+v.nome+'" carregada','ok');
 }
 
-// ── Nova versão em branco ──
+// ── Nova versão em branco (mantém vínculo com projeto atual) ──
 function plnNovaVersao(){
-  const nome=prompt('Nome da nova versão:','Versão '+((_plnGetVersoes().length)+1));
-  if(!nome)return;
   const vs=_plnGetVersoes();
+  const projAtual=plnProjId&&plnProjId!=='__novo__'?plnProjId:'';
+  const proj=projAtual?(S.projects||[]).find(p=>p.id===projAtual):null;
+  const sugestao='Versão '+((vs.filter(v=>v.projId===projAtual).length)+1)+(proj?' — '+proj.name:'');
+  const nome=prompt('Nome da nova versão:',sugestao);
+  if(!nome)return;
   const novaV={id:uid(),nome:nome.trim(),criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString(),
-    cliente:'',resp:'',inicio:'',consultor:'Alexsandro C. Lopes',projId:'',
-    fases:_plnFasesDefault()};
-  vs.push(novaV);
-  _plnSaveVersoes(vs);
+    cliente:proj?.client||'', resp:'', inicio:proj?.startDate||'',
+    consultor:document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
+    projId:projAtual, fases:_plnFasesDefault()};
+  vs.push(novaV); _plnSaveVersoes(vs);
+  plnVersaoAtualId=novaV.id;
+  _plnAplicarVersao(novaV);
+  plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
+  toast('✅ Nova versão "'+novaV.nome+'" criada','ok');
+}
+
+// ── Novo planejamento do zero (sem vínculo, fases padrão) ──
+function plnNovoPlanejamentoZero(){
+  const vs=_plnGetVersoes();
+  const nome=prompt('Nome para este novo planejamento:','Versão '+((vs.length)+1));
+  if(!nome)return;
+  const novaV={id:uid(),nome:nome.trim(),criadoEm:new Date().toISOString(),atualizadoEm:new Date().toISOString(),
+    cliente:'',resp:'',inicio:'',consultor:'Alexsandro C. Lopes',projId:'',fases:_plnFasesDefault()};
+  vs.push(novaV); _plnSaveVersoes(vs);
   plnVersaoAtualId=novaV.id;
   _plnAplicarVersao(novaV);
   ['pln-cliente','pln-resp','pln-inicio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const sel=document.getElementById('pln-proj-id');if(sel)sel.value='';
+  plnProjId=null;
   plnRenderFases();plnAtualizarGantt();plnRenderVersoes();
-  toast('✅ Nova versão "'+novaV.nome+'" criada','ok');
+  toast('🆕 Novo planejamento do zero criado: "'+novaV.nome+'"','ok');
 }
 
 // ── Duplicar versão atual ──
