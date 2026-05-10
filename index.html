@@ -4090,16 +4090,18 @@ function renderCGantt(){
     // cGantt: um row por período de planejamento
     roots.forEach(root => {
       const plans = root.planejamentos?.length ? root.planejamentos
-        : (root.date||root.dateEnd) ? [{id:'_',date:root.date,dateEnd:root.dateEnd,obs:''}] : [];
+        : (root.date||root.dateEnd) ? [{id:'_',date:root.date,dateEnd:root.dateEnd,timeStart:root.timeStart||'',timeEnd:root.timeEnd||'',obs:''}] : [];
       if(plans.length===0) return;
       plans.forEach((plan,pi)=>{
         const startD = plan.date ? plan.date.split('T')[0] : null;
         const endD   = plan.dateEnd ? plan.dateEnd.split('T')[0] : startD;
         if(!startD && !endD) return;
-        const planStage = pi===0 ? root : {
+        const planStage = {
           ...root,
-          id: root.id+'_p'+pi,
-          name: '└ Período '+(pi+1)+(plan.obs?' · '+plan.obs.slice(0,20):''),
+          id: pi===0 ? root.id : root.id+'_p'+pi,
+          name: pi===0 ? root.name : '└ Período '+(pi+1)+(plan.obs?' · '+plan.obs.slice(0,20):''),
+          timeStart: plan.timeStart || (pi===0 ? root.timeStart : '') || '',
+          timeEnd:   plan.timeEnd   || (pi===0 ? root.timeEnd   : '') || '',
         };
         allRows.push({ proj, col, root, stage: planStage, startD, endD });
       });
