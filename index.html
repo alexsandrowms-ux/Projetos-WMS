@@ -991,8 +991,8 @@ datalist{display:none}
                   <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Módulo / Período</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:90px">Horas FAP</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:90px">H/Dia</th>
-                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Início</th>
-                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Término</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Início · Hora</th>
+                  <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Término · Hora</th>
                   <th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Duração</th>
                   <th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border)">Obs.</th>
                   <th style="padding:8px 10px;text-align:right;font-size:10px;font-weight:700;color:var(--dim);text-transform:uppercase;border-bottom:1px solid var(--border);width:120px">Ações</th>
@@ -6220,12 +6220,18 @@ function _executarLancamentoEtapas(projId, cliente, consultor, isNovo){
   const novasEtapas = PLN_FASES.map((f,i)=>{
     const d = plnDatas[i];
     const allDts = (d.datas||[]).filter(dt=>dt.inicio||dt.fim);
-    const firstDt = allDts[0] || {inicio:'',fim:'',obs:''};
+    const firstDt = allDts[0] || {inicio:'',fim:'',obs:'',hIni:'08:00',hFim:'17:00'};
     return {
       id:uid(), parentId:null, num:f.num, name:f.nome,
       hours:String(f.horas), executor:consultor,
       date:firstDt.inicio||'', dateEnd:firstDt.fim||'',
-      planejamentos: allDts.map(dt=>({id:uid(),date:dt.inicio||'',dateEnd:dt.fim||'',obs:dt.obs||''})),
+      timeStart:firstDt.hIni||'08:00', timeEnd:firstDt.hFim||'17:00',
+      planejamentos: allDts.map(dt=>({
+        id:uid(),
+        date:dt.inicio||'', dateEnd:dt.fim||'',
+        timeStart:dt.hIni||'08:00', timeEnd:dt.hFim||'17:00',
+        obs:dt.obs||'', hPorDia:dt.hPorDia||8
+      })),
       status:'Pendente', apontamentos:[], bgColor:'', hourRate:110,
     };
   });
@@ -6323,10 +6329,16 @@ function plnRenderFases(){
           </div>
         </td>
         <td style="padding:5px 6px;text-align:center">
-          <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:140px">
+          <div style="display:flex;align-items:center;gap:3px">
+            <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:130px">
+            <input class="fc" type="time" value="${dt.hIni||'08:00'}" onchange="plnDatas[${i}].datas[${j}].hIni=this.value;plnAutoSave()" style="font-size:12px;width:80px" title="Hora de início">
+          </div>
         </td>
         <td style="padding:5px 6px;text-align:center">
-          <input class="fc" type="date" value="${dt.fim}" onchange="plnDatas[${i}].datas[${j}].fim=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:140px">
+          <div style="display:flex;align-items:center;gap:3px">
+            <input class="fc" type="date" value="${dt.fim}" onchange="plnDatas[${i}].datas[${j}].fim=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:130px">
+            <input class="fc" type="time" value="${dt.hFim||'17:00'}" onchange="plnDatas[${i}].datas[${j}].hFim=this.value;plnAutoSave()" style="font-size:12px;width:80px" title="Hora de término">
+          </div>
         </td>
         <td style="padding:5px 8px;text-align:center;font-size:11px;color:var(--green);font-weight:700;white-space:nowrap">${dur}</td>
         <td style="padding:5px 6px">
@@ -6415,6 +6427,7 @@ function plnAtualizarGantt(){
           const op=mi===0?0.9:0.65;
           const iniLabel=new Date(dt.inicio+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
           const fimLabel=new Date(dt.fim+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
+          const hIni=dt.hIni||'08:00', hFim=dt.hFim||'17:00';
           const dias=Math.round((new Date(dt.fim)-new Date(dt.inicio))/86400000)+1;
           const durLabel=dias+'d / '+Math.ceil(dias/7)+'sem';
           const hPorDia=+(dt.hPorDia||8);
@@ -6424,8 +6437,8 @@ function plnAtualizarGantt(){
           const tip=`<div class="pln-tip">
             <div class="pln-tip-fase"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${f.cor};flex-shrink:0"></span><span style="color:${f.cor}">${f.num}.</span> ${f.nome}</div>
             <div class="pln-tip-row">📅 <span class="pln-tip-val">${perLabel}</span></div>
-            <div class="pln-tip-row">▶️ Início: <span class="pln-tip-val">${iniLabel}</span></div>
-            <div class="pln-tip-row">🏁 Término: <span class="pln-tip-val">${fimLabel}</span></div>
+            <div class="pln-tip-row">▶️ <span class="pln-tip-val">${iniLabel} às ${hIni}</span></div>
+            <div class="pln-tip-row">🏁 <span class="pln-tip-val">${fimLabel} às ${hFim}</span></div>
             <div class="pln-tip-row">⏱ Duração: <span class="pln-tip-val">${durLabel}</span></div>
             <div class="pln-tip-row">🗓️ Agendas: <span class="pln-tip-val">${diasUtLabel} dia${diasUtLabel!==1?'s':''} úteis × ${hPorDia}h = ${diasUtLabel*hPorDia}h</span></div>
             ${hPorDia<8?`<div class="pln-tip-row">⚡ <span class="pln-tip-val" style="color:#f59e0b">${hPorDia===4?'Meio período (4h)':'Período parcial ('+hPorDia+'h)'}</span></div>`:''}
@@ -6948,7 +6961,7 @@ function plnExportarCronograma(){
 
   const fasesData = PLN_FASES.map((f,i)=>({
     num: f.num, nome: f.nome, horas: f.horas, cor: f.cor, semanas: f.semanas,
-    datas: (plnDatas[i]?.datas||[]).map(d=>({inicio:d.inicio||'',fim:d.fim||'',obs:d.obs||''}))
+    datas: (plnDatas[i]?.datas||[]).map(d=>({inicio:d.inicio||'',fim:d.fim||'',obs:d.obs||'',hPorDia:+(d.hPorDia||8),hIni:d.hIni||'08:00',hFim:d.hFim||'17:00'}))
   }));
 
   const dataJSON = JSON.stringify(fasesData);
@@ -7067,14 +7080,14 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
 /* ── PRINT ── */
 @media print{
   .topbar,.no-print{display:none!important}
-  body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{background:#fff}
   .container{padding:0}
-  .card{box-shadow:none;border:1px solid #e2e8f0;page-break-inside:avoid}
-  .hero,.gantt-table thead th,.gantt-bar,.apv,
-  .fase-row,.hbadge,.dur-chip,.ft thead tr,
-  #resumo-box>div{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .card{box-shadow:none;border:1px solid #e2e8f0}
+  .hero{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .gantt-table thead th{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .gantt-bar{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .apv{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .gantt-bar .g-tip{display:none!important}
-  .dt-inp,.obs-inp{border:1px solid #e2e8f0!important;background:#f8fafc!important}
 }
 @media(max-width:600px){
   .hero{padding:20px}
@@ -7126,8 +7139,8 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
             <th>Fase / Período</th>
             <th style="width:80px;text-align:center">Horas FAP</th>
             <th style="width:95px;text-align:center">H/Dia</th>
-            <th style="width:145px;text-align:center">Início</th>
-            <th style="width:145px;text-align:center">Término</th>
+            <th style="width:200px;text-align:center">Início · Hora</th>
+            <th style="width:200px;text-align:center">Término · Hora</th>
             <th style="width:80px;text-align:center">Duração</th>
             <th style="width:120px;text-align:center">Agendas</th>
             <th>Observação</th>
@@ -7246,10 +7259,14 @@ function salvarAlteracoes(){
       const e=document.getElementById('inp-e-'+fi+'-'+di);
       const o=document.getElementById('inp-o-'+fi+'-'+di);
       const h=document.getElementById('inp-h-'+fi+'-'+di);
+      const hi=document.getElementById('inp-hi-'+fi+'-'+di);
+      const hf=document.getElementById('inp-hf-'+fi+'-'+di);
       if(s)dt.inicio=s.value;
       if(e)dt.fim=e.value;
       if(o)dt.obs=o.value;
       if(h)dt.hPorDia=+h.value;
+      if(hi)dt.hIni=hi.value;
+      if(hf)dt.hFim=hf.value;
     });
   });
   const apvData={
@@ -7297,15 +7314,6 @@ function carregarAlteracoes(){
   }catch(e){}
 }
 
-// ── DIAS ÚTEIS (global — usado em renderTable, _updateAgendaChip e renderResumo) ──
-function diasUteis(ini,fim){
-  if(!ini||!fim)return 0;
-  let cur=new Date(ini+'T00:00:00'),end=new Date(fim+'T00:00:00'),n=0;
-  if(cur>end)return 0;
-  while(cur<=end){const d=cur.getDay();if(d!==0&&d!==6)n++;cur.setDate(cur.getDate()+1);}
-  return n;
-}
-
 // ── RENDER TABLE ──
 function renderTable(){
   const tbody=document.getElementById('ft-tbody');
@@ -7315,7 +7323,7 @@ function renderTable(){
     const periodos=f.datas.length;
     html+=\`<tr class="fase-row">
       <td class="fase-num" style="color:\${f.cor};\${fi===0?'border-top:none':''}">\${esc(f.num)}</td>
-      <td class="fase-nome" colspan="7">\${esc(f.nome)} <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px">\${periodos} período\${periodos!==1?'s':''}</span></td>
+      <td class="fase-nome" colspan="5">\${esc(f.nome)} <span style="font-size:10px;font-weight:400;color:#94a3b8;margin-left:6px">\${periodos} período\${periodos!==1?'s':''}</span></td>
       <td style="padding:10px 12px;background:#f8fafc"></td>
     </tr>\`;
     f.datas.forEach((dt,di)=>{
@@ -7327,12 +7335,22 @@ function renderTable(){
         <td class="dt-period" style="color:#64748b">Período \${di+1}</td>
         <td class="dt-td"><span class="hbadge">\${di===0?f.horas+'h FAP':''}</span></td>
         <td class="dt-td">
-          <select class="dt-inp" id="inp-h-\${fi}-\${di}" style="width:90px;cursor:pointer" onchange="onHpDiaChange(\${fi},\${di},this.value)" title="Horas por agenda (dia)">
+          <select class="dt-inp" id="inp-h-\${fi}-\${di}" style="width:90px;cursor:pointer" onchange="onHpDiaChange(\${fi},\${di},this.value)">
             \${[4,6,8].map(h=>\`<option value="\${h}"\${hpd===h?' selected':''}>\${h}h\${h===4?' (½ dia)':h===6?' (¾)':' (dia)'}</option>\`).join('')}
           </select>
         </td>
-        <td class="dt-td"><input class="dt-inp" type="date" id="inp-s-\${fi}-\${di}" value="\${esc(dt.inicio)}" onchange="onDateChange(\${fi},\${di},'inicio',this.value)"></td>
-        <td class="dt-td"><input class="dt-inp" type="date" id="inp-e-\${fi}-\${di}" value="\${esc(dt.fim)}" onchange="onDateChange(\${fi},\${di},'fim',this.value)"></td>
+        <td class="dt-td">
+          <div style="display:flex;gap:4px;align-items:center">
+            <input class="dt-inp" type="date" id="inp-s-\${fi}-\${di}" value="\${esc(dt.inicio)}" style="width:130px" onchange="onDateChange(\${fi},\${di},'inicio',this.value)">
+            <input class="dt-inp" type="time" id="inp-hi-\${fi}-\${di}" value="\${esc(dt.hIni||'08:00')}" style="width:80px" onchange="onTimeChange(\${fi},\${di},'hIni',this.value)" title="Hora de início">
+          </div>
+        </td>
+        <td class="dt-td">
+          <div style="display:flex;gap:4px;align-items:center">
+            <input class="dt-inp" type="date" id="inp-e-\${fi}-\${di}" value="\${esc(dt.fim)}" style="width:130px" onchange="onDateChange(\${fi},\${di},'fim',this.value)">
+            <input class="dt-inp" type="time" id="inp-hf-\${fi}-\${di}" value="\${esc(dt.hFim||'17:00')}" style="width:80px" onchange="onTimeChange(\${fi},\${di},'hFim',this.value)" title="Hora de término">
+          </div>
+        </td>
         <td class="dt-td"><span class="dur-chip" id="dur-\${fi}-\${di}">\${d||'—'}</span></td>
         <td class="dt-td"><span class="dur-chip" id="ag-\${fi}-\${di}" style="background:#ede9fe;color:#7c3aed">\${agLabel}</span></td>
         <td class="dt-td" style="padding:6px 8px"><input class="obs-inp" id="inp-o-\${fi}-\${di}" value="\${esc(dt.obs)}" placeholder="Observação..." oninput="onObsChange(\${fi},\${di},this.value)"></td>
@@ -7365,6 +7383,11 @@ function _updateAgendaChip(fi,di){
   const du=dt.inicio&&dt.fim?diasUteis(dt.inicio,dt.fim):0;
   const chip=document.getElementById('ag-'+fi+'-'+di);
   if(chip) chip.textContent=du>0?du+' agenda'+(du!==1?'s':'')+' · '+(du*hpd)+'h':'—';
+}
+
+function onTimeChange(fi,di,field,val){
+  FASES[fi].datas[di][field]=val;
+  markChanged();
 }
 
 function onObsChange(fi,di,val){ FASES[fi].datas[di].obs=val; markChanged(); }
@@ -7425,10 +7448,10 @@ function renderGantt(){
                 \${esc(f.num)}. \${esc(f.nome)}
               </div>
               \${perL?'<div style="opacity:.7;font-size:10px">'+perL+'</div>':''}
-              <div>▶️ Início: <strong>\${iniL}</strong></div>
-              <div>🏁 Término: <strong>\${fimL}</strong></div>
+              <div>▶️ Início: <strong>\${iniL} às \${esc(dt.hIni||'08:00')}</strong></div>
+              <div>🏁 Término: <strong>\${fimL} às \${esc(dt.hFim||'17:00')}</strong></div>
               <div>⏱ Duração: <strong>\${dLabel}</strong></div>
-              <div>📋 Horas: <strong>\${f.horas}h</strong></div>
+              <div>📋 Horas FAP: <strong>\${f.horas}h</strong></div>
               \${dt.obs?'<div style="opacity:.75;margin-top:4px">📝 '+esc(dt.obs)+'</div>':''}
             </div>
           </div>\`;
@@ -7455,6 +7478,14 @@ function renderResumo(){
   const ini=allInicio[0], fim=allFim[0];
   const meses=ini&&fim?((new Date(fim)-new Date(ini))/86400000/30).toFixed(1):'—';
   const totalPer=FASES.reduce((a,f)=>a+f.datas.filter(d=>d.inicio&&d.fim).length,0);
+  // Calcular dias úteis (agendas)
+  function diasUteis(ini,fim){
+    if(!ini||!fim)return 0;
+    let cur=new Date(ini+'T00:00:00'),end=new Date(fim+'T00:00:00'),n=0;
+    if(cur>end)return 0;
+    while(cur<=end){const d=cur.getDay();if(d!==0&&d!==6)n++;cur.setDate(cur.getDate()+1);}
+    return n;
+  }
   const totalAgendas=FASES.reduce((a,f)=>a+f.datas.reduce((b,d)=>b+(d.inicio&&d.fim?diasUteis(d.inicio,d.fim):0),0),0);
   const totalHorasAg=FASES.reduce((a,f)=>a+f.datas.reduce((b,d)=>b+(d.inicio&&d.fim?diasUteis(d.inicio,d.fim)*(+(d.hPorDia||8)):0),0),0);
   const investimento=VALOR_HORA>0?'R$ '+(totalH*VALOR_HORA).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—';
@@ -7506,8 +7537,6 @@ function init(){
   if(apvData&&!apvData.value) apvData.value=new Date().toISOString().split('T')[0];
   // Warn before leaving if unsaved
   window.addEventListener('beforeunload',e=>{ if(changed){e.preventDefault();e.returnValue='';} });
-  // Garantir renderização antes de imprimir
-  window.addEventListener('beforeprint',()=>{ renderTable(); renderGantt(); renderResumo(); });
 }
 init();
 ${'<'+'/script>'}
