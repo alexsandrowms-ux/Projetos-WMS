@@ -7787,14 +7787,16 @@ function toggleSubFields(isSub){
 // ════════════════════════════════════════════════
 // MÚLTIPLOS PLANEJAMENTOS POR ETAPA
 // ════════════════════════════════════════════════
-let _stagePlanejamentos = []; // [{id, date, dateEnd, obs}]
+let _stagePlanejamentos = []; // [{id, date, timeStart, dateEnd, timeEnd, obs}]
 
 function addPlanejamento(plan=null){
   _stagePlanejamentos.push({
-    id: plan?.id || uid(),
-    date:    plan?.date    || '',
-    dateEnd: plan?.dateEnd || '',
-    obs:     plan?.obs     || '',
+    id:       plan?.id       || uid(),
+    date:     plan?.date     || '',
+    timeStart:plan?.timeStart|| '08:00',
+    dateEnd:  plan?.dateEnd  || '',
+    timeEnd:  plan?.timeEnd  || '17:00',
+    obs:      plan?.obs      || '',
   });
   renderPlanejamentos();
 }
@@ -7812,12 +7814,11 @@ function planChange(idx, field, val){
 }
 
 function syncLegacyDates(){
-  // Keep legacy fs-date / fs-dateend in sync with first planejamento
   const first = _stagePlanejamentos[0];
   const fsDate    = document.getElementById('fs-date');
   const fsDateEnd = document.getElementById('fs-dateend');
-  if(fsDate)    fsDate.value    = first?.date    || '';
-  if(fsDateEnd) fsDateEnd.value = first?.dateEnd || '';
+  if(fsDate)    fsDate.value    = first ? (first.date+(first.timeStart?'T'+first.timeStart:'')) : '';
+  if(fsDateEnd) fsDateEnd.value = first ? (first.dateEnd+(first.timeEnd?'T'+first.timeEnd:''))   : '';
 }
 
 function renderPlanejamentos(){
@@ -7828,23 +7829,36 @@ function renderPlanejamentos(){
     return;
   }
   el.innerHTML = _stagePlanejamentos.map((p,i) => {
-    const dur = p.date && p.dateEnd
-      ? Math.max(0,Math.round((new Date(p.dateEnd)-new Date(p.date))/86400000)+1) + ' dia(s)'
-      : '';
-    return '<div style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">'
-        +'<span style="font-size:11px;font-weight:700;color:var(--mid)">Período '+(i+1)+(dur?' <span style=\'color:var(--accent)\'>· '+dur+'</span>':'')+'</span>'
-        +'<button class="btn btn-ghost btn-xs" onclick="removePlanejamento('+i+')" style="color:var(--red)">✕</button>'
-      +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">'
-        +'<div><label class="fl">📅 Início</label>'
-          +'<input class="fc" type="date" data-pidx="'+i+'" data-pfield="date" value="'+p.date+'" onchange="planChange('+i+',&quot;date&quot;,this.value);renderPlanejamentos()" style="font-size:12px"></div>'
-        +'<div><label class="fl">🏁 Término</label>'
-          +'<input class="fc" type="date" data-pidx="'+i+'" data-pfield="dateEnd" value="'+p.dateEnd+'" onchange="planChange('+i+',&quot;dateEnd&quot;,this.value);renderPlanejamentos()" style="font-size:12px"></div>'
-      +'</div>'
-      +'<div><label class="fl">📝 Obs</label>'
-        +'<input class="fc" type="text" value="'+esc(p.obs)+'" onchange="planChange('+i+',&quot;obs&quot;,this.value)" placeholder="Observação (opcional)" style="font-size:12px"></div>'
-    +'</div>';
+    const dias = p.date && p.dateEnd
+      ? Math.max(0,Math.round((new Date(p.dateEnd)-new Date(p.date))/86400000)+1)
+      : 0;
+    const durLabel = dias ? `<span style='color:var(--accent)'>· ${dias} dia(s)</span>` : '';
+    const ts = p.timeStart||'08:00', te = p.timeEnd||'17:00';
+    return `<div style="background:var(--bg4);border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-bottom:6px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <span style="font-size:11px;font-weight:700;color:var(--mid)">Período ${i+1} ${durLabel}</span>
+        <button class="btn btn-ghost btn-xs" onclick="removePlanejamento(${i})" style="color:var(--red)">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px">
+        <div>
+          <label class="fl">📅 Início</label>
+          <div style="display:flex;gap:4px">
+            <input class="fc" type="date" value="${p.date}" onchange="planChange(${i},'date',this.value);renderPlanejamentos()" style="font-size:12px;flex:1">
+            <input class="fc" type="time" value="${ts}" onchange="planChange(${i},'timeStart',this.value)" style="font-size:12px;width:82px" title="Hora de início">
+          </div>
+        </div>
+        <div>
+          <label class="fl">🏁 Término</label>
+          <div style="display:flex;gap:4px">
+            <input class="fc" type="date" value="${p.dateEnd}" onchange="planChange(${i},'dateEnd',this.value);renderPlanejamentos()" style="font-size:12px;flex:1">
+            <input class="fc" type="time" value="${te}" onchange="planChange(${i},'timeEnd',this.value)" style="font-size:12px;width:82px" title="Hora de término">
+          </div>
+        </div>
+      </div>
+      <div><label class="fl">📝 Obs</label>
+        <input class="fc" type="text" value="${esc(p.obs)}" onchange="planChange(${i},'obs',this.value)" placeholder="Observação (opcional)" style="font-size:12px">
+      </div>
+    </div>`;
   }).join('');
 }
 
@@ -7863,8 +7877,16 @@ function openStageModal(isNew=true,editId=null,defParent=null){
   document.getElementById('fs-dateend').value = dtEnd;
   // Load planejamentos
   _stagePlanejamentos = stage?.planejamentos?.length
-    ? stage.planejamentos.map(p=>({...p}))
-    : (dtStart || dtEnd ? [{id:uid(), date:dtStart.split('T')[0]||dtStart, dateEnd:dtEnd.split('T')[0]||dtEnd, obs:''}] : []);
+    ? stage.planejamentos.map(p=>({
+        id:p.id||uid(), date:p.date||'', timeStart:p.timeStart||'08:00',
+        dateEnd:p.dateEnd||'', timeEnd:p.timeEnd||'17:00', obs:p.obs||''
+      }))
+    : (dtStart || dtEnd ? [{
+        id:uid(),
+        date:dtStart.split('T')[0]||'', timeStart:dtStart.split('T')[1]||'08:00',
+        dateEnd:dtEnd.split('T')[0]||'', timeEnd:dtEnd.split('T')[1]||'17:00',
+        obs:''
+      }] : []);
   renderPlanejamentos();
   document.getElementById('fs-datereal').value=stage?.dateReal||'';
   document.getElementById('fs-datestartreal').value=stage?.dateStartReal||'';
@@ -8213,14 +8235,15 @@ function saveStage(){
     document.getElementById('fs-datestartreal')?.focus();
     return;
   }
+  const firstPlan = _stagePlanejamentos[0];
   const d={name,
     num:document.getElementById('fs-num').value.trim(),
     executor:document.getElementById('fs-executor').value.trim(),
-    date:_stagePlanejamentos[0]?.date||(()=>{const v=document.getElementById('fs-date').value;return v?v.split('T')[0]:''})(),
-    dateEnd:_stagePlanejamentos[0]?.dateEnd||(()=>{const v=document.getElementById('fs-dateend').value;return v?v.split('T')[0]:''})(),
+    date:    firstPlan?.date    ||(()=>{const v=document.getElementById('fs-date').value;return v?v.split('T')[0]:''})(),
+    dateEnd: firstPlan?.dateEnd ||(()=>{const v=document.getElementById('fs-dateend').value;return v?v.split('T')[0]:''})(),
+    timeStart:firstPlan?.timeStart||(()=>{const v=document.getElementById('fs-date').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):'08:00'})(),
+    timeEnd:  firstPlan?.timeEnd  ||(()=>{const v=document.getElementById('fs-dateend').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):'17:00'})(),
     planejamentos:_stagePlanejamentos.filter(p=>p.date||p.dateEnd).map(p=>({...p})),
-    timeStart:(()=>{const v=document.getElementById('fs-date').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
-    timeEnd:(()=>{const v=document.getElementById('fs-dateend').value;return v&&v.includes('T')?v.split('T')[1].slice(0,5):''})(),
     dateReal:document.getElementById('fs-datereal').value,
     dateStartReal:document.getElementById('fs-datestartreal')?.value||'',
     hours:(document.getElementById('fs-parent')?.value||_defParent)?'':document.getElementById('fs-hours').value,
