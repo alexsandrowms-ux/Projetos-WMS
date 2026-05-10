@@ -971,7 +971,11 @@ datalist{display:none}
             <div class="fg"><label class="fl">Responsável no Cliente</label><input class="fc" id="pln-resp" placeholder="Nome do responsável" oninput="plnAtualizarGantt();plnAutoSave()"></div>
           </div>
           <div class="frow">
-            <div class="fg"><label class="fl">📅 Início do Projeto</label><input class="fc" type="date" id="pln-inicio" onchange="plnPropagarDatas();plnAutoSave()"></div>
+            <div class="fg"><label class="fl">📅 Início do Projeto</label>
+              <input class="fc" type="text" id="pln-inicio" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
+                style="letter-spacing:.05em" oninput="maskDateInput(this)"
+                onchange="const y=_dmyToYmd(this.value);if(y||!this.value){this.dataset.ymd=y;plnPropagarDatas();plnAutoSave()}">
+            </div>
             <div class="fg"><label class="fl">Consultor AXL</label><input class="fc" id="pln-consultor" value="Alexsandro C. Lopes" oninput="plnAutoSave()"></div>
             <div class="fg"><label class="fl">Status do Escopo</label>
               <div id="pln-escopo-status" style="padding:7px 10px;border-radius:6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);font-size:12px;font-weight:700;color:var(--amber)">⏳ Aguardando aprovação</div>
@@ -6106,7 +6110,7 @@ function plnVerificarConflitos(ignoreProjId){
 
 // ── Auto-preencher com detecção de conflitos ──
 function plnPropagarDatasComConflito(){
-  const ini = document.getElementById('pln-inicio')?.value;
+  const ini = _plnGetIniYmd();
   if(!ini){ toast('Informe a data de início','warn'); return; }
   const ignoreProjId = plnProjId==='__novo__' ? null : plnProjId;
 
@@ -6330,13 +6334,19 @@ function plnRenderFases(){
         </td>
         <td style="padding:5px 6px;text-align:center">
           <div style="display:flex;align-items:center;gap:3px">
-            <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:130px">
+            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
+              value="${_ymdToDmy(dt.inicio)}" style="font-size:12px;width:120px;letter-spacing:.05em"
+              oninput="maskDateInput(this)"
+              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){plnDatas[${i}].datas[${j}].inicio=y;plnRenderFases();plnAtualizarGantt();plnAutoSave()}">
             <input class="fc" type="time" value="${dt.hIni||'08:00'}" onchange="plnDatas[${i}].datas[${j}].hIni=this.value;plnAutoSave()" style="font-size:12px;width:80px" title="Hora de início">
           </div>
         </td>
         <td style="padding:5px 6px;text-align:center">
           <div style="display:flex;align-items:center;gap:3px">
-            <input class="fc" type="date" value="${dt.fim}" onchange="plnDatas[${i}].datas[${j}].fim=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:130px">
+            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
+              value="${_ymdToDmy(dt.fim)}" style="font-size:12px;width:120px;letter-spacing:.05em"
+              oninput="maskDateInput(this)"
+              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){plnDatas[${i}].datas[${j}].fim=y;plnRenderFases();plnAtualizarGantt();plnAutoSave()}">
             <input class="fc" type="time" value="${dt.hFim||'17:00'}" onchange="plnDatas[${i}].datas[${j}].hFim=this.value;plnAutoSave()" style="font-size:12px;width:80px" title="Hora de término">
           </div>
         </td>
@@ -6354,7 +6364,7 @@ function plnRenderFases(){
 }
 
 function plnPropagarDatas(){
-  const ini=document.getElementById('pln-inicio')?.value;
+  const ini=_plnGetIniYmd();
   if(!ini){toast('Informe a data de início','warn');return;}
   let cur=new Date(ini+'T00:00:00');
   PLN_FASES.forEach((f,i)=>{
@@ -6588,7 +6598,7 @@ function _plnEstadoAtual(){
   return {
     cliente:    document.getElementById('pln-cliente')?.value||'',
     resp:       document.getElementById('pln-resp')?.value||'',
-    inicio:     document.getElementById('pln-inicio')?.value||'',
+    inicio:     _plnGetIniYmd()||'',
     consultor:  document.getElementById('pln-consultor')?.value||'',
     projId:     plnProjId||'',
     fases: PLN_FASES.map((f,i)=>({
@@ -6610,7 +6620,10 @@ function _plnFasesDefault(){
   ].map(f=>({...f, datas:[{inicio:'',fim:'',obs:''}]}));
 }
 
-// ── Carregar versão nos globals PLN_FASES / plnDatas ──
+// Lê o campo pln-inicio (texto DD/MM/AAAA) e retorna YYYY-MM-DD
+function _plnGetIniYmd(){ const el=document.getElementById('pln-inicio'); if(!el)return''; return _dmyToYmd(el.value)||''; }
+// Preenche pln-inicio com valor YYYY-MM-DD exibindo como DD/MM/AAAA
+function _plnSetIni(ymd){ const el=document.getElementById('pln-inicio'); if(el) el.value=_ymdToDmy(ymd||''); }
 function _plnAplicarVersao(v){
   PLN_FASES.length=0; plnDatas.length=0;
   (v.fases||_plnFasesDefault()).forEach(f=>{
@@ -6620,7 +6633,7 @@ function _plnAplicarVersao(v){
   const set=(id,val)=>{const el=document.getElementById(id);if(el)el.value=val||'';};
   set('pln-cliente',   v.cliente);
   set('pln-resp',      v.resp);
-  set('pln-inicio',    v.inicio);
+  _plnSetIni(v.inicio);
   set('pln-consultor', v.consultor||'Alexsandro C. Lopes');
   if(v.projId){
     plnProjId=v.projId;
@@ -6905,7 +6918,7 @@ function plnExportarJSON(){
   const plano={versao:'3.0',geradoEm:new Date().toISOString(),nomeVersao:atual.nome||'',
     cliente:document.getElementById('pln-cliente')?.value||'',
     responsavel:document.getElementById('pln-resp')?.value||'',
-    inicio:document.getElementById('pln-inicio')?.value||'',
+    inicio:_plnGetIniYmd()||'',
     consultor:document.getElementById('pln-consultor')?.value||'Alexsandro C. Lopes',
     fases:PLN_FASES.map((f,i)=>({num:f.num,nome:f.nome,horas:f.horas,cor:f.cor,semanas:f.semanas,datas:(plnDatas[i]?.datas||[])}))};
   const a=document.createElement('a');
@@ -6953,7 +6966,7 @@ function plnExportarCronograma(){
   const cliente    = document.getElementById('pln-cliente')?.value  || '___________________';
   const resp       = document.getElementById('pln-resp')?.value     || '___________________';
   const consultor  = document.getElementById('pln-consultor')?.value|| 'Alexsandro C. Lopes';
-  const inicioPrj  = document.getElementById('pln-inicio')?.value   || '';
+  const inicioPrj  = _plnGetIniYmd()   || '';
   const geradoEm   = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
   // Horas: soma das fases do planejamento; Taxa: do projeto vinculado se > 0
   const projExport = plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
@@ -7245,6 +7258,29 @@ function fD(s){ if(!s)return '—'; try{return new Date(s+'T00:00:00').toLocaleD
 function dur(a,b){ if(!a||!b)return ''; const d=Math.round((new Date(b)-new Date(a))/86400000)+1; if(d<=0)return ''; return d+'d / '+Math.ceil(d/7)+'sem'; }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function toYMD(d){ return d.toISOString().split('T')[0]; }
+
+// ── Máscara DD/MM/AAAA ──
+function _ymdToDmy(s){ if(!s)return''; const p=s.split('-'); return p.length===3?`${p[2]}/${p[1]}/${p[0]}`:s; }
+function _dmyToYmd(s){ if(!s||s.length<10)return''; const p=s.split('/'); return p.length===3&&p[2].length===4?`${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`:''; }
+function maskDateInput(el){
+  const sel=el.selectionStart;
+  let v=el.value.replace(/\D/g,'');
+  if(v.length>2)  v=v.slice(0,2)+'/'+v.slice(2);
+  if(v.length>5)  v=v.slice(0,5)+'/'+v.slice(5);
+  if(v.length>10) v=v.slice(0,10);
+  el.value=v;
+  try{ el.setSelectionRange(sel,sel); }catch{}
+}
+// Gera HTML de input com máscara. onChangeFn é chamado com valor YYYY-MM-DD
+function mkDateInput(ymdValue, onChangeFn, extraStyle='', id=''){
+  const dmy=_ymdToDmy(ymdValue||'');
+  return `<input type="text" ${id?`id="${id}"`:''}
+    class="fc" value="${esc(dmy)}" placeholder="DD/MM/AAAA"
+    maxlength="10" inputmode="numeric"
+    style="letter-spacing:.05em;${extraStyle}"
+    oninput="maskDateInput(this)"
+    onchange="const y=_dmyToYmd(this.value);if(y||!this.value){${onChangeFn}}">`
+}
 
 function markChanged(){
   changed = true;
@@ -7648,7 +7684,7 @@ function buildEscopoHTML(){
   const consultor = proj?.owner   || document.getElementById('pln-consultor')?.value || 'Alexsandro C. Lopes';
 
   // Dates: use project dates if set, else from planning Gantt
-  const iniValProj = proj?.startDate || document.getElementById('pln-inicio')?.value || '';
+  const iniValProj = proj?.startDate || _plnGetIniYmd() || '';
   const allDtsEsc  = plnDatas.flatMap(d=>(d.datas||[]));
   const firstFase  = allDtsEsc.filter(dt=>dt.inicio).map(dt=>dt.inicio).sort()[0] || '';
   const iniVal     = iniValProj || firstFase;
@@ -7843,14 +7879,20 @@ function renderPlanejamentos(){
         <div>
           <label class="fl">📅 Início</label>
           <div style="display:flex;gap:4px">
-            <input class="fc" type="date" value="${p.date}" onchange="planChange(${i},'date',this.value);renderPlanejamentos()" style="font-size:12px;flex:1">
+            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
+              value="${_ymdToDmy(p.date)}" style="font-size:12px;flex:1;letter-spacing:.05em"
+              oninput="maskDateInput(this)"
+              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){planChange(${i},'date',y);renderPlanejamentos()}">
             <input class="fc" type="time" value="${ts}" onchange="planChange(${i},'timeStart',this.value)" style="font-size:12px;width:82px" title="Hora de início">
           </div>
         </div>
         <div>
           <label class="fl">🏁 Término</label>
           <div style="display:flex;gap:4px">
-            <input class="fc" type="date" value="${p.dateEnd}" onchange="planChange(${i},'dateEnd',this.value);renderPlanejamentos()" style="font-size:12px;flex:1">
+            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
+              value="${_ymdToDmy(p.dateEnd)}" style="font-size:12px;flex:1;letter-spacing:.05em"
+              oninput="maskDateInput(this)"
+              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){planChange(${i},'dateEnd',y);renderPlanejamentos()}">
             <input class="fc" type="time" value="${te}" onchange="planChange(${i},'timeEnd',this.value)" style="font-size:12px;width:82px" title="Hora de término">
           </div>
         </div>
