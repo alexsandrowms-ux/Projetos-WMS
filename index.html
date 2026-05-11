@@ -971,11 +971,7 @@ datalist{display:none}
             <div class="fg"><label class="fl">Responsável no Cliente</label><input class="fc" id="pln-resp" placeholder="Nome do responsável" oninput="plnAtualizarGantt();plnAutoSave()"></div>
           </div>
           <div class="frow">
-            <div class="fg"><label class="fl">📅 Início do Projeto</label>
-              <input class="fc" type="text" id="pln-inicio" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
-                style="letter-spacing:.05em" oninput="maskDateInput(this)"
-                onchange="const y=_dmyToYmd(this.value);if(y||!this.value){this.dataset.ymd=y;plnPropagarDatas();plnAutoSave()}">
-            </div>
+            <div class="fg"><label class="fl">📅 Início do Projeto</label><input class="fc" type="date" id="pln-inicio" onchange="plnPropagarDatas();plnAutoSave()"></div>
             <div class="fg"><label class="fl">Consultor AXL</label><input class="fc" id="pln-consultor" value="Alexsandro C. Lopes" oninput="plnAutoSave()"></div>
             <div class="fg"><label class="fl">Status do Escopo</label>
               <div id="pln-escopo-status" style="padding:7px 10px;border-radius:6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);font-size:12px;font-weight:700;color:var(--amber)">⏳ Aguardando aprovação</div>
@@ -6349,19 +6345,13 @@ function plnRenderFases(){
         </td>
         <td style="padding:5px 6px;text-align:center">
           <div style="display:flex;align-items:center;gap:3px">
-            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
-              value="${_ymdToDmy(dt.inicio)}" style="font-size:12px;width:120px;letter-spacing:.05em"
-              oninput="maskDateInput(this)"
-              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){plnDatas[${i}].datas[${j}].inicio=y;plnRenderFases();plnAtualizarGantt();plnAutoSave()}">
+            <input class="fc" type="date" value="${dt.inicio}" onchange="plnDatas[${i}].datas[${j}].inicio=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:130px">
             <input class="fc" type="time" value="${dt.hIni||'08:00'}" onchange="plnDatas[${i}].datas[${j}].hIni=this.value;plnAutoSave()" style="font-size:12px;width:80px" title="Hora de início">
           </div>
         </td>
         <td style="padding:5px 6px;text-align:center">
           <div style="display:flex;align-items:center;gap:3px">
-            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
-              value="${_ymdToDmy(dt.fim)}" style="font-size:12px;width:120px;letter-spacing:.05em"
-              oninput="maskDateInput(this)"
-              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){plnDatas[${i}].datas[${j}].fim=y;plnRenderFases();plnAtualizarGantt();plnAutoSave()}">
+            <input class="fc" type="date" value="${dt.fim}" onchange="plnDatas[${i}].datas[${j}].fim=this.value;plnRenderFases();plnAtualizarGantt();plnAutoSave()" style="font-size:12px;width:130px">
             <input class="fc" type="time" value="${dt.hFim||'17:00'}" onchange="plnDatas[${i}].datas[${j}].hFim=this.value;plnAutoSave()" style="font-size:12px;width:80px" title="Hora de término">
           </div>
         </td>
@@ -6635,10 +6625,10 @@ function _plnFasesDefault(){
   ].map(f=>({...f, datas:[{inicio:'',fim:'',obs:''}]}));
 }
 
-// Lê o campo pln-inicio (texto DD/MM/AAAA) e retorna YYYY-MM-DD
-function _plnGetIniYmd(){ const el=document.getElementById('pln-inicio'); if(!el)return''; return _dmyToYmd(el.value)||''; }
-// Preenche pln-inicio com valor YYYY-MM-DD exibindo como DD/MM/AAAA
-function _plnSetIni(ymd){ const el=document.getElementById('pln-inicio'); if(el) el.value=_ymdToDmy(ymd||''); }
+// Lê o campo pln-inicio (type=date) — valor já em YYYY-MM-DD
+function _plnGetIniYmd(){ const el=document.getElementById('pln-inicio'); return el?.value||''; }
+// Preenche pln-inicio
+function _plnSetIni(ymd){ const el=document.getElementById('pln-inicio'); if(el) el.value=ymd||''; }
 function _plnAplicarVersao(v){
   PLN_FASES.length=0; plnDatas.length=0;
   (v.fases||_plnFasesDefault()).forEach(f=>{
@@ -7845,8 +7835,8 @@ function syncLegacyDates(){
   const first = _stagePlanejamentos[0];
   const fsDate    = document.getElementById('fs-date');
   const fsDateEnd = document.getElementById('fs-dateend');
-  if(fsDate)    fsDate.value    = first ? (first.date+(first.timeStart?'T'+first.timeStart:'')) : '';
-  if(fsDateEnd) fsDateEnd.value = first ? (first.dateEnd+(first.timeEnd?'T'+first.timeEnd:''))   : '';
+  if(fsDate)    fsDate.value    = first?.date    || '';
+  if(fsDateEnd) fsDateEnd.value = first?.dateEnd || '';
 }
 
 function renderPlanejamentos(){
@@ -7871,20 +7861,14 @@ function renderPlanejamentos(){
         <div>
           <label class="fl">📅 Início</label>
           <div style="display:flex;gap:4px">
-            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
-              value="${_ymdToDmy(p.date)}" style="font-size:12px;flex:1;letter-spacing:.05em"
-              oninput="maskDateInput(this)"
-              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){planChange(${i},'date',y);renderPlanejamentos()}">
+            <input class="fc" type="date" value="${p.date}" onchange="planChange(${i},'date',this.value);renderPlanejamentos()" style="font-size:12px;flex:1">
             <input class="fc" type="time" value="${ts}" onchange="planChange(${i},'timeStart',this.value)" style="font-size:12px;width:82px" title="Hora de início">
           </div>
         </div>
         <div>
           <label class="fl">🏁 Término</label>
           <div style="display:flex;gap:4px">
-            <input class="fc" type="text" placeholder="DD/MM/AAAA" maxlength="10" inputmode="numeric"
-              value="${_ymdToDmy(p.dateEnd)}" style="font-size:12px;flex:1;letter-spacing:.05em"
-              oninput="maskDateInput(this)"
-              onchange="const y=_dmyToYmd(this.value);if(y||!this.value){planChange(${i},'dateEnd',y);renderPlanejamentos()}">
+            <input class="fc" type="date" value="${p.dateEnd}" onchange="planChange(${i},'dateEnd',this.value);renderPlanejamentos()" style="font-size:12px;flex:1">
             <input class="fc" type="time" value="${te}" onchange="planChange(${i},'timeEnd',this.value)" style="font-size:12px;width:82px" title="Hora de término">
           </div>
         </div>
