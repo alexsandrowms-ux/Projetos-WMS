@@ -6339,8 +6339,8 @@ function plnRenderFases(){
         <input class="fc" value="${esc(f.nome)}" onchange="PLN_FASES[${i}].nome=this.value;plnAtualizarGantt();plnAutoSave()" style="font-size:12px;font-weight:700;width:100%;min-width:180px">
       </td>
       <td style="padding:6px 8px;width:90px">
-        <div style="display:flex;align-items:center;gap:4px" title="Calculado automaticamente: dias úteis × h/dia">
-          <span id="fap-h-${i}" style="font-size:13px;font-weight:800;color:var(--accent);min-width:32px;display:inline-block">${f.horas||0}</span>
+        <div style="display:flex;align-items:center;gap:4px">
+          <input class="fc" type="number" value="${f.horas}" onchange="PLN_FASES[${i}].horas=+this.value;plnAtualizarStatus();plnAutoSave()" style="font-size:12px;width:58px;padding:4px 6px" min="0">
           <span style="font-size:10px;color:var(--mid)">h</span>
         </div>
       </td>
@@ -6538,18 +6538,6 @@ function plnCalcAgendas(){
 
 function plnAtualizarStatus(){
   const el=document.getElementById('pln-status-row');if(!el)return;
-  // Recalcula horas de cada fase automaticamente (dias úteis × h/dia)
-  PLN_FASES.forEach((f,i)=>{
-    let h=0;
-    (plnDatas[i]?.datas||[]).forEach(dt=>{
-      if(dt.inicio&&dt.fim) h+=plnDiasUteis(dt.inicio,dt.fim)*(+(dt.hPorDia||8));
-    });
-    if(h>0){
-      f.horas=h;
-      const el2=document.getElementById('fap-h-'+i);
-      if(el2) el2.textContent=h;
-    }
-  });
   const filled=plnDatas.filter(d=>(d.datas||[]).some(dt=>dt.inicio&&dt.fim)).length;
   const totalH=PLN_FASES.reduce((a,f)=>a+(+f.horas||0),0);
   const proj=plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
@@ -7025,7 +7013,8 @@ function plnExportarCronograma(){
     datas: (plnDatas[i]?.datas||[]).map(d=>({inicio:d.inicio||'',fim:d.fim||'',obs:d.obs||'',hPorDia:+(d.hPorDia||8),hIni:d.hIni||'08:00',hFim:d.hFim||'17:00'}))
   }));
 
-  const dataJSON = JSON.stringify(fasesData);
+  // Codifica em base64 para evitar quebra do template literal por acentos/caracteres especiais
+  const dataJSON = btoa(unescape(encodeURIComponent(JSON.stringify(fasesData))));
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -7308,7 +7297,7 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
 
 <script>
 // ── DADOS EMBUTIDOS ──
-const FASES = ${dataJSON};
+const FASES = JSON.parse(decodeURIComponent(escape(atob("${dataJSON}"))));
 const VALOR_HORA = ${valorHExport}; // Taxa horária do projeto (0 = não definida)
 let changed = false;
 const LS_KEY = 'axl_cronograma_${cliente.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')}';
