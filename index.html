@@ -571,11 +571,16 @@ datalist{display:none}
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
+  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
+    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
+    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
+  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
+  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg></div>
     <div class="topbar-right">
@@ -5031,11 +5036,16 @@ tr:hover td{background:#f8fafc}
 <div class="rh">
   <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:2px solid #e2e8f0">
     <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
+  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
+    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
+    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
+  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
+  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg></div>
     <div style="width:1px;height:40px;background:#e2e8f0"></div>
@@ -6253,18 +6263,13 @@ function plnAprovarELancar(){
 }
 
 function _executarLancamentoEtapas(projId, cliente, consultor, isNovo){
-  // Calcula horas agendadas por fase (dias úteis × h/dia) para usar no lançamento
-  const agendas = plnCalcAgendas();
   const novasEtapas = PLN_FASES.map((f,i)=>{
     const d = plnDatas[i];
     const allDts = (d.datas||[]).filter(dt=>dt.inicio||dt.fim);
     const firstDt = allDts[0] || {inicio:'',fim:'',obs:'',hIni:'08:00',hFim:'17:00'};
-    // Usa horas agendadas se disponível, senão cai no FAP manual
-    const horasAgendadas = agendas.porFase[i]?.horas || 0;
-    const horasFinal = horasAgendadas > 0 ? horasAgendadas : f.horas;
     return {
       id:uid(), parentId:null, num:f.num, name:f.nome,
-      hours:String(horasFinal), executor:consultor,
+      hours:String(f.horas), executor:consultor,
       date:firstDt.inicio||'', dateEnd:firstDt.fim||'',
       timeStart:firstDt.hIni||'08:00', timeEnd:firstDt.hFim||'17:00',
       planejamentos: allDts.map(dt=>({
@@ -6302,12 +6307,6 @@ function _executarLancamentoEtapas(projId, cliente, consultor, isNovo){
     plnOnProjChange(projId);
   }
 
-  // Atualiza totalHours do projeto com total de horas agendadas
-  const projFinal=(S.projects||[]).find(p=>p.id===finalProjId);
-  if(projFinal){
-    const totalAgendado=agendas.totalHorasAgendadas;
-    if(totalAgendado>0) projFinal.totalHours=String(totalAgendado);
-  }
   saveS();
   // Refresh consolidated gantt if open
   if(document.getElementById('page-cgantt')?.classList.contains('on')) renderCGantt();
@@ -7009,10 +7008,30 @@ function plnExportarCronograma(){
   const projExport = plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
   const valorHExport = projExport&&parseFloat(projExport.defaultRate)>0?parseFloat(projExport.defaultRate):0;
 
-  const fasesData = PLN_FASES.map((f,i)=>({
-    num: f.num, nome: f.nome, horas: f.horas, cor: f.cor, semanas: f.semanas,
-    datas: (plnDatas[i]?.datas||[]).map(d=>({inicio:d.inicio||'',fim:d.fim||'',obs:d.obs||'',hPorDia:+(d.hPorDia||8),hIni:d.hIni||'08:00',hFim:d.hFim||'17:00'}))
-  }));
+  // Sincroniza DOM → plnDatas antes de exportar
+  // (captura campos editados sem disparar onchange)
+  PLN_FASES.forEach((f,i)=>{
+    if(!plnDatas[i]) plnDatas[i]={datas:[]};
+    (plnDatas[i].datas||[]).forEach((dt,j)=>{
+      const qs=(sel)=>document.querySelector(`[onchange*="plnDatas[${i}].datas[${j}].${sel}"]`);
+      const qsel=(sel)=>document.querySelector(`select[onchange*="plnDatas[${i}].datas[${j}].${sel}"]`);
+      const elIni=qs('inicio');   if(elIni)  dt.inicio  = elIni.value;
+      const elFim=qs('fim');      if(elFim)  dt.fim     = elFim.value;
+      const elHIni=qs('hIni');    if(elHIni) dt.hIni    = elHIni.value;
+      const elHFim=qs('hFim');    if(elHFim) dt.hFim    = elHFim.value;
+      const elObs=qs('obs');      if(elObs)  dt.obs     = elObs.value;
+      const elHpd=qsel('hPorDia');if(elHpd)  dt.hPorDia = +elHpd.value;
+    });
+  });
+
+  const fasesData = PLN_FASES.map((f,i)=>{
+    let datas = (plnDatas[i]?.datas||[]).map(d=>({
+      inicio:d.inicio||'', fim:d.fim||'', obs:d.obs||'',
+      hPorDia:+(d.hPorDia||8), hIni:d.hIni||'08:00', hFim:d.hFim||'17:00'
+    }));
+    if(!datas.length) datas=[{inicio:'',fim:'',obs:'',hPorDia:8,hIni:'08:00',hFim:'17:00'}];
+    return { num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas, datas };
+  });
 
   const dataJSON = JSON.stringify(fasesData);
 
@@ -7152,11 +7171,16 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
 <!-- TOPBAR -->
 <div class="topbar no-print">
   <div class="topbar-logo" style="display:flex;align-items:center;gap:10px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
+  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
+    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
+    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
+  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
+  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg> <span style="font-size:12px;font-weight:400;opacity:.7;color:#fff">· Proposta de Cronograma</span></div>
   <div class="topbar-actions">
@@ -8690,11 +8714,16 @@ function exportHTML(projs){
     <div style="display:flex;align-items:center;gap:14px">
       <div style="font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
+  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
+    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
+    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
+  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
+  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg>
       </div>
