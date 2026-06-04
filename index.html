@@ -571,16 +571,11 @@ datalist{display:none}
   <!-- TOPBAR -->
   <div class="topbar">
     <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
-  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
-    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
-    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
-  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
-  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg></div>
     <div class="topbar-right">
@@ -5036,16 +5031,11 @@ tr:hover td{background:#f8fafc}
 <div class="rh">
   <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;padding-bottom:14px;border-bottom:2px solid #e2e8f0">
     <div class="logo"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
-  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
-    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
-    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
-  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
-  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg></div>
     <div style="width:1px;height:40px;background:#e2e8f0"></div>
@@ -6550,9 +6540,11 @@ function plnAtualizarStatus(){
   // ── Card: Fases preenchidas ──
   html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">${filled}/${PLN_FASES.length} fases</span>`;
 
-  // ── Card: Horas + valor ──
+  // ── Card: Horas FAP + horas agendadas + valor ──
   const valorStr=valorH>0?' · R$ '+totalR.toLocaleString('pt-BR',{minimumFractionDigits:2}):'';
-  html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">${totalH}h${valorStr}</span>`;
+  const agHStr=ag.totalHorasAgendadas>0&&ag.totalHorasAgendadas!==totalH
+    ?` <span style="opacity:.7;font-size:10px">(${ag.totalHorasAgendadas}h agendadas)</span>`:'';
+  html+=`<span style="font-size:11px;padding:2px 10px;border-radius:10px;background:rgba(14,165,233,.1);color:var(--accent);font-weight:700">${totalH}h FAP${agHStr}${valorStr}</span>`;
 
   // ── Card: Totalizador de Agendas ──
   if(ag.totalAgendas>0){
@@ -7004,14 +6996,39 @@ function plnExportarCronograma(){
   const consultor  = document.getElementById('pln-consultor')?.value|| 'Alexsandro C. Lopes';
   const inicioPrj  = _plnGetIniYmd()   || '';
   const geradoEm   = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
-  // Horas: soma das fases do planejamento; Taxa: do projeto vinculado se > 0
   const projExport = plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
   const valorHExport = projExport&&parseFloat(projExport.defaultRate)>0?parseFloat(projExport.defaultRate):0;
 
-  const fasesData = PLN_FASES.map((f,i)=>({
-    num: f.num, nome: f.nome, horas: f.horas, cor: f.cor, semanas: f.semanas,
-    datas: (plnDatas[i]?.datas||[]).map(d=>({inicio:d.inicio||'',fim:d.fim||'',obs:d.obs||'',hPorDia:+(d.hPorDia||8),hIni:d.hIni||'08:00',hFim:d.hFim||'17:00'}))
-  }));
+  // Sincroniza DOM → plnDatas antes de exportar (captura campos não dispararam onchange)
+  PLN_FASES.forEach((f,i)=>{
+    const d=plnDatas[i];if(!d)return;
+    (d.datas||[]).forEach((dt,j)=>{
+      const s=document.getElementById('inp-s-'+i+'-'+j)||document.querySelector(`[onchange*="plnDatas[${i}].datas[${j}].inicio"]`);
+      const e=document.getElementById('inp-e-'+i+'-'+j)||document.querySelector(`[onchange*="plnDatas[${i}].datas[${j}].fim"]`);
+      // Lê via seletor de value dos inputs renderizados na tabela de fases
+      const allInputs=document.querySelectorAll(`input[onchange*="plnDatas[${i}].datas[${j}]"]`);
+      const allSelects=document.querySelectorAll(`select[onchange*="plnDatas[${i}].datas[${j}]"]`);
+      allInputs.forEach(el=>{
+        const oc=el.getAttribute('onchange')||'';
+        if(oc.includes('.inicio'))dt.inicio=el.value;
+        else if(oc.includes('.fim'))dt.fim=el.value;
+        else if(oc.includes('.hIni'))dt.hIni=el.value;
+        else if(oc.includes('.hFim'))dt.hFim=el.value;
+        else if(oc.includes('.obs'))dt.obs=el.value;
+      });
+      allSelects.forEach(el=>{
+        const oc=el.getAttribute('onchange')||'';
+        if(oc.includes('.hPorDia'))dt.hPorDia=+el.value;
+      });
+    });
+  });
+
+  const fasesData = PLN_FASES.map((f,i)=>{
+    let datas=(plnDatas[i]?.datas||[]).map(d=>({inicio:d.inicio||'',fim:d.fim||'',obs:d.obs||'',hPorDia:+(d.hPorDia||8),hIni:d.hIni||'08:00',hFim:d.hFim||'17:00'}));
+    // Garante ao menos 1 período por fase para a tabela renderizar
+    if(!datas.length) datas=[{inicio:'',fim:'',obs:'',hPorDia:8,hIni:'08:00',hFim:'17:00'}];
+    return { num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas, datas };
+  });
 
   const dataJSON = JSON.stringify(fasesData);
 
@@ -7151,16 +7168,11 @@ body{background:#f0f4f8;color:#1e293b;font-family:'Inter',sans-serif;min-height:
 <!-- TOPBAR -->
 <div class="topbar no-print">
   <div class="topbar-logo" style="display:flex;align-items:center;gap:10px"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
-  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
-    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
-    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
-  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
-  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg> <span style="font-size:12px;font-weight:400;opacity:.7;color:#fff">· Proposta de Cronograma</span></div>
   <div class="topbar-actions">
@@ -8694,16 +8706,11 @@ function exportHTML(projs){
     <div style="display:flex;align-items:center;gap:14px">
       <div style="font-size:28px;font-weight:900;letter-spacing:-1px;line-height:1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 185 36" height="36" style="display:inline-block;vertical-align:middle">
-  <!-- Symbol: two diagonal stripes forming a stylized P -->
   <g transform="translate(0,3)">
-    <!-- stripe 1 - blue/cyan -->
     <rect x="2" y="0" width="7" height="28" rx="3.5" fill="#38bdf8" transform="rotate(-12,8,14)"/>
-    <!-- stripe 2 - purple/blue -->
     <rect x="12" y="0" width="7" height="28" rx="3.5" fill="#818cf8" transform="rotate(-12,18,14)"/>
   </g>
-  <!-- PANiCE -->
   <text x="30" y="24" font-family="Syne,sans-serif" font-weight="800" font-size="22" fill="#ffffff" letter-spacing="-0.5">PAN<tspan fill="#38bdf8">i</tspan>CE</text>
-  <!-- tecnologia -->
   <text x="31" y="34" font-family="DM Sans,sans-serif" font-weight="400" font-size="9" fill="#7a9ab8" letter-spacing="2">tecnologia</text>
 </svg>
       </div>
