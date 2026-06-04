@@ -7008,12 +7008,34 @@ function plnExportarCronograma(){
   const projExport = plnProjId&&plnProjId!=='__novo__'?(S.projects||[]).find(p=>p.id===plnProjId):null;
   const valorHExport = projExport&&parseFloat(projExport.defaultRate)>0?parseFloat(projExport.defaultRate):0;
 
-  const fasesData = PLN_FASES.map((f,i)=>({
-    num: f.num, nome: f.nome, horas: f.horas, cor: f.cor, semanas: f.semanas,
-    datas: (plnDatas[i]?.datas||[]).map(d=>({inicio:d.inicio||'',fim:d.fim||'',obs:d.obs||'',hPorDia:+(d.hPorDia||8),hIni:d.hIni||'08:00',hFim:d.hFim||'17:00'}))
-  }));
+  // Lê valores diretamente do DOM — garante capturar tudo mesmo sem onchange ter disparado
+  const fasesData = PLN_FASES.map((f,i)=>{
+    const mem = plnDatas[i]?.datas || [];
+    const datas = mem.map((dt,j)=>{
+      // Tenta pegar do DOM primeiro, cai no valor de memória como fallback
+      const qv = (attr,fb) => {
+        const el = document.querySelector(`[onchange*="plnDatas[${i}].datas[${j}].${attr}"]`);
+        return el ? el.value : (fb||'');
+      };
+      const qvs = (attr,fb) => {
+        const el = document.querySelector(`select[onchange*="plnDatas[${i}].datas[${j}].${attr}"]`);
+        return el ? +el.value : (fb||8);
+      };
+      return {
+        inicio:  qv('inicio', dt.inicio||''),
+        fim:     qv('fim',    dt.fim||''),
+        hIni:    qv('hIni',   dt.hIni||'08:00'),
+        hFim:    qv('hFim',   dt.hFim||'17:00'),
+        obs:     qv('obs',    dt.obs||''),
+        hPorDia: qvs('hPorDia', dt.hPorDia||8)
+      };
+    });
+    // Se não há períodos em memória, garante ao menos 1 linha vazia
+    if(!datas.length) datas.push({inicio:'',fim:'',hIni:'08:00',hFim:'17:00',obs:'',hPorDia:8});
+    return { num:f.num, nome:f.nome, horas:f.horas, cor:f.cor, semanas:f.semanas, datas };
+  });
 
-  // Codifica em base64 para evitar quebra do template literal por acentos/caracteres especiais
+  // Base64 para evitar quebra do template literal por acentos/caracteres especiais
   const dataJSON = btoa(unescape(encodeURIComponent(JSON.stringify(fasesData))));
 
   const html = `<!DOCTYPE html>
