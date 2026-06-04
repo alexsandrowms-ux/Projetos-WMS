@@ -8619,8 +8619,11 @@ function exportHTML(projs){
     <table class="st"><thead><tr><th>Num</th><th>Etapa / Apontamento</th><th>Responsável</th><th>Início Plan. · Hora</th><th>Término Plan. · Hora</th><th>Status</th><th>Prazo</th><th>H. Plan.</th><th>H. Real / Duração</th><th>Custo Plan.</th><th>Custo Real</th><th>Variação</th><th>Nota</th><th style="background:#166534;min-width:220px">📅 Sugestão de Data (Cliente)</th></tr></thead><tbody>
     ${roots.map((r,ri)=>{
       const rc=PCOLS[ri%PCOLS.length];
-      const defRate=parseFloat(p.defaultRate)||0;
-      const rRate=r.hourRate||defRate;
+      // Se o projeto tem valor/hora definido (mesmo que 0), ele prevalece sobre o da etapa
+      const defRate = p.defaultRate!==undefined&&p.defaultRate!==''&&p.defaultRate!==null
+        ? parseFloat(p.defaultRate)||0
+        : parseFloat(r.hourRate)||0;
+      const rRate = defRate;
       const rHP=parseFloat(r.hours)||0;
       const rHR=getHoursReal(r,[...roots]);
       const rCP=Math.round(rHP*rRate*100)/100;
@@ -8690,7 +8693,9 @@ function exportHTML(projs){
     }).join('')}
     </tbody>
     ${(()=>{
-      const defRate=parseFloat(p.defaultRate)||0;
+      const defRate = p.defaultRate!==undefined&&p.defaultRate!==''&&p.defaultRate!==null
+        ? parseFloat(p.defaultRate)||0
+        : 0;
       const allS=p.stages||[];
       const totHP=allS.reduce((a,s)=>a+(parseFloat(s.hours)||0),0);
       const totHR=allS.filter(s=>!s.parentId).reduce((a,r)=>a+getHoursReal(r,allS),0);
