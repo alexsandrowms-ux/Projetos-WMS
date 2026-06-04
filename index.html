@@ -8699,8 +8699,8 @@ function exportHTML(projs){
       const allS=p.stages||[];
       const totHP=allS.reduce((a,s)=>a+(parseFloat(s.hours)||0),0);
       const totHR=allS.filter(s=>!s.parentId).reduce((a,r)=>a+getHoursReal(r,allS),0);
-      const totCP=Math.round(allS.reduce((a,s)=>{const r=s.hourRate||defRate;return a+(parseFloat(s.hours)||0)*r;},0)*100)/100;
-      const totCR=Math.round(allS.filter(s=>!s.parentId).reduce((a,s)=>{const r=s.hourRate||defRate;return a+getHoursReal(s,allS)*r;},0)*100)/100;
+      const totCP=Math.round(allS.reduce((a,s)=>{return a+(parseFloat(s.hours)||0)*defRate;},0)*100)/100;
+      const totCR=Math.round(allS.filter(s=>!s.parentId).reduce((a,s)=>{return a+getHoursReal(s,allS)*defRate;},0)*100)/100;
       const totV=totCP-totCR;
       const cur=v=>'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2});
       return`<tfoot><tr style="background:#f1f5f9;font-weight:800;border-top:2px solid #cbd5e1">
