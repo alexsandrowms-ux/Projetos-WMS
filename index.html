@@ -28,6 +28,11 @@
     --st-cancelado-bg:#FDE8E8;
     --st-reagendado:#8E5CE0;
     --st-reagendado-bg:#F1E9FC;
+
+    --tipo-presencial:#0B1521;
+    --tipo-presencial-bg:#E8EBEF;
+    --tipo-remota:#0E9594;
+    --tipo-remota-bg:#DFF7F6;
   }
   *{box-sizing:border-box;}
   body{
@@ -476,10 +481,16 @@
       <option value="Cancelado">Cancelado</option>
       <option value="Reagendado">Reagendado</option>
     </select>
+    <select id="filterTipo">
+      <option value="">Todos os tipos</option>
+      <option value="Presencial">Presencial</option>
+      <option value="Remota">Remota</option>
+    </select>
     <input type="text" id="filterDataIni" placeholder="De (DD/MM/AAAA)" maxlength="10" style="width:130px;">
     <input type="text" id="filterDataFim" placeholder="Até (DD/MM/AAAA)" maxlength="10" style="width:130px;">
     <input type="text" id="filterHoraIni" placeholder="Hora início (HH:MM)" maxlength="5" style="width:130px;">
     <div class="spacer"></div>
+    <button class="btn btn-primary btn-sm" id="btnApplyFilter">Aplicar filtro</button>
     <button class="btn btn-ghost btn-sm" id="btnClearFilters">Limpar filtros</button>
     <button class="btn btn-ghost btn-sm" id="btnImport">⬆ Importar CSV</button>
     <input type="file" id="fileImport" accept=".csv" style="display:none;">
@@ -498,6 +509,7 @@
           <th>Fim</th>
           <th>Horas apontadas</th>
           <th>Cliente atendido</th>
+          <th>Tipo</th>
           <th>Status</th>
           <th>Atividade realizada</th>
           <th style="text-align:right;">Ações</th>
@@ -555,15 +567,24 @@
       <input type="text" id="fCliente" placeholder="Nome do cliente" maxlength="80">
     </div>
 
-    <div class="field">
-      <label>Status da atividade</label>
-      <select id="fStatus">
-        <option>Agendado</option>
-        <option>Em Andamento</option>
-        <option>Concluído</option>
-        <option>Cancelado</option>
-        <option>Reagendado</option>
-      </select>
+    <div class="row2">
+      <div class="field">
+        <label>Tipo de agenda</label>
+        <select id="fTipo">
+          <option>Presencial</option>
+          <option>Remota</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status da atividade</label>
+        <select id="fStatus">
+          <option>Agendado</option>
+          <option>Em Andamento</option>
+          <option>Concluído</option>
+          <option>Cancelado</option>
+          <option>Reagendado</option>
+        </select>
+      </div>
     </div>
 
     <div class="field">
@@ -588,6 +609,10 @@
     'Concluído':  {fg:'var(--st-concluido)', bg:'var(--st-concluido-bg)'},
     'Cancelado':  {fg:'var(--st-cancelado)', bg:'var(--st-cancelado-bg)'},
     'Reagendado': {fg:'var(--st-reagendado)',bg:'var(--st-reagendado-bg)'}
+  };
+  const TIPO_COLORS = {
+    'Presencial': {fg:'var(--tipo-presencial)', bg:'var(--tipo-presencial-bg)'},
+    'Remota':     {fg:'var(--tipo-remota)',     bg:'var(--tipo-remota-bg)'}
   };
 
   let agendas = [];
@@ -705,6 +730,7 @@
     $('fHorasApontadas').value = item ? item.horas : '';
     lastAuto = item ? item.horas : '';
     $('fCliente').value = item ? item.cliente : '';
+    $('fTipo').value = item ? (item.tipo || 'Presencial') : 'Presencial';
     $('fStatus').value = item ? item.status : 'Agendado';
     $('fDescricao').value = item ? (item.descricao || '') : '';
     $('overlay').classList.add('show');
@@ -725,6 +751,7 @@
     const intervalo = $('fIntervalo').value.trim() || '00:00';
     const horas = $('fHorasApontadas').value.trim();
     const cliente = $('fCliente').value.trim();
+    const tipo = $('fTipo').value;
     const status = $('fStatus').value;
     const descricao = $('fDescricao').value.trim();
 
@@ -738,11 +765,11 @@
     if(editingId){
       const idx = agendas.findIndex(a=>a.id===editingId);
       if(idx>-1){
-        agendas[idx] = {...agendas[idx], data, horaIni, horaFim, intervalo, horas, cliente, status, descricao};
+        agendas[idx] = {...agendas[idx], data, horaIni, horaFim, intervalo, horas, cliente, tipo, status, descricao};
       }
       toast('Atividade atualizada.');
     }else{
-      agendas.push({id: uid(), data, horaIni, horaFim, intervalo, horas, cliente, status, descricao});
+      agendas.push({id: uid(), data, horaIni, horaFim, intervalo, horas, cliente, tipo, status, descricao});
       toast('Atividade adicionada.');
     }
     await saveData();
@@ -763,6 +790,7 @@
     return {
       cliente: $('filterCliente').value,
       status: $('filterStatus').value,
+      tipo: $('filterTipo').value,
       dataIni: $('filterDataIni').value,
       dataFim: $('filterDataFim').value,
       horaIni: $('filterHoraIni').value.trim()
@@ -773,16 +801,18 @@
     return list.filter(a=>{
       if(f.cliente && a.cliente !== f.cliente) return false;
       if(f.status && a.status !== f.status) return false;
+      if(f.tipo && (a.tipo || 'Presencial') !== f.tipo) return false;
       if(f.dataIni && isValidDate(f.dataIni) && dateToSortable(a.data) < dateToSortable(f.dataIni)) return false;
       if(f.dataFim && isValidDate(f.dataFim) && dateToSortable(a.data) > dateToSortable(f.dataFim)) return false;
       if(f.horaIni && isValidTime(f.horaIni) && a.horaIni !== f.horaIni) return false;
       return true;
     });
   }
-  ['filterCliente','filterStatus'].forEach(id=> $(id).addEventListener('change', render));
+  ['filterCliente','filterStatus','filterTipo'].forEach(id=> $(id).addEventListener('change', render));
   ['filterDataIni','filterDataFim','filterHoraIni'].forEach(id=> $(id).addEventListener('input', render));
+  $('btnApplyFilter').addEventListener('click', render);
   $('btnClearFilters').addEventListener('click', ()=>{
-    $('filterCliente').value=''; $('filterStatus').value='';
+    $('filterCliente').value=''; $('filterStatus').value=''; $('filterTipo').value='';
     $('filterDataIni').value=''; $('filterDataFim').value='';
     $('filterHoraIni').value='';
     render();
@@ -792,7 +822,7 @@
     const filtered = applyFilters(agendas);
     if(!filtered.length){ toast('Nenhuma atividade corresponde aos filtros atuais.'); return; }
     const f = currentFilters();
-    const hasFilter = f.cliente || f.status || f.dataIni || f.dataFim || f.horaIni;
+    const hasFilter = f.cliente || f.status || f.tipo || f.dataIni || f.dataFim || f.horaIni;
     if(!hasFilter){ toast('Aplique ao menos um filtro antes de excluir em lote.'); return; }
     if(!confirm(`Excluir ${filtered.length} atividade(s) que correspondem aos filtros atuais? Essa ação não pode ser desfeita.`)) return;
     const idsToRemove = new Set(filtered.map(a=>a.id));
@@ -933,6 +963,8 @@
 
     $('tbody').innerHTML = sorted.map(a=>{
       const c = STATUS_COLORS[a.status] || STATUS_COLORS['Agendado'];
+      const t = TIPO_COLORS[a.tipo] || TIPO_COLORS['Presencial'];
+      const tipoLabel = a.tipo || 'Presencial';
       const desc = (a.descricao || '').trim();
       return `
       <tr>
@@ -942,6 +974,11 @@
         <td data-label="Fim">${a.horaFim}</td>
         <td data-label="Horas apontadas" class="horas-cell">${a.horas}h</td>
         <td data-label="Cliente" class="cliente-cell">${escapeHtml(a.cliente)}</td>
+        <td data-label="Tipo">
+          <span class="status-pill" style="color:${t.fg};background:${t.bg};">
+            <span class="dot" style="background:${t.fg};"></span>${tipoLabel}
+          </span>
+        </td>
         <td data-label="Status">
           <span class="status-pill" style="color:${c.fg};background:${c.bg};">
             <span class="dot" style="background:${c.fg};"></span>${a.status}
@@ -972,8 +1009,8 @@
   $('btnExport').addEventListener('click', ()=>{
     const list = applyFilters(agendas);
     if(!list.length){ toast('Não há dados para exportar.'); return; }
-    const header = ['Data','Hora Inicial','Intervalo','Hora Final','Horas Apontadas','Cliente Atendido','Status','Atividade Realizada'];
-    const rows = list.map(a=>[a.data,a.horaIni,a.intervalo||'00:00',a.horaFim,a.horas,a.cliente,a.status,a.descricao||'']);
+    const header = ['Data','Hora Inicial','Intervalo','Hora Final','Horas Apontadas','Cliente Atendido','Tipo','Status','Atividade Realizada'];
+    const rows = list.map(a=>[a.data,a.horaIni,a.intervalo||'00:00',a.horaFim,a.horas,a.cliente,a.tipo||'Presencial',a.status,a.descricao||'']);
     const csv = [header, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
     const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -1027,6 +1064,7 @@
     const idxFim = findCol('hora final','fim');
     const idxHoras = findCol('horas apontadas','horas');
     const idxCliente = findCol('cliente atendido','cliente');
+    const idxTipo = findCol('tipo','tipo de agenda');
     const idxStatus = findCol('status');
     const idxDesc = findCol('atividade realizada','atividade','descrição','descricao');
 
@@ -1045,6 +1083,7 @@
       const intervalo = (idxIntervalo>-1 ? cols[idxIntervalo] : '') || '00:00';
       const horas = cols[idxHoras] || '';
       const cliente = cols[idxCliente] || '';
+      const tipo = idxTipo>-1 ? cols[idxTipo] : 'Presencial';
       const status = idxStatus>-1 ? cols[idxStatus] : 'Agendado';
       const descricao = idxDesc>-1 ? (cols[idxDesc] || '') : '';
 
@@ -1052,9 +1091,10 @@
         invalid++; continue;
       }
       const statusFinal = STATUS_COLORS[status] ? status : 'Agendado';
+      const tipoFinal = TIPO_COLORS[tipo] ? tipo : 'Presencial';
       const dup = agendas.some(a=> a.data===data && a.horaIni===horaIni && a.horaFim===horaFim && a.cliente===cliente);
       if(dup){ skipped++; continue; }
-      agendas.push({id: uid(), data, horaIni, horaFim, intervalo: isValidInterval(intervalo)?intervalo:'00:00', horas, cliente, status: statusFinal, descricao});
+      agendas.push({id: uid(), data, horaIni, horaFim, intervalo: isValidInterval(intervalo)?intervalo:'00:00', horas, cliente, tipo: tipoFinal, status: statusFinal, descricao});
       added++;
     }
     await saveData();
@@ -1101,6 +1141,7 @@
         intervalo: String(Math.floor(totalIntervaloMin/60)).padStart(2,'0')+':'+String(totalIntervaloMin%60).padStart(2,'0'),
         horas: totalHoras.toFixed(2).replace('.',','),
         cliente: first.cliente,
+        tipo: first.tipo || 'Presencial',
         status: statuses.length===1 ? statuses[0] : statuses[0],
         descricao: descs.join(' | ')
       });
