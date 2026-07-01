@@ -237,6 +237,138 @@
     padding:10px 0;
   }
 
+  /* ---------- TABS ---------- */
+  .tabs{
+    display:flex;
+    gap:8px;
+    margin-bottom:20px;
+    border-bottom:1px solid var(--line);
+  }
+  .tab-btn{
+    font-family:'Open Sans',sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    background:transparent;
+    border:none;
+    padding:10px 4px;
+    margin-bottom:-1px;
+    cursor:pointer;
+    color:var(--muted);
+    border-bottom:2px solid transparent;
+  }
+  .tab-btn + .tab-btn{margin-left:6px;}
+  .tab-btn:hover{color:var(--text);}
+  .tab-btn.active{
+    color:var(--navy);
+    border-bottom:2px solid var(--orange);
+  }
+
+  /* ---------- KPI BLOCKS ---------- */
+  .kpi-block{
+    background:linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px 20px 20px;
+    margin-bottom:20px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 1px 2px rgba(15,23,33,.04),
+      0 10px 24px -8px rgba(15,23,33,.14);
+  }
+  .kpi-block h2{
+    font-size:14px;
+    margin:0 0 16px;
+    color:var(--navy);
+    font-weight:700;
+  }
+  .kpi-grid2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+  }
+  .kpi-bars{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .kpi-bar-row{
+    display:grid;
+    grid-template-columns:130px 1fr 64px;
+    align-items:center;
+    gap:10px;
+  }
+  .kpi-bar-label{
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .kpi-bar-track{
+    height:16px;
+    background:#F0F2F5;
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:inset 0 1px 3px rgba(15,23,33,.08);
+  }
+  .kpi-bar-fill{
+    height:100%;
+    border-radius:8px;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.4),
+      inset 0 -2px 3px rgba(0,0,0,.15);
+    transition:width .3s ease;
+  }
+  .kpi-bar-val{
+    font-size:12px;
+    font-weight:700;
+    color:var(--muted);
+    text-align:right;
+    white-space:nowrap;
+  }
+  .kpi-empty{
+    font-size:13px;
+    color:var(--muted);
+    padding:10px 0;
+  }
+  .kpi-month-chart{
+    display:flex;
+    align-items:flex-end;
+    gap:14px;
+    height:160px;
+    padding-top:10px;
+  }
+  .kpi-month-col{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    flex:1;
+    height:100%;
+    gap:6px;
+  }
+  .kpi-month-bar{
+    width:100%;
+    max-width:46px;
+    border-radius:6px 6px 3px 3px;
+    background:linear-gradient(180deg, var(--orange) 0%, #C9490F 100%);
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.35),
+      inset 0 -2px 3px rgba(0,0,0,.18),
+      0 3px 6px -1px rgba(15,23,33,.25);
+  }
+  .kpi-month-val{
+    font-size:11px;
+    font-weight:700;
+    color:var(--navy);
+  }
+  .kpi-month-lbl{
+    font-size:11px;
+    color:var(--muted);
+    font-weight:600;
+  }
+
   /* ---------- TOOLBAR ---------- */
   .toolbar{
     display:flex;
@@ -473,6 +605,8 @@
     }
     .row2{grid-template-columns:1fr;}
     .row3{grid-template-columns:1fr;}
+    .kpi-grid2{grid-template-columns:1fr;}
+    .kpi-bar-row{grid-template-columns:90px 1fr 54px;}
   }
 </style>
 </head>
@@ -487,6 +621,13 @@
 </header>
 
 <main>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabAgenda" data-tab="agenda">📋 Agenda</button>
+    <button class="tab-btn" id="tabKpis" data-tab="kpis">📊 KPIs</button>
+  </div>
+
+  <div id="viewAgenda">
 
   <section class="summary" id="summaryCards"></section>
 
@@ -551,6 +692,33 @@
       <div><b>Nenhuma atividade cadastrada ainda.</b></div>
       <div>Clique em "Nova atividade" para começar o controle de agenda.</div>
     </div>
+  </div>
+
+  </div>
+
+  <div id="viewKPIs" style="display:none;">
+    <section class="summary" id="kpiSummaryCards"></section>
+
+    <section class="kpi-block">
+      <h2>Horas por cliente</h2>
+      <div id="kpiClienteBars" class="kpi-bars"></div>
+    </section>
+
+    <div class="kpi-grid2">
+      <section class="kpi-block">
+        <h2>Distribuição por status</h2>
+        <div id="kpiStatusBars" class="kpi-bars"></div>
+      </section>
+      <section class="kpi-block">
+        <h2>Distribuição por tipo</h2>
+        <div id="kpiTipoBars" class="kpi-bars"></div>
+      </section>
+    </div>
+
+    <section class="kpi-block">
+      <h2>Horas por mês</h2>
+      <div id="kpiMesChart" class="kpi-month-chart"></div>
+    </section>
   </div>
 
 </main>
@@ -1193,6 +1361,115 @@
     toast(`${toMerge.length} linha(s) mesclada(s) a partir de ${totalRows} registros.`);
   });
 
+  // ---------- Tabs ----------
+  const MONTHS_PT = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+  document.querySelectorAll('.tab-btn').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      const tab = btn.dataset.tab;
+      $('viewAgenda').style.display = tab==='agenda' ? '' : 'none';
+      $('viewKPIs').style.display = tab==='kpis' ? '' : 'none';
+      if(tab==='kpis') renderKPIs(applyFilters(agendas));
+    });
+  });
+
+  // ---------- KPIs ----------
+  function kpiBarRow(label, value, max, color, formatVal){
+    const pct = max > 0 ? Math.max((value/max*100), value>0?2:0) : 0;
+    return `
+      <div class="kpi-bar-row">
+        <div class="kpi-bar-label" title="${escapeHtml(label)}">${escapeHtml(label)}</div>
+        <div class="kpi-bar-track"><div class="kpi-bar-fill" style="width:${pct.toFixed(1)}%;background:${color};"></div></div>
+        <div class="kpi-bar-val">${formatVal}</div>
+      </div>`;
+  }
+
+  function renderKPIs(list){
+    // Summary cards
+    const total = list.reduce((s,a)=>s+parseHoras(a.horas),0);
+    const executadas = list.filter(a=>a.status==='Concluído').reduce((s,a)=>s+parseHoras(a.horas),0);
+    const concluidas = list.filter(a=>a.status==='Concluído').length;
+    const taxaConclusao = list.length ? (concluidas/list.length*100) : 0;
+    const mediaPorAtividade = list.length ? total/list.length : 0;
+    const clientesAtivos = new Set(list.map(a=>a.cliente)).size;
+
+    $('kpiSummaryCards').innerHTML = `
+      <div class="sum-card accent">
+        <div class="val">${fmtHorasHM(total)}</div>
+        <div class="lbl">Horas apontadas</div>
+      </div>
+      <div class="sum-card executed">
+        <div class="val">${fmtHorasHM(executadas)}</div>
+        <div class="lbl">Horas executadas</div>
+      </div>
+      <div class="sum-card">
+        <div class="val">${taxaConclusao.toFixed(0)}%</div>
+        <div class="lbl">Taxa de conclusão</div>
+      </div>
+      <div class="sum-card">
+        <div class="val">${fmtHorasHM(mediaPorAtividade)}</div>
+        <div class="lbl">Média / atividade</div>
+      </div>
+      <div class="sum-card">
+        <div class="val">${clientesAtivos}</div>
+        <div class="lbl">Clientes ativos</div>
+      </div>
+    `;
+
+    // Horas por cliente
+    const porCliente = {};
+    list.forEach(a=>{ porCliente[a.cliente] = (porCliente[a.cliente]||0) + parseHoras(a.horas); });
+    const clientesOrdenados = Object.entries(porCliente).sort((a,b)=>b[1]-a[1]);
+    const maxCliente = clientesOrdenados.length ? clientesOrdenados[0][1] : 0;
+    $('kpiClienteBars').innerHTML = clientesOrdenados.length
+      ? clientesOrdenados.map(([cliente,horas])=> kpiBarRow(cliente, horas, maxCliente, 'var(--orange)', fmtHorasHM(horas))).join('')
+      : '<div class="kpi-empty">Nenhuma atividade no período selecionado.</div>';
+
+    // Distribuição por status
+    const porStatus = {};
+    list.forEach(a=>{ porStatus[a.status] = (porStatus[a.status]||0) + parseHoras(a.horas); });
+    const statusOrdenado = Object.keys(STATUS_COLORS).filter(s=>porStatus[s] > 0);
+    const maxStatus = Math.max(...Object.values(porStatus), 0);
+    $('kpiStatusBars').innerHTML = statusOrdenado.length
+      ? statusOrdenado.map(s=> kpiBarRow(s, porStatus[s], maxStatus, STATUS_COLORS[s].fg, fmtHorasHM(porStatus[s]))).join('')
+      : '<div class="kpi-empty">Nenhuma atividade no período selecionado.</div>';
+
+    // Distribuição por tipo
+    const porTipo = {};
+    list.forEach(a=>{ const t = a.tipo || 'Presencial'; porTipo[t] = (porTipo[t]||0) + parseHoras(a.horas); });
+    const tipoOrdenado = Object.keys(TIPO_COLORS).filter(t=>porTipo[t] > 0);
+    const maxTipo = Math.max(...Object.values(porTipo), 0);
+    $('kpiTipoBars').innerHTML = tipoOrdenado.length
+      ? tipoOrdenado.map(t=> kpiBarRow(t, porTipo[t], maxTipo, TIPO_COLORS[t].fg, fmtHorasHM(porTipo[t]))).join('')
+      : '<div class="kpi-empty">Nenhuma atividade no período selecionado.</div>';
+
+    // Horas por mês
+    const porMes = {};
+    list.forEach(a=>{
+      if(!isValidDate(a.data)) return;
+      const [dd,mm,aaaa] = a.data.split('/');
+      const key = aaaa+'-'+mm;
+      porMes[key] = (porMes[key]||0) + parseHoras(a.horas);
+    });
+    const mesesOrdenados = Object.keys(porMes).sort();
+    const maxMes = Math.max(...Object.values(porMes), 0);
+    $('kpiMesChart').innerHTML = mesesOrdenados.length
+      ? mesesOrdenados.map(key=>{
+          const [aaaa,mm] = key.split('-');
+          const horas = porMes[key];
+          const heightPct = maxMes > 0 ? Math.max((horas/maxMes*100), 4) : 4;
+          const lbl = MONTHS_PT[parseInt(mm,10)-1] + '/' + aaaa.slice(2);
+          return `
+            <div class="kpi-month-col">
+              <div class="kpi-month-val">${fmtHorasHM(horas)}</div>
+              <div class="kpi-month-bar" style="height:${heightPct.toFixed(1)}%;"></div>
+              <div class="kpi-month-lbl">${lbl}</div>
+            </div>`;
+        }).join('')
+      : '<div class="kpi-empty">Nenhuma atividade no período selecionado.</div>';
+  }
+
   // ---------- Render orchestration ----------
   function render(){
     updateClienteOptions();
@@ -1200,6 +1477,7 @@
     renderSummary(list);
     renderGantt(list);
     renderTable(list);
+    if($('viewKPIs').style.display !== 'none') renderKPIs(list);
   }
 
   loadData();
