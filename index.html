@@ -879,6 +879,12 @@
     if(!h) return 0;
     return parseFloat(String(h).replace(',','.')) || 0;
   }
+  function fmtHorasHM(decimal){
+    const totalMin = Math.round(decimal * 60);
+    const h = Math.floor(totalMin / 60);
+    const m = totalMin % 60;
+    return `${h}h${String(m).padStart(2,'0')}`;
+  }
 
   function renderSummary(list){
     const total = list.reduce((s,a)=>s+parseHoras(a.horas),0);
@@ -889,11 +895,11 @@
 
     $('summaryCards').innerHTML = `
       <div class="sum-card accent">
-        <div class="val">${total.toFixed(2).replace('.',',')}h</div>
+        <div class="val">${fmtHorasHM(total)}</div>
         <div class="lbl">Horas apontadas</div>
       </div>
       <div class="sum-card executed">
-        <div class="val">${executadas.toFixed(2).replace('.',',')}h</div>
+        <div class="val">${fmtHorasHM(executadas)}</div>
         <div class="lbl">Horas executadas</div>
       </div>
       <div class="sum-card">
