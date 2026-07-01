@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Controle de Agendas — Panice</title>
+<title>Controle de Agendas — AXL_IntraLog</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -370,6 +370,7 @@
     background:#fff;
   }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
   .hint{font-size:11px; color:var(--muted); margin-top:4px;}
   .modal-actions{
     display:flex; justify-content:flex-end; gap:8px;
@@ -437,16 +438,17 @@
       text-overflow:clip;
     }
     .row2{grid-template-columns:1fr;}
+    .row3{grid-template-columns:1fr;}
   }
 </style>
 </head>
 <body>
 
 <header class="top">
-  <div class="logo-mark">P</div>
+  <div class="logo-mark">A</div>
   <div>
-    <h1>Controle de Agendas</h1>
-    <p>Panice Tecnologia · Gente atendendo Gente</p>
+    <h1>Controle de Agendas AXL_IntraLog</h1>
+    <p>AXL IntraLog · Gestão de atendimentos</p>
   </div>
 </header>
 
@@ -481,6 +483,7 @@
     <button class="btn btn-ghost btn-sm" id="btnImport">⬆ Importar CSV</button>
     <input type="file" id="fileImport" accept=".csv" style="display:none;">
     <button class="btn btn-ghost btn-sm" id="btnExport">⬇ Exportar CSV</button>
+    <button class="btn btn-ghost btn-sm" id="btnMerge">🔗 Mesclar duplicados</button>
   </div>
 
   <div class="table-wrap">
@@ -489,6 +492,7 @@
         <tr>
           <th>Data</th>
           <th>Início</th>
+          <th>Intervalo</th>
           <th>Fim</th>
           <th>Horas apontadas</th>
           <th>Cliente atendido</th>
@@ -522,21 +526,26 @@
       <input type="text" id="fData" placeholder="DD/MM/AAAA" maxlength="10">
     </div>
 
-    <div class="row2">
+    <div class="row3">
       <div class="field">
         <label>Hora inicial</label>
         <input type="text" id="fHoraIni" placeholder="HH:MM" maxlength="5">
+      </div>
+      <div class="field">
+        <label>Intervalo</label>
+        <input type="text" id="fIntervalo" placeholder="HH:MM" maxlength="5">
       </div>
       <div class="field">
         <label>Hora final</label>
         <input type="text" id="fHoraFim" placeholder="HH:MM" maxlength="5">
       </div>
     </div>
+    <div class="hint" style="margin:-10px 0 14px;">Intervalo é a duração da pausa (ex.: almoço) descontada do período — deixe 00:00 se não houver.</div>
 
     <div class="field">
       <label>Horas apontadas</label>
       <input type="text" id="fHorasApontadas" placeholder="0,00" maxlength="6">
-      <div class="hint">Calculado automaticamente pelo intervalo — pode ser ajustado manualmente (ex.: descontar intervalo).</div>
+      <div class="hint">Calculado automaticamente (fim − início − intervalo) — pode ser ajustado manualmente.</div>
     </div>
 
     <div class="field">
@@ -630,10 +639,11 @@
     });
   }
   maskDate($('fData')); maskDate($('filterDataIni')); maskDate($('filterDataFim'));
-  maskTime($('fHoraIni')); maskTime($('fHoraFim'));
+  maskTime($('fHoraIni')); maskTime($('fHoraFim')); maskTime($('fIntervalo'));
 
   function isValidDate(s){ return /^\d{2}\/\d{2}\/\d{4}$/.test(s); }
   function isValidTime(s){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
+  function isValidInterval(s){ return s === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
 
   function dateToSortable(d){
     // DD/MM/AAAA -> AAAAMMDD
@@ -649,27 +659,33 @@
     const mm = String(d.getMonth()+1).padStart(2,'0');
     return `${dd}/${mm}/${d.getFullYear()}`;
   }
+  function timeToMin(t){
+    if(!isValidTime(t)) return 0;
+    const [h,m] = t.split(':').map(Number);
+    return h*60+m;
+  }
 
-  function calcHoras(ini, fim){
+  function calcHoras(ini, fim, intervalo){
     if(!isValidTime(ini) || !isValidTime(fim)) return '';
-    const [h1,m1] = ini.split(':').map(Number);
-    const [h2,m2] = fim.split(':').map(Number);
-    let mins = (h2*60+m2) - (h1*60+m1);
+    let mins = timeToMin(fim) - timeToMin(ini);
     if(mins < 0) mins += 24*60; // atravessa meia-noite
+    const intervaloMin = intervalo ? timeToMin(intervalo) : 0;
+    mins = Math.max(mins - intervaloMin, 0);
     return (mins/60).toFixed(2).replace('.',',');
   }
 
   // auto-calc horas apontadas as user types times (only if field untouched or matches previous auto calc)
   let lastAuto = '';
   function autoFillHoras(){
-    const ini = $('fHoraIni').value, fim = $('fHoraFim').value;
-    const calc = calcHoras(ini, fim);
+    const ini = $('fHoraIni').value, fim = $('fHoraFim').value, intervalo = $('fIntervalo').value;
+    const calc = calcHoras(ini, fim, intervalo);
     const current = $('fHorasApontadas').value;
     if(current === '' || current === lastAuto){
       $('fHorasApontadas').value = calc;
       lastAuto = calc;
     }
   }
+  $('fIntervalo').addEventListener('input', autoFillHoras);
   $('fHoraIni').addEventListener('input', autoFillHoras);
   $('fHoraFim').addEventListener('input', autoFillHoras);
 
@@ -679,6 +695,7 @@
     $('modalTitle').textContent = item ? 'Editar atividade' : 'Nova atividade';
     $('fData').value = item ? item.data : '';
     $('fHoraIni').value = item ? item.horaIni : '';
+    $('fIntervalo').value = item ? (item.intervalo || '00:00') : '00:00';
     $('fHoraFim').value = item ? item.horaFim : '';
     $('fHorasApontadas').value = item ? item.horas : '';
     lastAuto = item ? item.horas : '';
@@ -700,6 +717,7 @@
     const data = $('fData').value.trim();
     const horaIni = $('fHoraIni').value.trim();
     const horaFim = $('fHoraFim').value.trim();
+    const intervalo = $('fIntervalo').value.trim() || '00:00';
     const horas = $('fHorasApontadas').value.trim();
     const cliente = $('fCliente').value.trim();
     const status = $('fStatus').value;
@@ -708,17 +726,18 @@
     if(!isValidDate(data)){ toast('Informe uma data válida (DD/MM/AAAA).'); return; }
     if(!isValidTime(horaIni)){ toast('Informe a hora inicial válida (HH:MM).'); return; }
     if(!isValidTime(horaFim)){ toast('Informe a hora final válida (HH:MM).'); return; }
+    if(!isValidInterval(intervalo)){ toast('Informe um intervalo válido (HH:MM).'); return; }
     if(!cliente){ toast('Informe o cliente atendido.'); return; }
     if(!horas){ toast('Informe as horas apontadas.'); return; }
 
     if(editingId){
       const idx = agendas.findIndex(a=>a.id===editingId);
       if(idx>-1){
-        agendas[idx] = {...agendas[idx], data, horaIni, horaFim, horas, cliente, status, descricao};
+        agendas[idx] = {...agendas[idx], data, horaIni, horaFim, intervalo, horas, cliente, status, descricao};
       }
       toast('Atividade atualizada.');
     }else{
-      agendas.push({id: uid(), data, horaIni, horaFim, horas, cliente, status, descricao});
+      agendas.push({id: uid(), data, horaIni, horaFim, intervalo, horas, cliente, status, descricao});
       toast('Atividade adicionada.');
     }
     await saveData();
@@ -897,6 +916,7 @@
       <tr>
         <td data-label="Data">${a.data}</td>
         <td data-label="Início">${a.horaIni}</td>
+        <td data-label="Intervalo">${a.intervalo && a.intervalo !== '00:00' ? a.intervalo : '—'}</td>
         <td data-label="Fim">${a.horaFim}</td>
         <td data-label="Horas apontadas" class="horas-cell">${a.horas}h</td>
         <td data-label="Cliente" class="cliente-cell">${escapeHtml(a.cliente)}</td>
@@ -930,8 +950,8 @@
   $('btnExport').addEventListener('click', ()=>{
     const list = applyFilters(agendas);
     if(!list.length){ toast('Não há dados para exportar.'); return; }
-    const header = ['Data','Hora Inicial','Hora Final','Horas Apontadas','Cliente Atendido','Status','Atividade Realizada'];
-    const rows = list.map(a=>[a.data,a.horaIni,a.horaFim,a.horas,a.cliente,a.status,a.descricao||'']);
+    const header = ['Data','Hora Inicial','Intervalo','Hora Final','Horas Apontadas','Cliente Atendido','Status','Atividade Realizada'];
+    const rows = list.map(a=>[a.data,a.horaIni,a.intervalo||'00:00',a.horaFim,a.horas,a.cliente,a.status,a.descricao||'']);
     const csv = [header, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
     const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -971,24 +991,103 @@
     const lines = text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim().length);
     if(lines.length < 2){ toast('Arquivo CSV vazio ou inválido.'); e.target.value=''; return; }
 
+    const headerCols = parseCsvLine(lines[0]).map(c=>c.trim().toLowerCase());
+    const findCol = (...names) => {
+      for(const n of names){
+        const idx = headerCols.indexOf(n);
+        if(idx > -1) return idx;
+      }
+      return -1;
+    };
+    const idxData = findCol('data');
+    const idxIni = findCol('hora inicial','início','inicio');
+    const idxIntervalo = findCol('intervalo');
+    const idxFim = findCol('hora final','fim');
+    const idxHoras = findCol('horas apontadas','horas');
+    const idxCliente = findCol('cliente atendido','cliente');
+    const idxStatus = findCol('status');
+    const idxDesc = findCol('atividade realizada','atividade','descrição','descricao');
+
+    if(idxData===-1 || idxIni===-1 || idxFim===-1 || idxHoras===-1 || idxCliente===-1){
+      toast('Cabeçalho do CSV não reconhecido. Verifique as colunas.');
+      e.target.value = '';
+      return;
+    }
+
     let added = 0, skipped = 0, invalid = 0;
     for(let i=1;i<lines.length;i++){
       const cols = parseCsvLine(lines[i]).map(c=>c.trim());
-      if(cols.length < 6) { invalid++; continue; }
-      const [data, horaIni, horaFim, horas, cliente, status, descricao] = cols;
+      const data = cols[idxData] || '';
+      const horaIni = cols[idxIni] || '';
+      const horaFim = cols[idxFim] || '';
+      const intervalo = (idxIntervalo>-1 ? cols[idxIntervalo] : '') || '00:00';
+      const horas = cols[idxHoras] || '';
+      const cliente = cols[idxCliente] || '';
+      const status = idxStatus>-1 ? cols[idxStatus] : 'Agendado';
+      const descricao = idxDesc>-1 ? (cols[idxDesc] || '') : '';
+
       if(!isValidDate(data) || !isValidTime(horaIni) || !isValidTime(horaFim) || !cliente || !horas){
         invalid++; continue;
       }
       const statusFinal = STATUS_COLORS[status] ? status : 'Agendado';
       const dup = agendas.some(a=> a.data===data && a.horaIni===horaIni && a.horaFim===horaFim && a.cliente===cliente);
       if(dup){ skipped++; continue; }
-      agendas.push({id: uid(), data, horaIni, horaFim, horas, cliente, status: statusFinal, descricao: descricao || ''});
+      agendas.push({id: uid(), data, horaIni, horaFim, intervalo: isValidInterval(intervalo)?intervalo:'00:00', horas, cliente, status: statusFinal, descricao});
       added++;
     }
     await saveData();
     render();
     e.target.value = '';
     toast(`Importação concluída: ${added} adicionadas, ${skipped} já existiam, ${invalid} inválidas.`);
+  });
+
+  // ---------- Merge duplicate rows (same client + date) ----------
+  $('btnMerge').addEventListener('click', async ()=>{
+    const groups = {};
+    agendas.forEach(a=>{
+      const key = a.cliente + '|' + a.data;
+      (groups[key] = groups[key] || []).push(a);
+    });
+    const toMerge = Object.values(groups).filter(g=>g.length > 1);
+    if(!toMerge.length){ toast('Nenhuma linha duplicada de mesmo cliente/data encontrada.'); return; }
+
+    const totalRows = toMerge.reduce((s,g)=>s+g.length,0);
+    if(!confirm(`Encontradas ${toMerge.length} data(s)/cliente(s) com ${totalRows} linhas para mesclar em ${toMerge.length} linha(s). Deseja continuar?`)) return;
+
+    let merged = [];
+    const idsToRemove = new Set();
+    toMerge.forEach(group=>{
+      group.sort((a,b)=> timeToMin(a.horaIni) - timeToMin(b.horaIni));
+      const first = group[0], last = group[group.length-1];
+      const iniMin = timeToMin(first.horaIni);
+      const fimMin = Math.max(...group.map(g=>timeToMin(g.horaFim)));
+      let gapMin = 0;
+      for(let i=0;i<group.length-1;i++){
+        gapMin += Math.max(timeToMin(group[i+1].horaIni) - timeToMin(group[i].horaFim), 0);
+      }
+      const existingIntervalo = group.reduce((s,g)=> s + timeToMin(g.intervalo||'00:00'), 0);
+      const totalIntervaloMin = gapMin + existingIntervalo;
+      const totalHoras = Math.max((fimMin - iniMin - totalIntervaloMin)/60, 0);
+      const statuses = [...new Set(group.map(g=>g.status))];
+      const descs = [...new Set(group.map(g=>g.descricao).filter(Boolean))];
+      group.forEach(g=>idsToRemove.add(g.id));
+      merged.push({
+        id: uid(),
+        data: first.data,
+        horaIni: first.horaIni,
+        horaFim: String(Math.floor(fimMin/60)).padStart(2,'0')+':'+String(fimMin%60).padStart(2,'0'),
+        intervalo: String(Math.floor(totalIntervaloMin/60)).padStart(2,'0')+':'+String(totalIntervaloMin%60).padStart(2,'0'),
+        horas: totalHoras.toFixed(2).replace('.',','),
+        cliente: first.cliente,
+        status: statuses.length===1 ? statuses[0] : statuses[0],
+        descricao: descs.join(' | ')
+      });
+    });
+
+    agendas = agendas.filter(a=>!idsToRemove.has(a.id)).concat(merged);
+    await saveData();
+    render();
+    toast(`${toMerge.length} linha(s) mesclada(s) a partir de ${totalRows} registros.`);
   });
 
   // ---------- Render orchestration ----------
