@@ -478,12 +478,14 @@
     </select>
     <input type="text" id="filterDataIni" placeholder="De (DD/MM/AAAA)" maxlength="10" style="width:130px;">
     <input type="text" id="filterDataFim" placeholder="Até (DD/MM/AAAA)" maxlength="10" style="width:130px;">
+    <input type="text" id="filterHoraIni" placeholder="Hora início (HH:MM)" maxlength="5" style="width:130px;">
     <div class="spacer"></div>
     <button class="btn btn-ghost btn-sm" id="btnClearFilters">Limpar filtros</button>
     <button class="btn btn-ghost btn-sm" id="btnImport">⬆ Importar CSV</button>
     <input type="file" id="fileImport" accept=".csv" style="display:none;">
     <button class="btn btn-ghost btn-sm" id="btnExport">⬇ Exportar CSV</button>
     <button class="btn btn-ghost btn-sm" id="btnMerge">🔗 Mesclar duplicados</button>
+    <button class="btn btn-danger btn-sm" id="btnDeleteFiltered">🗑 Excluir filtrados</button>
   </div>
 
   <div class="table-wrap">
@@ -642,7 +644,7 @@
     });
   }
   maskDate($('fData')); maskDate($('filterDataIni')); maskDate($('filterDataFim'));
-  maskTime($('fHoraIni')); maskTime($('fHoraFim')); maskTime($('fIntervalo'));
+  maskTime($('fHoraIni')); maskTime($('fHoraFim')); maskTime($('fIntervalo')); maskTime($('filterHoraIni'));
 
   function isValidDate(s){ return /^\d{2}\/\d{2}\/\d{4}$/.test(s); }
   function isValidTime(s){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
@@ -762,7 +764,8 @@
       cliente: $('filterCliente').value,
       status: $('filterStatus').value,
       dataIni: $('filterDataIni').value,
-      dataFim: $('filterDataFim').value
+      dataFim: $('filterDataFim').value,
+      horaIni: $('filterHoraIni').value.trim()
     };
   }
   function applyFilters(list){
@@ -772,15 +775,31 @@
       if(f.status && a.status !== f.status) return false;
       if(f.dataIni && isValidDate(f.dataIni) && dateToSortable(a.data) < dateToSortable(f.dataIni)) return false;
       if(f.dataFim && isValidDate(f.dataFim) && dateToSortable(a.data) > dateToSortable(f.dataFim)) return false;
+      if(f.horaIni && isValidTime(f.horaIni) && a.horaIni !== f.horaIni) return false;
       return true;
     });
   }
   ['filterCliente','filterStatus'].forEach(id=> $(id).addEventListener('change', render));
-  ['filterDataIni','filterDataFim'].forEach(id=> $(id).addEventListener('input', render));
+  ['filterDataIni','filterDataFim','filterHoraIni'].forEach(id=> $(id).addEventListener('input', render));
   $('btnClearFilters').addEventListener('click', ()=>{
     $('filterCliente').value=''; $('filterStatus').value='';
     $('filterDataIni').value=''; $('filterDataFim').value='';
+    $('filterHoraIni').value='';
     render();
+  });
+
+  $('btnDeleteFiltered').addEventListener('click', async ()=>{
+    const filtered = applyFilters(agendas);
+    if(!filtered.length){ toast('Nenhuma atividade corresponde aos filtros atuais.'); return; }
+    const f = currentFilters();
+    const hasFilter = f.cliente || f.status || f.dataIni || f.dataFim || f.horaIni;
+    if(!hasFilter){ toast('Aplique ao menos um filtro antes de excluir em lote.'); return; }
+    if(!confirm(`Excluir ${filtered.length} atividade(s) que correspondem aos filtros atuais? Essa ação não pode ser desfeita.`)) return;
+    const idsToRemove = new Set(filtered.map(a=>a.id));
+    agendas = agendas.filter(a=>!idsToRemove.has(a.id));
+    await saveData();
+    render();
+    toast(`${filtered.length} atividade(s) excluída(s).`);
   });
 
   function updateClienteOptions(){
