@@ -605,20 +605,23 @@
   }
 
   // ---------- Storage ----------
+  // Usa localStorage do navegador (persiste por domínio/origem) — funciona ao
+  // hospedar este arquivo fora do Claude.ai (GitHub Pages, servidor próprio, etc.)
   async function loadData(){
     try{
-      const res = await window.storage.get(STORAGE_KEY, false);
-      agendas = res ? JSON.parse(res.value) : [];
+      const raw = localStorage.getItem(STORAGE_KEY);
+      agendas = raw ? JSON.parse(raw) : [];
     }catch(e){
       agendas = [];
+      toast('Não foi possível ler os dados salvos neste navegador.');
     }
     render();
   }
   async function saveData(){
     try{
-      await window.storage.set(STORAGE_KEY, JSON.stringify(agendas), false);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(agendas));
     }catch(e){
-      toast('Erro ao salvar. Tente novamente.');
+      toast('Erro ao salvar. Verifique o espaço de armazenamento do navegador.');
     }
   }
 
