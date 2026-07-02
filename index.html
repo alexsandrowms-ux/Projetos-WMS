@@ -665,6 +665,7 @@
     <button class="btn btn-ghost btn-sm" id="btnImport">⬆ Importar CSV</button>
     <input type="file" id="fileImport" accept=".csv" style="display:none;">
     <button class="btn btn-ghost btn-sm" id="btnExport">⬇ Exportar CSV</button>
+    <button class="btn btn-ghost btn-sm" id="btnPublish">🌐 Gerar dados.json</button>
     <button class="btn btn-ghost btn-sm" id="btnMerge">🔗 Mesclar duplicados</button>
     <button class="btn btn-danger btn-sm" id="btnDeleteFiltered">🗑 Excluir filtrados</button>
   </div>
@@ -679,6 +680,7 @@
           <th>Fim</th>
           <th>Horas apontadas</th>
           <th>Cliente atendido</th>
+          <th>Local</th>
           <th>Tipo</th>
           <th>Status</th>
           <th>Atividade realizada</th>
@@ -766,6 +768,21 @@
 
     <div class="row2">
       <div class="field">
+        <label>Estado</label>
+        <select id="fEstado">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Cidade</label>
+        <select id="fCidade" disabled>
+          <option value="">Selecione o estado primeiro</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
         <label>Tipo de agenda</label>
         <select id="fTipo">
           <option>Presencial</option>
@@ -811,6 +828,16 @@
     'Presencial': {fg:'var(--tipo-presencial)', bg:'var(--tipo-presencial-bg)'},
     'Remota':     {fg:'var(--tipo-remota)',     bg:'var(--tipo-remota-bg)'}
   };
+  const UF_LIST = [
+    ['AC','Acre'],['AL','Alagoas'],['AP','Amapá'],['AM','Amazonas'],['BA','Bahia'],
+    ['CE','Ceará'],['DF','Distrito Federal'],['ES','Espírito Santo'],['GO','Goiás'],
+    ['MA','Maranhão'],['MT','Mato Grosso'],['MS','Mato Grosso do Sul'],['MG','Minas Gerais'],
+    ['PA','Pará'],['PB','Paraíba'],['PR','Paraná'],['PE','Pernambuco'],['PI','Piauí'],
+    ['RJ','Rio de Janeiro'],['RN','Rio Grande do Norte'],['RS','Rio Grande do Sul'],
+    ['RO','Rondônia'],['RR','Roraima'],['SC','Santa Catarina'],['SP','São Paulo'],
+    ['SE','Sergipe'],['TO','Tocantins']
+  ];
+  const cidadesCache = {};
 
   let agendas = [];
   let editingId = null;
@@ -831,13 +858,33 @@
   // ---------- Storage ----------
   // Usa localStorage do navegador (persiste por domínio/origem) — funciona ao
   // hospedar este arquivo fora do Claude.ai (GitHub Pages, servidor próprio, etc.)
+  // Se o navegador não tem nada salvo ainda (ex.: outra pessoa abrindo o link
+  // pela primeira vez), tenta carregar um "dados.json" publicado junto com a
+  // página como base inicial compartilhada (snapshot, não é tempo real).
   async function loadData(){
     try{
       const raw = localStorage.getItem(STORAGE_KEY);
-      agendas = raw ? JSON.parse(raw) : [];
+      if(raw){
+        agendas = JSON.parse(raw);
+        render();
+        return;
+      }
     }catch(e){
       agendas = [];
-      toast('Não foi possível ler os dados salvos neste navegador.');
+    }
+
+    try{
+      const res = await fetch('./dados.json', {cache:'no-store'});
+      if(res.ok){
+        const publicData = await res.json();
+        if(Array.isArray(publicData)){
+          agendas = publicData;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(agendas));
+          toast('Dados carregados a partir do arquivo publicado (dados.json).');
+        }
+      }
+    }catch(e){
+      // sem dados.json publicado ou falha ao buscar — segue com base vazia
     }
     render();
   }
@@ -867,6 +914,44 @@
   }
   maskDate($('fData')); maskDate($('filterDataIni')); maskDate($('filterDataFim'));
   maskTime($('fHoraIni')); maskTime($('fHoraFim')); maskTime($('fIntervalo')); maskTime($('filterHoraIni'));
+
+  // ---------- Estado / Cidade (cascata via API do IBGE) ----------
+  UF_LIST.forEach(([sigla,nome])=>{
+    const opt = document.createElement('option');
+    opt.value = sigla;
+    opt.textContent = `${nome} (${sigla})`;
+    $('fEstado').appendChild(opt);
+  });
+
+  async function loadCidades(uf, cidadeSelecionada){
+    const cidadeSel = $('fCidade');
+    if(!uf){
+      cidadeSel.innerHTML = '<option value="">Selecione o estado primeiro</option>';
+      cidadeSel.disabled = true;
+      return;
+    }
+    cidadeSel.disabled = true;
+    cidadeSel.innerHTML = '<option value="">Carregando cidades...</option>';
+    try{
+      let cidades = cidadesCache[uf];
+      if(!cidades){
+        const res = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/estados/${uf}/municipios`);
+        if(!res.ok) throw new Error('fetch failed');
+        const json = await res.json();
+        cidades = json.map(m=>m.nome).sort((a,b)=>a.localeCompare(b,'pt-BR'));
+        cidadesCache[uf] = cidades;
+      }
+      cidadeSel.innerHTML = '<option value="">Selecione...</option>' +
+        cidades.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+      cidadeSel.disabled = false;
+      if(cidadeSelecionada) cidadeSel.value = cidadeSelecionada;
+    }catch(e){
+      cidadeSel.innerHTML = '<option value="">Não foi possível carregar (sem internet?)</option>';
+      cidadeSel.disabled = true;
+      toast('Não foi possível carregar as cidades. Verifique sua conexão.');
+    }
+  }
+  $('fEstado').addEventListener('change', ()=> loadCidades($('fEstado').value, ''));
 
   function isValidDate(s){ return /^\d{2}\/\d{2}\/\d{4}$/.test(s); }
   function isValidTime(s){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
@@ -927,6 +1012,8 @@
     $('fHorasApontadas').value = item ? item.horas : '';
     lastAuto = item ? item.horas : '';
     $('fCliente').value = item ? item.cliente : '';
+    $('fEstado').value = item ? (item.estado || '') : '';
+    loadCidades(item ? (item.estado || '') : '', item ? (item.cidade || '') : '');
     $('fTipo').value = item ? (item.tipo || 'Presencial') : 'Presencial';
     $('fStatus').value = item ? item.status : 'Agendado';
     $('fDescricao').value = item ? (item.descricao || '') : '';
@@ -948,6 +1035,8 @@
     const intervalo = $('fIntervalo').value.trim() || '00:00';
     const horas = $('fHorasApontadas').value.trim();
     const cliente = $('fCliente').value.trim();
+    const estado = $('fEstado').value;
+    const cidade = $('fCidade').value;
     const tipo = $('fTipo').value;
     const status = $('fStatus').value;
     const descricao = $('fDescricao').value.trim();
@@ -962,11 +1051,11 @@
     if(editingId){
       const idx = agendas.findIndex(a=>a.id===editingId);
       if(idx>-1){
-        agendas[idx] = {...agendas[idx], data, horaIni, horaFim, intervalo, horas, cliente, tipo, status, descricao};
+        agendas[idx] = {...agendas[idx], data, horaIni, horaFim, intervalo, horas, cliente, estado, cidade, tipo, status, descricao};
       }
       toast('Atividade atualizada.');
     }else{
-      agendas.push({id: uid(), data, horaIni, horaFim, intervalo, horas, cliente, tipo, status, descricao});
+      agendas.push({id: uid(), data, horaIni, horaFim, intervalo, horas, cliente, estado, cidade, tipo, status, descricao});
       toast('Atividade adicionada.');
     }
     await saveData();
@@ -1182,6 +1271,7 @@
         <td data-label="Fim">${a.horaFim}</td>
         <td data-label="Horas apontadas" class="horas-cell">${a.horas}h</td>
         <td data-label="Cliente" class="cliente-cell">${escapeHtml(a.cliente)}</td>
+        <td data-label="Local" class="desc-cell" style="max-width:140px;">${(a.cidade || a.estado) ? escapeHtml([a.cidade, a.estado].filter(Boolean).join('/')) : '<span class="desc-empty">—</span>'}</td>
         <td data-label="Tipo">
           <span class="status-pill" style="color:${t.fg};background:${t.bg};">
             <span class="dot" style="background:${t.fg};"></span>${tipoLabel}
@@ -1217,8 +1307,8 @@
   $('btnExport').addEventListener('click', ()=>{
     const list = applyFilters(agendas);
     if(!list.length){ toast('Não há dados para exportar.'); return; }
-    const header = ['Data','Hora Inicial','Intervalo','Hora Final','Horas Apontadas','Cliente Atendido','Tipo','Status','Atividade Realizada'];
-    const rows = list.map(a=>[a.data,a.horaIni,a.intervalo||'00:00',a.horaFim,a.horas,a.cliente,a.tipo||'Presencial',a.status,a.descricao||'']);
+    const header = ['Data','Hora Inicial','Intervalo','Hora Final','Horas Apontadas','Cliente Atendido','Estado','Cidade','Tipo','Status','Atividade Realizada'];
+    const rows = list.map(a=>[a.data,a.horaIni,a.intervalo||'00:00',a.horaFim,a.horas,a.cliente,a.estado||'',a.cidade||'',a.tipo||'Presencial',a.status,a.descricao||'']);
     const csv = [header, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\n');
     const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
     const url = URL.createObjectURL(blob);
@@ -1227,6 +1317,19 @@
     link.download = 'controle_agendas.csv';
     link.click();
     URL.revokeObjectURL(url);
+  });
+
+  // ---------- Publicar dados.json (base compartilhada para novos visitantes) ----------
+  $('btnPublish').addEventListener('click', ()=>{
+    if(!agendas.length){ toast('Não há dados para publicar.'); return; }
+    const blob = new Blob([JSON.stringify(agendas, null, 2)], {type:'application/json;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'dados.json';
+    link.click();
+    URL.revokeObjectURL(url);
+    toast('dados.json gerado. Suba esse arquivo na mesma pasta do index.html no GitHub.');
   });
 
   // ---------- Import CSV ----------
@@ -1272,6 +1375,8 @@
     const idxFim = findCol('hora final','fim');
     const idxHoras = findCol('horas apontadas','horas');
     const idxCliente = findCol('cliente atendido','cliente');
+    const idxEstado = findCol('estado','uf');
+    const idxCidade = findCol('cidade');
     const idxTipo = findCol('tipo','tipo de agenda');
     const idxStatus = findCol('status');
     const idxDesc = findCol('atividade realizada','atividade','descrição','descricao');
@@ -1291,6 +1396,8 @@
       const intervalo = (idxIntervalo>-1 ? cols[idxIntervalo] : '') || '00:00';
       const horas = cols[idxHoras] || '';
       const cliente = cols[idxCliente] || '';
+      const estado = idxEstado>-1 ? (cols[idxEstado] || '') : '';
+      const cidade = idxCidade>-1 ? (cols[idxCidade] || '') : '';
       const tipo = idxTipo>-1 ? cols[idxTipo] : 'Presencial';
       const status = idxStatus>-1 ? cols[idxStatus] : 'Agendado';
       const descricao = idxDesc>-1 ? (cols[idxDesc] || '') : '';
@@ -1302,7 +1409,7 @@
       const tipoFinal = TIPO_COLORS[tipo] ? tipo : 'Presencial';
       const dup = agendas.some(a=> a.data===data && a.horaIni===horaIni && a.horaFim===horaFim && a.cliente===cliente);
       if(dup){ skipped++; continue; }
-      agendas.push({id: uid(), data, horaIni, horaFim, intervalo: isValidInterval(intervalo)?intervalo:'00:00', horas, cliente, tipo: tipoFinal, status: statusFinal, descricao});
+      agendas.push({id: uid(), data, horaIni, horaFim, intervalo: isValidInterval(intervalo)?intervalo:'00:00', horas, cliente, estado, cidade, tipo: tipoFinal, status: statusFinal, descricao});
       added++;
     }
     await saveData();
@@ -1349,6 +1456,8 @@
         intervalo: String(Math.floor(totalIntervaloMin/60)).padStart(2,'0')+':'+String(totalIntervaloMin%60).padStart(2,'0'),
         horas: totalHoras.toFixed(2).replace('.',','),
         cliente: first.cliente,
+        estado: first.estado || '',
+        cidade: first.cidade || '',
         tipo: first.tipo || 'Presencial',
         status: statuses.length===1 ? statuses[0] : statuses[0],
         descricao: descs.join(' | ')
