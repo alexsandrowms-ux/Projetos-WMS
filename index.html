@@ -763,7 +763,8 @@
 
     <div class="field">
       <label>Cliente atendido</label>
-      <input type="text" id="fCliente" placeholder="Nome do cliente" maxlength="80">
+      <input type="text" id="fCliente" list="clienteDatalist" placeholder="Nome do cliente" maxlength="80">
+      <datalist id="clienteDatalist"></datalist>
     </div>
 
     <div class="row2">
@@ -953,6 +954,27 @@
   }
   $('fEstado').addEventListener('change', ()=> loadCidades($('fEstado').value, ''));
 
+  function findClienteLocation(nomeCliente){
+    const alvo = nomeCliente.trim().toLowerCase();
+    if(!alvo) return null;
+    for(let i = agendas.length - 1; i >= 0; i--){
+      const a = agendas[i];
+      if(a.estado && a.cidade && a.cliente && a.cliente.trim().toLowerCase() === alvo){
+        return {estado: a.estado, cidade: a.cidade};
+      }
+    }
+    return null;
+  }
+  $('fCliente').addEventListener('change', ()=>{
+    if($('fEstado').value) return; // não sobrescreve escolha manual já feita
+    const loc = findClienteLocation($('fCliente').value);
+    if(loc){
+      $('fEstado').value = loc.estado;
+      loadCidades(loc.estado, loc.cidade);
+      toast(`Local preenchido automaticamente: ${loc.cidade}/${loc.estado}.`);
+    }
+  });
+
   function isValidDate(s){ return /^\d{2}\/\d{2}\/\d{4}$/.test(s); }
   function isValidTime(s){ return /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
   function isValidInterval(s){ return s === '' || /^([01]\d|2[0-3]):[0-5]\d$/.test(s); }
@@ -1125,6 +1147,8 @@
     sel.innerHTML = '<option value="">Todos os clientes</option>' +
       clientes.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
     sel.value = current;
+
+    $('clienteDatalist').innerHTML = clientes.map(c=>`<option value="${escapeHtml(c)}"></option>`).join('');
   }
 
   function escapeHtml(s){
