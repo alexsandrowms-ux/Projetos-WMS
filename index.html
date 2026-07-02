@@ -668,6 +668,7 @@
     <button class="btn btn-ghost btn-sm" id="btnPublish">🌐 Gerar dados.json</button>
     <button class="btn btn-ghost btn-sm" id="btnMerge">🔗 Mesclar duplicados</button>
     <button class="btn btn-danger btn-sm" id="btnDeleteFiltered">🗑 Excluir filtrados</button>
+    <button class="btn btn-danger btn-sm" id="btnDeleteAll">🗑 Excluir TODAS</button>
   </div>
 
   <div class="table-wrap">
@@ -1138,6 +1139,17 @@
     await saveData();
     render();
     toast(`${filtered.length} atividade(s) excluída(s).`);
+  });
+
+  $('btnDeleteAll').addEventListener('click', async ()=>{
+    if(!agendas.length){ toast('Não há atividades cadastradas.'); return; }
+    const total = agendas.length;
+    const digitado = prompt(`Isso vai excluir TODAS as ${total} atividade(s) cadastradas, de todos os clientes, sem filtro nenhum. Essa ação não pode ser desfeita.\n\nDigite EXCLUIR para confirmar:`);
+    if(digitado !== 'EXCLUIR'){ toast('Exclusão cancelada.'); return; }
+    agendas = [];
+    await saveData();
+    render();
+    toast(`Todas as ${total} atividade(s) foram excluídas. Pode importar o CSV agora.`);
   });
 
   function updateClienteOptions(){
