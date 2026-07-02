@@ -1357,7 +1357,8 @@
   });
 
   // ---------- Import CSV ----------
-  function parseCsvLine(line){
+  function parseCsvLine(line, delimiter){
+    delimiter = delimiter || ';';
     const out = [];
     let cur = '', inQuotes = false;
     for(let i=0;i<line.length;i++){
@@ -1369,12 +1370,19 @@
         } else cur += ch;
       } else {
         if(ch === '"') inQuotes = true;
-        else if(ch === ';'){ out.push(cur); cur=''; }
+        else if(ch === delimiter){ out.push(cur); cur=''; }
         else cur += ch;
       }
     }
     out.push(cur);
     return out;
+  }
+  function detectDelimiter(headerLine){
+    const semis = (headerLine.match(/;/g) || []).length;
+    const commas = (headerLine.match(/,/g) || []).length;
+    const tabs = (headerLine.match(/\t/g) || []).length;
+    if(tabs > semis && tabs > commas) return '\t';
+    return semis >= commas ? ';' : ',';
   }
 
   $('btnImport').addEventListener('click', ()=> $('fileImport').click());
@@ -1385,7 +1393,8 @@
     const lines = text.replace(/^\uFEFF/,'').split(/\r?\n/).filter(l=>l.trim().length);
     if(lines.length < 2){ toast('Arquivo CSV vazio ou inválido.'); e.target.value=''; return; }
 
-    const headerCols = parseCsvLine(lines[0]).map(c=>c.trim().toLowerCase());
+    const delimiter = detectDelimiter(lines[0]);
+    const headerCols = parseCsvLine(lines[0], delimiter).map(c=>c.trim().toLowerCase());
     const findCol = (...names) => {
       for(const n of names){
         const idx = headerCols.indexOf(n);
@@ -1413,7 +1422,7 @@
 
     let added = 0, skipped = 0, invalid = 0;
     for(let i=1;i<lines.length;i++){
-      const cols = parseCsvLine(lines[i]).map(c=>c.trim());
+      const cols = parseCsvLine(lines[i], delimiter).map(c=>c.trim());
       const data = cols[idxData] || '';
       const horaIni = cols[idxIni] || '';
       const horaFim = cols[idxFim] || '';
