@@ -413,7 +413,7 @@
     background:var(--card);
     border:1px solid var(--line);
     border-radius:14px;
-    overflow:hidden;
+    overflow-x:auto;
   }
   table{
     width:100%;
@@ -431,6 +431,15 @@
     border-bottom:1px solid var(--line);
     background:#FAFBFC;
   }
+  thead th:last-child, tbody td:last-child{
+    position:sticky;
+    right:0;
+    z-index:1;
+    box-shadow:-6px 0 8px -6px rgba(15,23,33,.12);
+  }
+  thead th:last-child{background:#FAFBFC; z-index:2;}
+  tbody td:last-child{background:var(--card);}
+  tbody tr:hover td:last-child{background:#FAFBFD;}
   tbody td{
     padding:12px 14px;
     border-bottom:1px solid var(--line);
@@ -587,6 +596,8 @@
       display:flex;
       justify-content:space-between;
       gap:10px;
+      position:static;
+      box-shadow:none;
     }
     tbody td::before{
       content:attr(data-label);
