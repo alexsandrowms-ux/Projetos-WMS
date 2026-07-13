@@ -447,6 +447,45 @@
   }
   tbody tr:last-child td{border-bottom:none;}
   tbody tr:hover{background:#FAFBFD;}
+
+  /* ---------- Destaque: hoje (pulsando) / atrasada ---------- */
+  @keyframes pulseHoje{
+    0%, 100% { background-color: rgba(240,90,26,.07); }
+    50%      { background-color: rgba(240,90,26,.20); }
+  }
+  tr.row-hoje td{
+    animation: pulseHoje 1.6s ease-in-out infinite;
+    border-left:3px solid var(--orange);
+  }
+  tr.row-hoje:hover td{ animation-play-state:running; }
+  tr.row-atrasada td{
+    background-color:#FFF6D8 !important;
+    border-left:3px solid var(--st-agendado);
+  }
+  tr.row-atrasada:hover td{ background-color:#FFF0BE !important; }
+  .tag-hoje{
+    display:inline-block;
+    font-size:9.5px;
+    font-weight:800;
+    letter-spacing:.4px;
+    color:#fff;
+    background:var(--orange);
+    padding:2px 6px;
+    border-radius:4px;
+    vertical-align:middle;
+  }
+  .tag-atrasada{
+    display:inline-block;
+    font-size:9.5px;
+    font-weight:800;
+    letter-spacing:.3px;
+    color:#8A6D00;
+    background:#FFE9A8;
+    padding:2px 6px;
+    border-radius:4px;
+    vertical-align:middle;
+    white-space:nowrap;
+  }
   .cliente-cell{font-weight:700; color:var(--navy);}
   .desc-cell{
     max-width:220px;
@@ -1305,14 +1344,24 @@
 
     $('emptyState').style.display = sorted.length ? 'none' : 'block';
 
+    const hojeStr = fmtDateObj(new Date());
+    const hojeSortable = dateToSortable(hojeStr);
+    const ATIVOS = ['Agendado','Em Andamento'];
+
     $('tbody').innerHTML = sorted.map(a=>{
       const c = STATUS_COLORS[a.status] || STATUS_COLORS['Agendado'];
       const t = TIPO_COLORS[a.tipo] || TIPO_COLORS['Presencial'];
       const tipoLabel = a.tipo || 'Presencial';
       const desc = (a.descricao || '').trim();
+
+      const dataOk = isValidDate(a.data);
+      const isHoje = dataOk && a.data === hojeStr && ATIVOS.includes(a.status);
+      const isAtrasada = dataOk && dateToSortable(a.data) < hojeSortable && ATIVOS.includes(a.status);
+      const rowClass = isHoje ? 'row-hoje' : (isAtrasada ? 'row-atrasada' : '');
+
       return `
-      <tr>
-        <td data-label="Data">${a.data}</td>
+      <tr class="${rowClass}">
+        <td data-label="Data">${a.data}${isHoje ? ' <span class="tag-hoje">HOJE</span>' : ''}${isAtrasada ? ' <span class="tag-atrasada">⚠ ATRASADA</span>' : ''}</td>
         <td data-label="Início">${a.horaIni}</td>
         <td data-label="Intervalo">${a.intervalo && a.intervalo !== '00:00' ? a.intervalo : '—'}</td>
         <td data-label="Fim">${a.horaFim}</td>
