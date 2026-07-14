@@ -377,7 +377,7 @@
     margin-bottom:16px;
     align-items:center;
   }
-  .toolbar select, .toolbar input[type=text]{
+  .toolbar select, .toolbar input[type=text], .toolbar input[type=date]{
     font-family:inherit;
     font-size:13px;
     padding:9px 11px;
@@ -706,8 +706,8 @@
       <option value="Presencial">Presencial</option>
       <option value="Remota">Remota</option>
     </select>
-    <input type="text" id="filterDataIni" placeholder="De (DD/MM/AAAA)" maxlength="10" style="width:130px;">
-    <input type="text" id="filterDataFim" placeholder="Até (DD/MM/AAAA)" maxlength="10" style="width:130px;">
+    <input type="date" id="filterDataIni" style="width:150px;">
+    <input type="date" id="filterDataFim" style="width:150px;">
     <input type="text" id="filterHoraIni" placeholder="Hora início (HH:MM)" maxlength="5" style="width:130px;">
     <div class="spacer"></div>
     <button class="btn btn-primary btn-sm" id="btnApplyFilter">Aplicar filtro</button>
@@ -787,7 +787,7 @@
 
     <div class="field">
       <label>Data</label>
-      <input type="text" id="fData" placeholder="DD/MM/AAAA" maxlength="10">
+      <input type="date" id="fData">
     </div>
 
     <div class="row3">
@@ -949,14 +949,6 @@
   }
 
   // ---------- Masks ----------
-  function maskDate(el){
-    el.addEventListener('input', ()=>{
-      let v = el.value.replace(/\D/g,'').slice(0,8);
-      if(v.length >= 5) v = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
-      else if(v.length >= 3) v = v.slice(0,2)+'/'+v.slice(2);
-      el.value = v;
-    });
-  }
   function maskTime(el){
     el.addEventListener('input', ()=>{
       let v = el.value.replace(/\D/g,'').slice(0,4);
@@ -964,8 +956,19 @@
       el.value = v;
     });
   }
-  maskDate($('fData')); maskDate($('filterDataIni')); maskDate($('filterDataFim'));
   maskTime($('fHoraIni')); maskTime($('fHoraFim')); maskTime($('fIntervalo')); maskTime($('filterHoraIni'));
+
+  // ---------- Conversão DD/MM/AAAA (formato interno) <-> AAAA-MM-DD (input type=date) ----------
+  function ddmmyyyyToISO(d){
+    if(!/^\d{2}\/\d{2}\/\d{4}$/.test(d)) return '';
+    const [dd,mm,aaaa] = d.split('/');
+    return `${aaaa}-${mm}-${dd}`;
+  }
+  function isoToDDMMYYYY(iso){
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return '';
+    const [aaaa,mm,dd] = iso.split('-');
+    return `${dd}/${mm}/${aaaa}`;
+  }
 
   // ---------- Estado / Cidade (cascata via API do IBGE) ----------
   UF_LIST.forEach(([sigla,nome])=>{
@@ -1078,7 +1081,7 @@
   function openModal(item){
     editingId = item ? item.id : null;
     $('modalTitle').textContent = item ? 'Editar atividade' : 'Nova atividade';
-    $('fData').value = item ? item.data : '';
+    $('fData').value = item ? ddmmyyyyToISO(item.data) : '';
     $('fHoraIni').value = item ? item.horaIni : '';
     $('fIntervalo').value = item ? (item.intervalo || '00:00') : '00:00';
     $('fHoraFim').value = item ? item.horaFim : '';
@@ -1102,7 +1105,7 @@
   $('overlay').addEventListener('click', (e)=>{ if(e.target.id === 'overlay') closeModal(); });
 
   $('btnSave').addEventListener('click', async ()=>{
-    const data = $('fData').value.trim();
+    const data = isoToDDMMYYYY($('fData').value);
     const horaIni = $('fHoraIni').value.trim();
     const horaFim = $('fHoraFim').value.trim();
     const intervalo = $('fIntervalo').value.trim() || '00:00';
@@ -1114,7 +1117,7 @@
     const status = $('fStatus').value;
     const descricao = $('fDescricao').value.trim();
 
-    if(!isValidDate(data)){ toast('Informe uma data válida (DD/MM/AAAA).'); return; }
+    if(!isValidDate(data)){ toast('Informe uma data válida.'); return; }
     if(!isValidTime(horaIni)){ toast('Informe a hora inicial válida (HH:MM).'); return; }
     if(!isValidTime(horaFim)){ toast('Informe a hora final válida (HH:MM).'); return; }
     if(!isValidInterval(intervalo)){ toast('Informe um intervalo válido (HH:MM).'); return; }
@@ -1161,8 +1164,8 @@
       if(f.cliente && a.cliente !== f.cliente) return false;
       if(f.status && a.status !== f.status) return false;
       if(f.tipo && (a.tipo || 'Presencial') !== f.tipo) return false;
-      if(f.dataIni && isValidDate(f.dataIni) && dateToSortable(a.data) < dateToSortable(f.dataIni)) return false;
-      if(f.dataFim && isValidDate(f.dataFim) && dateToSortable(a.data) > dateToSortable(f.dataFim)) return false;
+      if(f.dataIni && dateToSortable(a.data) < f.dataIni.replace(/-/g,'')) return false;
+      if(f.dataFim && dateToSortable(a.data) > f.dataFim.replace(/-/g,'')) return false;
       if(f.horaIni && isValidTime(f.horaIni) && a.horaIni !== f.horaIni) return false;
       return true;
     });
