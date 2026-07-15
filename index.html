@@ -197,6 +197,8 @@
     color:var(--text);
     border-right:1px solid var(--line);
     white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
   .g-corner{
     position:sticky;
@@ -235,6 +237,180 @@
     font-size:13px;
     color:var(--muted);
     padding:10px 0;
+  }
+
+  /* ---------- KANBAN DE FASES ---------- */
+  .proj-hint{
+    font-size:11.5px;
+    color:var(--muted);
+    max-width:320px;
+    text-align:right;
+  }
+  .kanban-board{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:16px;
+  }
+  .kanban-col-header{
+    font-size:13px;
+    font-weight:800;
+    margin-bottom:10px;
+    padding-bottom:8px;
+    border-bottom:2px solid currentColor;
+  }
+  .kanban-cards{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    min-height:60px;
+  }
+  .kanban-card{
+    background:linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px 14px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 1px 2px rgba(15,23,33,.05),
+      0 6px 14px -6px rgba(15,23,33,.16);
+    cursor:pointer;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .kanban-card:hover{
+    transform:translateY(-2px);
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 1px 2px rgba(15,23,33,.06),
+      0 10px 20px -6px rgba(15,23,33,.22);
+  }
+  .kanban-card .kc-cliente{
+    font-size:10.5px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.4px;
+    color:var(--orange);
+    margin-bottom:3px;
+  }
+  .kanban-card .kc-fase{
+    font-size:13px;
+    font-weight:700;
+    color:var(--navy);
+    margin-bottom:6px;
+    line-height:1.3;
+  }
+  .kanban-card .kc-datas{
+    font-size:11.5px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .kanban-card .kc-horas{
+    font-size:11px;
+    color:var(--muted);
+    display:flex;
+    justify-content:space-between;
+  }
+  .kanban-card .kc-horas b{color:var(--text);}
+  .kanban-empty{
+    font-size:12.5px;
+    color:var(--muted);
+    padding:14px 0;
+    text-align:center;
+    border:1px dashed var(--line);
+    border-radius:10px;
+  }
+  .fase-horas-info{
+    background:#F5F6F8;
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:12.5px;
+    color:var(--muted);
+    margin-bottom:14px;
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .fase-horas-info b{color:var(--navy);}
+
+  .fase-progress{
+    margin-bottom:16px;
+  }
+  .fase-progress-labels{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .fase-progress-labels b{color:var(--navy);}
+  .fase-progress-track{
+    height:14px;
+    background:#F0F2F5;
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:inset 0 1px 3px rgba(15,23,33,.08);
+  }
+  .fase-progress-fill{
+    height:100%;
+    border-radius:8px;
+    transition:width .3s ease;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.4), inset 0 -2px 3px rgba(0,0,0,.15);
+  }
+  .fase-progress-pct{
+    font-size:11px;
+    font-weight:700;
+    margin-top:4px;
+    text-align:right;
+  }
+  .fase-apont-list{
+    max-height:150px;
+    overflow-y:auto;
+    border:1px solid var(--line);
+    border-radius:8px;
+    margin-bottom:4px;
+  }
+  .fase-apont-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:8px 10px;
+    border-bottom:1px solid var(--line);
+    font-size:12px;
+  }
+  .fase-apont-row:last-child{border-bottom:none;}
+  .fase-apont-row .fa-info{display:flex; flex-direction:column; gap:2px;}
+  .fase-apont-row .fa-data{font-weight:700; color:var(--text);}
+  .fase-apont-row .fa-horario{color:var(--muted); font-size:11px;}
+  .fase-apont-row .fa-horas{font-weight:700; color:var(--navy); white-space:nowrap;}
+  .fase-apont-row .fa-desc{
+    color:var(--text);
+    font-size:11.5px;
+    font-style:italic;
+    max-width:280px;
+  }
+  .fa-anexo{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:11px;
+    color:var(--orange);
+    text-decoration:none;
+    font-weight:700;
+    margin-top:2px;
+  }
+  .fa-anexo:hover{text-decoration:underline;}
+  .fase-apont-empty{
+    font-size:12px;
+    color:var(--muted);
+    padding:14px 10px;
+    text-align:center;
+  }
+  .fase-apont-add{
+    background:#F9FAFB;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:12px;
+    margin-bottom:16px;
   }
 
   /* ---------- TABS ---------- */
@@ -496,6 +672,18 @@
     font-size:13px;
   }
   .desc-empty{color:#C4CAD1;}
+  .origem-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:10.5px;
+    font-weight:700;
+    padding:3px 8px;
+    border-radius:20px;
+    white-space:nowrap;
+  }
+  .origem-planejado{color:var(--muted); background:#F0F2F5;}
+  .origem-apontamento{color:var(--st-concluido); background:var(--st-concluido-bg);}
   .horas-cell{font-variant-numeric:tabular-nums; font-weight:700;}
 
   .status-pill{
@@ -584,6 +772,7 @@
   }
   .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px;}
+  .row4{display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:10px;}
   .hint{font-size:11px; color:var(--muted); margin-top:4px;}
   .modal-actions{
     display:flex; justify-content:flex-end; gap:8px;
@@ -655,7 +844,10 @@
     }
     .row2{grid-template-columns:1fr;}
     .row3{grid-template-columns:1fr;}
+    .row4{grid-template-columns:1fr 1fr;}
     .kpi-grid2{grid-template-columns:1fr;}
+    .kanban-board{grid-template-columns:1fr;}
+    .proj-hint{display:none;}
     .kpi-bar-row{grid-template-columns:90px 1fr 54px;}
   }
 </style>
@@ -675,6 +867,7 @@
   <div class="tabs">
     <button class="tab-btn active" id="tabAgenda" data-tab="agenda">📋 Agenda</button>
     <button class="tab-btn" id="tabKpis" data-tab="kpis">📊 KPIs</button>
+    <button class="tab-btn" id="tabProjetos" data-tab="projetos">🏗️ Projetos</button>
   </div>
 
   <div id="viewAgenda">
@@ -734,6 +927,7 @@
           <th>Local</th>
           <th>Tipo</th>
           <th>Status</th>
+          <th>Origem</th>
           <th>Atividade realizada</th>
           <th style="text-align:right;">Ações</th>
         </tr>
@@ -774,7 +968,188 @@
     </section>
   </div>
 
-</main>
+  <div id="viewProjetos" style="display:none;">
+
+    <div class="toolbar">
+      <select id="projSelect" style="min-width:220px;"></select>
+      <button class="btn btn-primary btn-sm" id="btnNovoProjeto">+ Novo Projeto</button>
+      <button class="btn btn-danger btn-sm" id="btnExcluirProjeto">🗑 Excluir Projeto</button>
+      <button class="btn btn-danger btn-sm" id="btnExcluirTodosProjetos">🗑 Excluir TODOS os Projetos</button>
+      <div class="spacer"></div>
+      <span class="proj-hint">Ao planejar as datas de cada fase, a agenda é atualizada automaticamente.</span>
+    </div>
+
+    <section class="gantt-block" id="projGanttBlock">
+      <h2>
+        <span>Gantt do Projeto <span id="projGanttRange" style="font-weight:400;color:var(--muted);font-size:11.5px;"></span></span>
+        <span class="gantt-legend" id="projGanttLegend"></span>
+      </h2>
+      <div class="gantt-scroll">
+        <div class="gantt-grid" id="projGanttGrid"></div>
+      </div>
+    </section>
+
+    <section class="kpi-block">
+      <h2>Kanban de Fases</h2>
+      <div class="kanban-board">
+        <div class="kanban-col">
+          <div class="kanban-col-header" style="color:var(--st-agendado);">🟡 Agendado</div>
+          <div class="kanban-cards" id="kanbanAgendado"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header" style="color:var(--st-andamento);">🔵 Em Andamento</div>
+          <div class="kanban-cards" id="kanbanAndamento"></div>
+        </div>
+        <div class="kanban-col">
+          <div class="kanban-col-header" style="color:var(--st-concluido);">🟢 Concluído</div>
+          <div class="kanban-cards" id="kanbanConcluido"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="kpi-block">
+      <h2>Estratificação de horas apontadas por etapa</h2>
+      <div id="projEstratificacao" class="kpi-bars"></div>
+    </section>
+
+  </div>
+
+  </main>
+
+  <div class="overlay" id="faseOverlay">
+    <div class="modal">
+      <h3 id="faseModalTitle">Fase do projeto</h3>
+      <div class="sub" id="faseModalSub">Cliente</div>
+
+      <div class="field">
+        <label>Datas planejadas de execução</label>
+        <div class="fase-apont-list" id="faseDatasPlanejadasList"></div>
+      </div>
+
+      <div class="fase-apont-add">
+        <div class="row2">
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Data início</label>
+            <input type="date" id="fPlanData">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Data fim (opcional, p/ período)</label>
+            <input type="date" id="fPlanDataFim">
+          </div>
+        </div>
+        <div class="row3" style="margin-top:10px;">
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Início</label>
+            <input type="text" id="fPlanHoraIni" placeholder="HH:MM" maxlength="5">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Intervalo</label>
+            <input type="text" id="fPlanIntervalo" placeholder="HH:MM" maxlength="5">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Fim</label>
+            <input type="text" id="fPlanHoraFim" placeholder="HH:MM" maxlength="5">
+          </div>
+        </div>
+        <div class="row3" style="margin-top:10px;">
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Tipo de atendimento</label>
+            <select id="fPlanTipo">
+              <option>Presencial</option>
+              <option>Remota</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Estado</label>
+            <select id="fPlanEstado"><option value="">Selecione...</option></select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Cidade</label>
+            <select id="fPlanCidade" disabled><option value="">Selecione o estado primeiro</option></select>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:6px;">Se preencher "Data fim", adiciona automaticamente todos os dias úteis do período (com o mesmo horário/intervalo/local) — e já lança direto na Agenda. Datas que já existirem em outra fase são bloqueadas ou avisadas.</div>
+        <button class="btn btn-ghost btn-sm" id="btnAddDataPlanejada" type="button" style="width:100%; margin-top:10px;">+ Adicionar data(s) planejada(s)</button>
+      </div>
+
+      <div class="field">
+        <label>Status da fase</label>
+        <select id="fFaseStatus">
+          <option>Agendado</option>
+          <option>Em Andamento</option>
+          <option>Concluído</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Horas estimadas (meta da fase)</label>
+        <input type="text" id="fFaseHorasEstimadas" placeholder="0,00">
+      </div>
+
+      <div class="field">
+        <label>Notas da fase</label>
+        <textarea id="fFaseNotas" rows="3" placeholder="Observações sobre essa fase..."></textarea>
+      </div>
+
+      <div class="fase-progress" id="faseProgress"></div>
+
+      <div class="field">
+        <label>Apontamentos reais (execução) desta fase</label>
+        <div class="fase-apont-list" id="faseApontamentosList"></div>
+      </div>
+
+      <div class="fase-apont-add">
+        <div class="row4">
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Data</label>
+            <input type="date" id="fApontData">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Início</label>
+            <input type="text" id="fApontHoraIni" placeholder="HH:MM" maxlength="5">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Intervalo</label>
+            <input type="text" id="fApontIntervalo" placeholder="HH:MM" maxlength="5">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Fim</label>
+            <input type="text" id="fApontHoraFim" placeholder="HH:MM" maxlength="5">
+          </div>
+        </div>
+
+        <div class="field" style="margin:10px 0 0;">
+          <label style="font-size:11px;">Atividade (o que foi feito)</label>
+          <textarea id="fApontDescricao" rows="2" placeholder="Descreva o que foi realizado nesse apontamento..." maxlength="500"></textarea>
+        </div>
+
+        <div class="row2" style="margin-top:10px;">
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Status desse apontamento</label>
+            <select id="fApontStatus">
+              <option>Concluído</option>
+              <option>Em Andamento</option>
+              <option>Agendado</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label style="font-size:11px;">Anexo (opcional, até 1,5 MB)</label>
+            <input type="file" id="fApontAnexo">
+          </div>
+        </div>
+
+        <button class="btn btn-primary btn-sm" id="btnApontarHoras" type="button" style="width:100%; margin-top:10px;">+ Apontar horas</button>
+      </div>
+
+      <div class="modal-actions" style="justify-content:space-between;">
+        <button class="btn btn-ghost" id="btnGerarAgendaFase" title="Uso normal é automático. Use isso só se algo ficar fora de sincronia (ex.: dados antigos migrados).">🔄 Reconferir sincronização</button>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-ghost" id="btnFaseCancel">Cancelar</button>
+          <button class="btn btn-primary" id="btnFaseSave">Salvar</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <div class="fab-wrap">
   <button class="btn btn-primary fab" id="btnNew">+ Nova atividade</button>
@@ -943,8 +1318,10 @@
   async function saveData(){
     try{
       localStorage.setItem(STORAGE_KEY, JSON.stringify(agendas));
+      return true;
     }catch(e){
       toast('Erro ao salvar. Verifique o espaço de armazenamento do navegador.');
+      return false;
     }
   }
 
@@ -971,15 +1348,19 @@
   }
 
   // ---------- Estado / Cidade (cascata via API do IBGE) ----------
-  UF_LIST.forEach(([sigla,nome])=>{
-    const opt = document.createElement('option');
-    opt.value = sigla;
-    opt.textContent = `${nome} (${sigla})`;
-    $('fEstado').appendChild(opt);
-  });
+  function popularUF(selectEl){
+    UF_LIST.forEach(([sigla,nome])=>{
+      const opt = document.createElement('option');
+      opt.value = sigla;
+      opt.textContent = `${nome} (${sigla})`;
+      selectEl.appendChild(opt);
+    });
+  }
+  popularUF($('fEstado'));
+  popularUF($('fPlanEstado'));
 
-  async function loadCidades(uf, cidadeSelecionada){
-    const cidadeSel = $('fCidade');
+  async function loadCidades(uf, cidadeSelecionada, cidadeSelId){
+    const cidadeSel = $(cidadeSelId || 'fCidade');
     if(!uf){
       cidadeSel.innerHTML = '<option value="">Selecione o estado primeiro</option>';
       cidadeSel.disabled = true;
@@ -1006,7 +1387,8 @@
       toast('Não foi possível carregar as cidades. Verifique sua conexão.');
     }
   }
-  $('fEstado').addEventListener('change', ()=> loadCidades($('fEstado').value, ''));
+  $('fEstado').addEventListener('change', ()=> loadCidades($('fEstado').value, '', 'fCidade'));
+  $('fPlanEstado').addEventListener('change', ()=> loadCidades($('fPlanEstado').value, '', 'fPlanCidade'));
 
   function findClienteLocation(nomeCliente){
     const alvo = nomeCliente.trim().toLowerCase();
@@ -1046,6 +1428,13 @@
     const dd = String(d.getDate()).padStart(2,'0');
     const mm = String(d.getMonth()+1).padStart(2,'0');
     return `${dd}/${mm}/${d.getFullYear()}`;
+  }
+  function dateObjToISO(d){
+    // usa componentes locais (evita o shift de dia do toISOString, que converte para UTC)
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    return `${yyyy}-${mm}-${dd}`;
   }
   function timeToMin(t){
     if(!isValidTime(t)) return 0;
@@ -1140,9 +1529,24 @@
   });
 
   // ---------- Delete ----------
+  // Quando uma atividade "planejada" é excluída direto na Agenda, remove também
+  // a data correspondente do planejamento da fase (aba Projetos / Gantt de fases).
+  function desvincularDoProjeto(agendaEntry){
+    if(!agendaEntry || !agendaEntry.projetoId || !agendaEntry.faseId || agendaEntry.origem !== 'planejado') return;
+    const projeto = projetos.find(p=>p.id===agendaEntry.projetoId);
+    if(!projeto) return;
+    const fase = projeto.fases.find(f=>f.id===agendaEntry.faseId);
+    if(!fase) return;
+    const antes = fase.datasPlanejadas.length;
+    fase.datasPlanejadas = fase.datasPlanejadas.filter(dp=> isoToDDMMYYYY(dp.data) !== agendaEntry.data);
+    if(fase.datasPlanejadas.length !== antes) saveProjetos();
+  }
+
   async function deleteItem(id){
     if(!confirm('Remover esta atividade da agenda?')) return;
+    const entry = agendas.find(a=>a.id===id);
     agendas = agendas.filter(a=>a.id!==id);
+    if(entry) desvincularDoProjeto(entry);
     await saveData();
     render();
   }
@@ -1188,6 +1592,7 @@
     if(!hasFilter){ toast('Aplique ao menos um filtro antes de excluir em lote.'); return; }
     if(!confirm(`Excluir ${filtered.length} atividade(s) que correspondem aos filtros atuais? Essa ação não pode ser desfeita.`)) return;
     const idsToRemove = new Set(filtered.map(a=>a.id));
+    filtered.forEach(desvincularDoProjeto);
     agendas = agendas.filter(a=>!idsToRemove.has(a.id));
     await saveData();
     render();
@@ -1199,6 +1604,7 @@
     const total = agendas.length;
     const digitado = prompt(`Isso vai excluir TODAS as ${total} atividade(s) cadastradas, de todos os clientes, sem filtro nenhum. Essa ação não pode ser desfeita.\n\nDigite EXCLUIR para confirmar:`);
     if(digitado !== 'EXCLUIR'){ toast('Exclusão cancelada.'); return; }
+    agendas.forEach(desvincularDoProjeto);
     agendas = [];
     await saveData();
     render();
@@ -1381,6 +1787,11 @@
             <span class="dot" style="background:${c.fg};"></span>${a.status}
           </span>
         </td>
+        <td data-label="Origem">${
+          a.origem === 'apontamento' ? '<span class="origem-tag origem-apontamento">✓ Apontamento</span>' :
+          a.origem === 'planejado' ? '<span class="origem-tag origem-planejado">📅 Planejado</span>' :
+          '<span class="desc-empty">—</span>'
+        }</td>
         <td data-label="Atividade" class="desc-cell" title="${escapeHtml(desc)}">${desc ? escapeHtml(desc) : '<span class="desc-empty">—</span>'}</td>
         <td data-label="Ações">
           <div class="row-actions">
@@ -1587,7 +1998,9 @@
       const tab = btn.dataset.tab;
       $('viewAgenda').style.display = tab==='agenda' ? '' : 'none';
       $('viewKPIs').style.display = tab==='kpis' ? '' : 'none';
+      $('viewProjetos').style.display = tab==='projetos' ? '' : 'none';
       if(tab==='kpis') renderKPIs(applyFilters(agendas));
+      if(tab==='projetos') renderProjetos();
     });
   });
 
@@ -1695,7 +2108,697 @@
     renderGantt(list);
     renderTable(list);
     if($('viewKPIs').style.display !== 'none') renderKPIs(list);
+    if($('viewProjetos').style.display !== 'none') renderProjetos();
   }
+
+  // =====================================================================
+  // ---------- PROJETOS (Gestão de Implantação WMS) ----------
+  // =====================================================================
+  const FASES_NOMES = [
+    'Levantamento de Processo',
+    'Escopo de mensuração de horas',
+    'Configuração do WMS',
+    'Validação de testes',
+    'Treinamento Equipe',
+    'Teste integrado na íntegra',
+    'Go-live',
+    'Pós implantação'
+  ];
+  const PROJETOS_KEY = 'controle-agendas:projetos';
+  let projetos = [];
+  let faseEditando = null; // {projetoId, faseId}
+
+  async function loadProjetos(){
+    try{
+      const raw = localStorage.getItem(PROJETOS_KEY);
+      projetos = raw ? JSON.parse(raw) : [];
+    }catch(e){
+      projetos = [];
+    }
+    // Migração: fases antigas tinham um único intervalo dataInicio/dataFim.
+    // Agora cada fase tem uma lista de datas planejadas (datasPlanejadas).
+    let migrou = false;
+    projetos.forEach(p=>{
+      p.fases.forEach(f=>{
+        if(!f.datasPlanejadas){
+          f.datasPlanejadas = [];
+          if(f.dataInicio && f.dataFim){
+            const start = new Date(f.dataInicio+'T00:00:00');
+            const end = new Date(f.dataFim+'T00:00:00');
+            for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+              if(d.getDay()===0 || d.getDay()===6) continue;
+              f.datasPlanejadas.push({id: uid(), data: dateObjToISO(d), horaIni:'08:00', horaFim:'17:00'});
+            }
+          }
+          migrou = true;
+        }
+      });
+    });
+    if(migrou) await saveProjetos();
+  }
+  async function saveProjetos(){
+    try{
+      localStorage.setItem(PROJETOS_KEY, JSON.stringify(projetos));
+    }catch(e){
+      toast('Erro ao salvar projetos.');
+    }
+  }
+
+  function novoProjetoObj(cliente){
+    return {
+      id: uid(),
+      cliente,
+      fases: FASES_NOMES.map(nome=>({
+        id: uid(),
+        nome,
+        datasPlanejadas: [], // [{id, data:'AAAA-MM-DD', horaIni, horaFim}]
+        status: 'Agendado',
+        horasEstimadas: '',
+        notas: ''
+      }))
+    };
+  }
+
+  $('btnNovoProjeto').addEventListener('click', ()=>{
+    const cliente = prompt('Nome do cliente/projeto:');
+    if(!cliente || !cliente.trim()) return;
+    const p = novoProjetoObj(cliente.trim());
+    projetos.push(p);
+    saveProjetos();
+    renderProjetos(p.id);
+    toast(`Projeto "${cliente.trim()}" criado com as 8 fases padrão.`);
+  });
+
+  $('btnExcluirProjeto').addEventListener('click', ()=>{
+    const id = $('projSelect').value;
+    const projeto = projetos.find(p=>p.id===id);
+    if(!projeto){ toast('Selecione um projeto para excluir.'); return; }
+    if(!confirm(`Excluir o projeto "${projeto.cliente}" e todas as suas fases? As atividades já geradas na agenda NÃO serão apagadas automaticamente.`)) return;
+    projetos = projetos.filter(p=>p.id!==id);
+    saveProjetos();
+    renderProjetos();
+    toast('Projeto excluído.');
+  });
+
+  $('btnExcluirTodosProjetos').addEventListener('click', async ()=>{
+    if(!projetos.length){ toast('Não há projetos cadastrados.'); return; }
+    const total = projetos.length;
+    const digitado = prompt(`Isso vai excluir TODOS os ${total} projeto(s) e o planejamento de todas as fases (datas planejadas). As atividades já geradas na agenda NÃO serão apagadas automaticamente — use "Excluir TODAS" na aba Agenda se quiser limpar isso também.\n\nDigite EXCLUIR para confirmar:`);
+    if(digitado !== 'EXCLUIR'){ toast('Exclusão cancelada.'); return; }
+    projetos = [];
+    await saveProjetos();
+    renderProjetos();
+    toast(`Todos os ${total} projeto(s) e seus planejamentos foram excluídos.`);
+  });
+
+  $('projSelect').addEventListener('change', ()=> renderProjetos($('projSelect').value));
+
+  // ---------- Validação de cruzamento de datas (por data individual planejada) ----------
+  function checkOverlapData(projetoId, faseId, dataISO){
+    if(!dataISO) return {ok:true};
+    const projetoAtual = projetos.find(p=>p.id===projetoId);
+    // 1) mesmo projeto: nenhuma outra fase pode planejar a mesma data
+    for(const f of projetoAtual.fases){
+      if(f.id === faseId) continue;
+      if(f.datasPlanejadas.some(dp=>dp.data===dataISO)){
+        return {ok:false, motivo:`A data ${isoToDDMMYYYY(dataISO)} já está planejada na fase "${f.nome}" deste mesmo projeto.`};
+      }
+    }
+    // 2) outros projetos ativos: aviso (não bloqueia)
+    for(const p of projetos){
+      if(p.id === projetoId) continue;
+      for(const f of p.fases){
+        if(f.status === 'Concluído') continue;
+        if(f.datasPlanejadas.some(dp=>dp.data===dataISO)){
+          return {ok:'warn', motivo:`Atenção: ${isoToDDMMYYYY(dataISO)} já está planejada na fase "${f.nome}" do projeto "${p.cliente}". Deseja continuar mesmo assim?`};
+        }
+      }
+    }
+    return {ok:true};
+  }
+
+  // ---------- Geração automática de agenda (sincroniza com a lista de datas planejadas) ----------
+  // Cria (se ainda não existir) a atividade "planejado" na agenda para UMA data planejada
+  function criarAgendaPlanejada(projeto, fase, dp){
+    const dataStr = isoToDDMMYYYY(dp.data);
+    const jaExiste = agendas.some(a=> a.projetoId===projeto.id && a.faseId===fase.id && a.data===dataStr && a.origem==='planejado');
+    if(jaExiste) return false;
+    const horaIni = dp.horaIni || '08:00';
+    const intervalo = dp.intervalo || '00:00';
+    const horaFim = dp.horaFim || '17:00';
+    agendas.push({
+      id: uid(),
+      data: dataStr,
+      horaIni, horaFim,
+      intervalo,
+      horas: calcHoras(horaIni, horaFim, intervalo) || '0,00',
+      cliente: projeto.cliente,
+      estado: dp.estado || '',
+      cidade: dp.cidade || '',
+      tipo: dp.tipo || 'Presencial',
+      status: 'Agendado',
+      descricao: fase.nome,
+      projetoId: projeto.id,
+      faseId: fase.id,
+      origem: 'planejado'
+    });
+    return true;
+  }
+  // Remove da agenda a atividade "planejado" ligada a uma data planejada específica
+  function removerAgendaPlanejada(projetoId, faseId, dataISO){
+    const dataStr = isoToDDMMYYYY(dataISO);
+    const antes = agendas.length;
+    agendas = agendas.filter(a=> !(a.projetoId===projetoId && a.faseId===faseId && a.data===dataStr && a.origem==='planejado'));
+    return antes - agendas.length;
+  }
+
+  function gerarAgendaFase(projeto, fase){
+    if(!fase.datasPlanejadas.length){ toast('Adicione ao menos uma data planejada antes de sincronizar a agenda.'); return; }
+
+    // remove entradas "planejado" dessa fase que não estão mais na lista de datas planejadas
+    const datasAtuais = new Set(fase.datasPlanejadas.map(dp=>isoToDDMMYYYY(dp.data)));
+    const antes = agendas.length;
+    agendas = agendas.filter(a=> !(a.projetoId===projeto.id && a.faseId===fase.id && a.origem==='planejado' && !datasAtuais.has(a.data)));
+    const removidos = antes - agendas.length;
+
+    let added = 0, skipped = 0;
+    fase.datasPlanejadas.forEach(dp=>{
+      if(criarAgendaPlanejada(projeto, fase, dp)) added++; else skipped++;
+    });
+    saveData();
+    render();
+    toast(`Agenda sincronizada: ${added} adicionada(s), ${skipped} já existiam, ${removidos} removida(s) (não estão mais no planejamento). Isso é o planejado — só conta como horas apontadas quando você registrar um apontamento real.`);
+  }
+
+  // "Horas apontadas" da fase = SOMENTE apontamentos reais lançados manualmente.
+  // A agenda planejada (gerada via "Gerar/Atualizar Agenda") não entra nesse total.
+  function horasApontadasFase(projetoId, faseId){
+    return agendas.filter(a=>a.projetoId===projetoId && a.faseId===faseId && a.origem==='apontamento')
+      .reduce((s,a)=>s+parseHoras(a.horas), 0);
+  }
+  function horasPlanejadasFase(projetoId, faseId){
+    return agendas.filter(a=>a.projetoId===projetoId && a.faseId===faseId && a.origem==='planejado')
+      .reduce((s,a)=>s+parseHoras(a.horas), 0);
+  }
+  function horasExecutadasFase(projetoId, faseId){
+    return agendas.filter(a=>a.projetoId===projetoId && a.faseId===faseId && a.origem==='apontamento' && a.status==='Concluído')
+      .reduce((s,a)=>s+parseHoras(a.horas), 0);
+  }
+
+  // ---------- Modal de fase: progresso + lista de apontamentos ----------
+  function refreshFaseModalInfo(projeto, fase){
+    const apontadas = horasApontadasFase(projeto.id, fase.id);
+    const planejadas = horasPlanejadasFase(projeto.id, fase.id);
+    const estimadas = parseHoras($('fFaseHorasEstimadas').value);
+
+    const linhaPlanejado = `<span style="font-size:11px;">Planejado na agenda: <b>${fmtHorasHM(planejadas)}</b></span>`;
+
+    if(estimadas > 0){
+      const pct = (apontadas/estimadas*100);
+      const pctClamp = Math.min(pct, 100);
+      let cor = 'var(--st-concluido)';
+      if(pct > 100 && pct <= 120) cor = 'var(--st-agendado)';
+      else if(pct > 120) cor = 'var(--st-cancelado)';
+      $('faseProgress').innerHTML = `
+        <div class="fase-progress-labels">
+          <span>Apontado (real): <b>${fmtHorasHM(apontadas)}</b></span>
+          <span>Meta: <b>${fmtHorasHM(estimadas)}</b></span>
+        </div>
+        <div class="fase-progress-track"><div class="fase-progress-fill" style="width:${pctClamp.toFixed(1)}%;background:${cor};"></div></div>
+        <div class="fase-progress-pct" style="color:${cor};">${pct.toFixed(0)}% da meta${pct>100 ? ' — acima do estimado' : ''}</div>
+        <div style="margin-top:6px;">${linhaPlanejado}</div>
+      `;
+    } else {
+      $('faseProgress').innerHTML = `
+        <div class="fase-progress-labels"><span>Apontado (real) até agora: <b>${fmtHorasHM(apontadas)}</b></span><span>Sem meta definida</span></div>
+        <div>${linhaPlanejado}</div>
+      `;
+    }
+
+    const lista = agendas.filter(a=>a.projetoId===projeto.id && a.faseId===fase.id && a.origem==='apontamento')
+      .sort((a,b)=> (dateToSortable(a.data)+a.horaIni.replace(':','')).localeCompare(dateToSortable(b.data)+b.horaIni.replace(':','')));
+
+    $('faseApontamentosList').innerHTML = lista.length
+      ? lista.map(a=>{
+          const c = STATUS_COLORS[a.status] || STATUS_COLORS['Agendado'];
+          const desc = (a.descricao || '').trim();
+          const anexoHtml = a.anexo
+            ? `<a href="${a.anexo.data}" download="${escapeHtml(a.anexo.name)}" class="fa-anexo" title="Baixar ${escapeHtml(a.anexo.name)}">📎 ${escapeHtml(a.anexo.name)}</a>`
+            : '';
+          return `
+          <div class="fase-apont-row">
+            <div class="fa-info">
+              <span class="fa-data">${a.data}</span>
+              <span class="fa-horario">${a.horaIni}–${a.horaFim} · <span style="color:${c.fg};">${a.status}</span></span>
+              ${desc ? `<span class="fa-desc">${escapeHtml(desc)}</span>` : ''}
+              ${anexoHtml}
+            </div>
+            <span class="fa-horas">${a.horas}h</span>
+            <button class="icon-btn" title="Excluir apontamento" onclick="window.__delApontamento('${a.id}','${projeto.id}','${fase.id}')">🗑</button>
+          </div>`;
+        }).join('')
+      : '<div class="fase-apont-empty">Nenhum apontamento ainda. Use o formulário abaixo para lançar horas.</div>';
+
+    const planejadas2 = [...fase.datasPlanejadas].sort((a,b)=> a.data.localeCompare(b.data));
+    $('faseDatasPlanejadasList').innerHTML = planejadas2.length
+      ? planejadas2.map(dp=>{
+          const interv = dp.intervalo && dp.intervalo !== '00:00' ? ` (intervalo ${dp.intervalo})` : '';
+          const local = [dp.cidade, dp.estado].filter(Boolean).join('/');
+          const tipoLabel = dp.tipo || 'Presencial';
+          const localLine = ` · ${tipoLabel}${local ? ' · ' + local : ''}`;
+          return `
+          <div class="fase-apont-row">
+            <div class="fa-info">
+              <span class="fa-data">${isoToDDMMYYYY(dp.data)}</span>
+              <span class="fa-horario">${dp.horaIni}–${dp.horaFim}${interv}${localLine}</span>
+            </div>
+            <span class="fa-horas">${calcHoras(dp.horaIni, dp.horaFim, dp.intervalo || '00:00') || '—'}h</span>
+            <button class="icon-btn" title="Remover data planejada" onclick="window.__delDataPlanejada('${projeto.id}','${fase.id}','${dp.id}')">🗑</button>
+          </div>`;
+        }).join('')
+      : '<div class="fase-apont-empty">Nenhuma data planejada ainda. Adicione abaixo.</div>';
+  }
+
+  window.__delDataPlanejada = function(projetoId, faseId, planId){
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+    const dp = fase.datasPlanejadas.find(d=>d.id===planId);
+    fase.datasPlanejadas = fase.datasPlanejadas.filter(dp=>dp.id!==planId);
+    saveProjetos();
+    if(dp){
+      removerAgendaPlanejada(projetoId, faseId, dp.data);
+      saveData();
+      render();
+    }
+    refreshFaseModalInfo(projeto, fase);
+  };
+
+  maskTime($('fPlanHoraIni')); maskTime($('fPlanIntervalo')); maskTime($('fPlanHoraFim'));
+
+  $('btnAddDataPlanejada').addEventListener('click', async ()=>{
+    if(!faseEditando) return;
+    const {projetoId, faseId} = faseEditando;
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+
+    const dataIniISO = $('fPlanData').value;
+    const dataFimISO = $('fPlanDataFim').value;
+    const horaIni = $('fPlanHoraIni').value.trim() || '08:00';
+    const intervalo = $('fPlanIntervalo').value.trim() || '00:00';
+    const horaFim = $('fPlanHoraFim').value.trim() || '17:00';
+    const tipo = $('fPlanTipo').value;
+    const estado = $('fPlanEstado').value;
+    const cidade = $('fPlanCidade').value;
+
+    if(!dataIniISO){ toast('Informe ao menos a data início.'); return; }
+    if(!isValidTime(horaIni) || !isValidTime(horaFim)){ toast('Informe início e fim válidos (HH:MM).'); return; }
+    if(!isValidInterval(intervalo)){ toast('Informe um intervalo válido (HH:MM).'); return; }
+    if(dataFimISO && dataFimISO < dataIniISO){ toast('A data fim não pode ser anterior à data início.'); return; }
+
+    // monta a lista de datas candidatas (dias úteis do período, ou só a data única)
+    const candidatas = [];
+    if(dataFimISO && dataFimISO !== dataIniISO){
+      const start = new Date(dataIniISO+'T00:00:00');
+      const end = new Date(dataFimISO+'T00:00:00');
+      for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+        if(d.getDay()===0 || d.getDay()===6) continue; // só dias úteis
+        candidatas.push(dateObjToISO(d));
+      }
+    } else {
+      candidatas.push(dataIniISO);
+    }
+
+    let jaExistiam = 0, bloqueadas = 0;
+    const paraAvisar = [];
+    const paraAdicionar = [];
+
+    candidatas.forEach(dISO=>{
+      if(fase.datasPlanejadas.some(dp=>dp.data===dISO)){ jaExistiam++; return; }
+      const check = checkOverlapData(projetoId, faseId, dISO);
+      if(check.ok === false){ bloqueadas++; return; }
+      if(check.ok === 'warn'){ paraAvisar.push(dISO); return; }
+      paraAdicionar.push(dISO);
+    });
+
+    if(paraAvisar.length){
+      const incluir = confirm(`${paraAvisar.length} data(s) cruzam com fases de outros projetos (${paraAvisar.map(isoToDDMMYYYY).join(', ')}). Deseja incluí-las mesmo assim?`);
+      if(incluir) paraAdicionar.push(...paraAvisar);
+    }
+
+    paraAdicionar.forEach(dISO=>{
+      const dp = {id: uid(), data: dISO, horaIni, intervalo, horaFim, tipo, estado, cidade};
+      fase.datasPlanejadas.push(dp);
+      criarAgendaPlanejada(projeto, fase, dp);
+    });
+
+    if(paraAdicionar.length){
+      await saveProjetos();
+      await saveData();
+      render();
+      refreshFaseModalInfo(projeto, fase);
+    }
+
+    $('fPlanData').value = '';
+    $('fPlanDataFim').value = '';
+    $('fPlanHoraIni').value = '';
+    $('fPlanIntervalo').value = '';
+    $('fPlanHoraFim').value = '';
+    toast(`${paraAdicionar.length} data(s) planejada(s) e já lançada(s) na agenda, ${jaExistiam} já existiam, ${bloqueadas} bloqueada(s) (mesmo projeto).`);
+  });
+
+  window.__delApontamento = function(agendaId, projetoId, faseId){
+    if(!confirm('Excluir esse apontamento de horas?')) return;
+    agendas = agendas.filter(a=>a.id!==agendaId);
+    saveData();
+    render();
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+    refreshFaseModalInfo(projeto, fase);
+  };
+
+  maskTime($('fApontHoraIni')); maskTime($('fApontIntervalo')); maskTime($('fApontHoraFim'));
+
+  function readFileAsDataURL(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  $('btnApontarHoras').addEventListener('click', async ()=>{
+    if(!faseEditando) return;
+    const {projetoId, faseId} = faseEditando;
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+
+    const dataISO = $('fApontData').value;
+    const data = isoToDDMMYYYY(dataISO);
+    const horaIni = $('fApontHoraIni').value.trim();
+    const intervalo = $('fApontIntervalo').value.trim() || '00:00';
+    const horaFim = $('fApontHoraFim').value.trim();
+    const status = $('fApontStatus').value;
+    const descricao = $('fApontDescricao').value.trim();
+    const arquivo = $('fApontAnexo').files[0];
+
+    if(!isValidDate(data)){ toast('Informe a data do apontamento.'); return; }
+    if(!isValidTime(horaIni) || !isValidTime(horaFim)){ toast('Informe início e fim válidos (HH:MM).'); return; }
+    if(!isValidInterval(intervalo)){ toast('Informe um intervalo válido (HH:MM).'); return; }
+    const horas = calcHoras(horaIni, horaFim, intervalo);
+    if(!horas || parseHoras(horas) <= 0){ toast('O horário final deve ser depois do inicial (descontado o intervalo).'); return; }
+
+    // Tipo/Estado/Cidade vêm do planejamento (não são digitados no apontamento).
+    // Se essa data já estava planejada, herda o local/tipo dela; senão fica vazio.
+    const dpCorrespondente = fase.datasPlanejadas.find(dp=>dp.data===dataISO);
+    const tipo = dpCorrespondente ? (dpCorrespondente.tipo || 'Presencial') : 'Presencial';
+    const estado = dpCorrespondente ? (dpCorrespondente.estado || '') : '';
+    const cidade = dpCorrespondente ? (dpCorrespondente.cidade || '') : '';
+
+    const LIMITE_ANEXO = 1.5 * 1024 * 1024; // 1,5 MB — localStorage tem espaço limitado no navegador
+    if(arquivo && arquivo.size > LIMITE_ANEXO){
+      toast('Anexo maior que 1,5 MB. Escolha um arquivo menor (o armazenamento do navegador é limitado).');
+      return;
+    }
+
+    let anexo = null;
+    if(arquivo){
+      try{
+        const dataUrl = await readFileAsDataURL(arquivo);
+        anexo = {name: arquivo.name, type: arquivo.type, data: dataUrl};
+      }catch(e){
+        toast('Não foi possível ler o anexo. O apontamento será salvo sem ele.');
+      }
+    }
+
+    const novoApontamento = {
+      id: uid(),
+      data, horaIni, horaFim,
+      intervalo,
+      horas,
+      cliente: projeto.cliente,
+      estado, cidade,
+      tipo,
+      status,
+      descricao: descricao || fase.nome,
+      projetoId: projeto.id,
+      faseId: fase.id,
+      origem: 'apontamento'
+    };
+    if(anexo) novoApontamento.anexo = anexo;
+
+    agendas.push(novoApontamento);
+    const ok = await saveData();
+    if(!ok){
+      agendas.pop();
+      toast('Não foi possível salvar (anexo pode ser grande demais para o espaço disponível). Tente um arquivo menor.');
+      return;
+    }
+    render();
+    refreshFaseModalInfo(projeto, fase);
+
+    $('fApontData').value = '';
+    $('fApontHoraIni').value = '';
+    $('fApontIntervalo').value = '';
+    $('fApontHoraFim').value = '';
+    $('fApontDescricao').value = '';
+    $('fApontAnexo').value = '';
+    toast(`Apontamento de ${horas}h adicionado em ${data}.`);
+  });
+
+  // ---------- Modal de fase ----------
+  function openFaseModal(projeto, fase){
+    faseEditando = {projetoId: projeto.id, faseId: fase.id};
+    $('faseModalTitle').textContent = fase.nome;
+    $('faseModalSub').textContent = `Projeto: ${projeto.cliente}`;
+    $('fFaseStatus').value = fase.status || 'Agendado';
+    $('fFaseHorasEstimadas').value = fase.horasEstimadas || '';
+    $('fFaseNotas').value = fase.notas || '';
+    $('fPlanData').value = '';
+    $('fPlanDataFim').value = '';
+    $('fPlanHoraIni').value = '';
+    $('fPlanIntervalo').value = '';
+    $('fPlanHoraFim').value = '';
+    $('fPlanTipo').value = 'Presencial';
+    const loc = findClienteLocation(projeto.cliente);
+    if(loc){
+      $('fPlanEstado').value = loc.estado;
+      loadCidades(loc.estado, loc.cidade, 'fPlanCidade');
+    } else {
+      $('fPlanEstado').value = '';
+      loadCidades('', '', 'fPlanCidade');
+    }
+    $('fApontData').value = '';
+    $('fApontHoraIni').value = '';
+    $('fApontIntervalo').value = '';
+    $('fApontHoraFim').value = '';
+    $('fApontDescricao').value = '';
+    $('fApontAnexo').value = '';
+    $('fApontStatus').value = 'Concluído';
+    refreshFaseModalInfo(projeto, fase);
+    $('faseOverlay').classList.add('show');
+  }
+  function closeFaseModal(){
+    $('faseOverlay').classList.remove('show');
+    faseEditando = null;
+  }
+  $('btnFaseCancel').addEventListener('click', closeFaseModal);
+  $('faseOverlay').addEventListener('click', (e)=>{ if(e.target.id==='faseOverlay') closeFaseModal(); });
+  $('fFaseHorasEstimadas').addEventListener('input', ()=>{
+    if(!faseEditando) return;
+    const projeto = projetos.find(p=>p.id===faseEditando.projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseEditando.faseId);
+    refreshFaseModalInfo(projeto, fase);
+  });
+
+  $('btnFaseSave').addEventListener('click', async ()=>{
+    if(!faseEditando) return;
+    const {projetoId, faseId} = faseEditando;
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+
+    fase.status = $('fFaseStatus').value;
+    fase.horasEstimadas = $('fFaseHorasEstimadas').value.trim();
+    fase.notas = $('fFaseNotas').value.trim();
+
+    await saveProjetos();
+    closeFaseModal();
+    renderProjetos(projetoId);
+    toast('Fase atualizada.');
+  });
+
+  $('btnGerarAgendaFase').addEventListener('click', ()=>{
+    if(!faseEditando) return;
+    const {projetoId, faseId} = faseEditando;
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+    gerarAgendaFase(projeto, fase);
+    refreshFaseModalInfo(projeto, fase);
+  });
+
+  function moverStatusFase(projetoId, faseId, novoStatus){
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+    fase.status = novoStatus;
+    saveProjetos();
+    renderProjetos(projetoId);
+  }
+  // exposto para os botões inline do Kanban
+  window.__moverStatusFase = moverStatusFase;
+  window.__abrirFase = function(projetoId, faseId){
+    const projeto = projetos.find(p=>p.id===projetoId);
+    const fase = projeto.fases.find(f=>f.id===faseId);
+    if(projeto && fase) openFaseModal(projeto, fase);
+  };
+
+  // ---------- Gantt de fases ----------
+  function renderProjGantt(scopeProjetos){
+    const grid = $('projGanttGrid');
+    const rangeEl = $('projGanttRange');
+    const legendEl = $('projGanttLegend');
+
+    const todasFases = [];
+    scopeProjetos.forEach(p=> p.fases.forEach(f=>{
+      if(f.datasPlanejadas.length) todasFases.push({projeto:p, fase:f});
+    }));
+
+    if(!todasFases.length){
+      grid.innerHTML = '<div class="g-empty">Nenhuma fase com datas planejadas ainda. Clique num card do Kanban abaixo e adicione datas planejadas.</div>';
+      rangeEl.textContent = '';
+      legendEl.innerHTML = '';
+      return;
+    }
+
+    let minD = null, maxD = null;
+    todasFases.forEach(({fase})=>{
+      fase.datasPlanejadas.forEach(dp=>{
+        const d = new Date(dp.data+'T00:00:00');
+        if(!minD || d < minD) minD = d;
+        if(!maxD || d > maxD) maxD = d;
+      });
+    });
+
+    const dias = [];
+    for(let d=new Date(minD); d<=maxD; d.setDate(d.getDate()+1)) dias.push(new Date(d));
+
+    rangeEl.textContent = `(${fmtDateObj(minD)} — ${fmtDateObj(maxD)})`;
+
+    grid.style.gridTemplateColumns = `260px repeat(${dias.length}, 26px)`;
+
+    let html = '<div class="g-cell g-corner"></div>';
+    dias.forEach(d=>{
+      const isWknd = (d.getDay()===0 || d.getDay()===6);
+      html += `<div class="g-cell g-head ${isWknd?'weekend':''}" title="${fmtDateObj(d)}" style="font-size:9px;">${String(d.getDate()).padStart(2,'0')}</div>`;
+    });
+
+    todasFases.forEach(({projeto, fase})=>{
+      const label = `${projeto.cliente} · ${fase.nome}`;
+      html += `<div class="g-cell g-rowlabel" title="${escapeHtml(label)}" style="font-size:11px;">${escapeHtml(label)}</div>`;
+      const datasPlanSet = new Set(fase.datasPlanejadas.map(dp=>dp.data));
+      dias.forEach(d=>{
+        const dISO = dateObjToISO(d);
+        if(datasPlanSet.has(dISO)){
+          const dataStr = fmtDateObj(d);
+          const agendaEntry = agendas.find(a=> a.projetoId===projeto.id && a.faseId===fase.id && a.data===dataStr && a.origem==='planejado');
+          const statusDoDia = agendaEntry ? agendaEntry.status : fase.status;
+          const c = STATUS_COLORS[statusDoDia] || STATUS_COLORS['Agendado'];
+          html += `<div class="g-cell g-bar-wrap"><div class="g-bar" style="background:${c.fg};" title="${escapeHtml(label)} · ${statusDoDia} · ${dataStr}"></div></div>`;
+        } else {
+          html += `<div class="g-cell g-bar-wrap"></div>`;
+        }
+      });
+    });
+
+    grid.innerHTML = html;
+    legendEl.innerHTML = Object.keys(STATUS_COLORS).map(s=>{
+      const c = STATUS_COLORS[s];
+      return `<span><span class="sw" style="background:${c.fg};"></span>${s}</span>`;
+    }).join('');
+  }
+
+  // ---------- Kanban de fases ----------
+  function kanbanCardHTML(projeto, fase){
+    let datas = 'Nenhuma data planejada';
+    if(fase.datasPlanejadas.length){
+      const ordenadas = [...fase.datasPlanejadas].sort((a,b)=>a.data.localeCompare(b.data));
+      const n = ordenadas.length;
+      datas = n === 1
+        ? isoToDDMMYYYY(ordenadas[0].data)
+        : `${isoToDDMMYYYY(ordenadas[0].data)} → ${isoToDDMMYYYY(ordenadas[n-1].data)} (${n} data${n>1?'s':''})`;
+    }
+    const apontadas = horasApontadasFase(projeto.id, fase.id);
+    const ordem = ['Agendado','Em Andamento','Concluído'];
+    const idx = ordem.indexOf(fase.status);
+    const anterior = idx > 0 ? ordem[idx-1] : null;
+    const proximo = idx < ordem.length-1 ? ordem[idx+1] : null;
+    return `
+      <div class="kanban-card" onclick="window.__abrirFase('${projeto.id}','${fase.id}')">
+        <div class="kc-cliente">${escapeHtml(projeto.cliente)}</div>
+        <div class="kc-fase">${escapeHtml(fase.nome)}</div>
+        <div class="kc-datas">${datas}</div>
+        <div class="kc-horas">
+          <span>Apontadas (real): <b>${fmtHorasHM(apontadas)}</b></span>
+        </div>
+        <div class="row-actions" style="margin-top:8px;" onclick="event.stopPropagation()">
+          ${anterior ? `<button class="icon-btn" title="Voltar para ${anterior}" onclick="window.__moverStatusFase('${projeto.id}','${fase.id}','${anterior}')">◀</button>` : '<span></span>'}
+          ${proximo ? `<button class="icon-btn" title="Avançar para ${proximo}" onclick="window.__moverStatusFase('${projeto.id}','${fase.id}','${proximo}')">▶</button>` : ''}
+        </div>
+      </div>`;
+  }
+
+  function renderKanban(scopeProjetos){
+    const colunas = {'Agendado':'kanbanAgendado', 'Em Andamento':'kanbanAndamento', 'Concluído':'kanbanConcluido'};
+    Object.entries(colunas).forEach(([status, elId])=>{
+      const cards = [];
+      scopeProjetos.forEach(p=> p.fases.forEach(f=>{
+        if(f.status === status) cards.push({projeto:p, fase:f});
+      }));
+      $(elId).innerHTML = cards.length
+        ? cards.map(({projeto,fase})=> kanbanCardHTML(projeto, fase)).join('')
+        : '<div class="kanban-empty">Nenhuma fase aqui.</div>';
+    });
+  }
+
+  // ---------- Orquestração da aba Projetos ----------
+  function renderEstratificacaoFases(scopeProjetos){
+    const linhas = [];
+    scopeProjetos.forEach(p=> p.fases.forEach(f=>{
+      const horas = horasApontadasFase(p.id, f.id);
+      if(horas > 0) linhas.push({label: `${p.cliente} · ${f.nome}`, horas});
+    }));
+    linhas.sort((a,b)=>b.horas-a.horas);
+    const max = linhas.length ? linhas[0].horas : 0;
+    $('projEstratificacao').innerHTML = linhas.length
+      ? linhas.map(l=> kpiBarRow(l.label, l.horas, max, 'var(--orange)', fmtHorasHM(l.horas))).join('')
+      : '<div class="kpi-empty">Nenhum apontamento real registrado ainda. Lance horas dentro de uma fase para ver a estratificação aqui.</div>';
+  }
+
+  function renderProjetos(selecionarId){
+    const sel = $('projSelect');
+    const atual = selecionarId || sel.value;
+    sel.innerHTML = '<option value="">Todos os projetos</option>' +
+      projetos.map(p=>`<option value="${p.id}">${escapeHtml(p.cliente)}</option>`).join('');
+    sel.value = atual || '';
+
+    const scope = sel.value ? projetos.filter(p=>p.id===sel.value) : projetos;
+
+    if(!projetos.length){
+      $('projGanttGrid').innerHTML = '<div class="g-empty">Nenhum projeto criado ainda. Clique em "+ Novo Projeto" para começar.</div>';
+      $('projGanttRange').textContent = '';
+      $('projGanttLegend').innerHTML = '';
+      ['kanbanAgendado','kanbanAndamento','kanbanConcluido'].forEach(id=>{
+        $(id).innerHTML = '<div class="kanban-empty">Nenhuma fase aqui.</div>';
+      });
+      $('projEstratificacao').innerHTML = '<div class="kpi-empty">Nenhum projeto criado ainda.</div>';
+      return;
+    }
+
+    renderProjGantt(scope);
+    renderKanban(scope);
+    renderEstratificacaoFases(scope);
+  }
+
+  loadProjetos();
 
   loadData();
 })();
