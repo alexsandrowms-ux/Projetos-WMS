@@ -413,6 +413,120 @@
     margin-bottom:16px;
   }
 
+  /* ---------- CONFIG WMS (checklist por projeto) ---------- */
+  .cfg-etapa-block{
+    background:linear-gradient(180deg, #FFFFFF 0%, #FAFBFD 100%);
+    border:1px solid var(--line);
+    border-radius:14px;
+    margin-bottom:16px;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 1px 2px rgba(15,23,33,.04),
+      0 8px 18px -6px rgba(15,23,33,.12);
+    overflow:hidden;
+  }
+  .cfg-etapa-header{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px 20px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .cfg-etapa-header:hover{background:#FAFBFD;}
+  .cfg-etapa-titulo{
+    font-weight:800;
+    font-size:14px;
+    color:var(--navy);
+    flex:1;
+  }
+  .cfg-etapa-titulo .num{color:var(--orange); margin-right:6px;}
+  .cfg-etapa-pct{
+    font-weight:800;
+    font-size:13px;
+    white-space:nowrap;
+  }
+  .cfg-etapa-track{
+    width:110px;
+    height:8px;
+    background:#F0F2F5;
+    border-radius:6px;
+    overflow:hidden;
+    flex-shrink:0;
+  }
+  .cfg-etapa-fill{
+    height:100%;
+    border-radius:6px;
+    transition:width .3s ease;
+  }
+  .cfg-etapa-arrow{
+    font-size:11px;
+    color:var(--muted);
+    transition:transform .2s ease;
+    flex-shrink:0;
+  }
+  .cfg-etapa-header.open .cfg-etapa-arrow{transform:rotate(90deg);}
+  .cfg-etapa-body{
+    display:none;
+    padding:4px 20px 16px;
+    border-top:1px solid var(--line);
+  }
+  .cfg-etapa-body.open{display:block;}
+  .cfg-subgrupo{
+    font-size:11px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+    color:var(--muted);
+    margin:14px 0 8px;
+  }
+  .cfg-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:10px 0;
+    border-bottom:1px solid #F0F2F5;
+  }
+  .cfg-item:last-child{border-bottom:none;}
+  .cfg-item input[type=checkbox]{
+    width:18px; height:18px;
+    margin-top:2px;
+    flex-shrink:0;
+    accent-color:var(--st-concluido);
+    cursor:pointer;
+  }
+  .cfg-item-body{flex:1; min-width:0;}
+  .cfg-item-nome{
+    font-size:13px;
+    font-weight:700;
+    color:var(--text);
+    cursor:pointer;
+  }
+  .cfg-item.done .cfg-item-nome{color:var(--st-concluido); text-decoration:line-through; text-decoration-color:rgba(15,169,104,.4);}
+  .cfg-item-importante{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:3px;
+    line-height:1.4;
+  }
+  .cfg-item-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:5px;
+    font-size:11px;
+  }
+  .cfg-item-rotina{color:var(--tipo-remota); font-weight:600;}
+  .cfg-item-help{color:var(--orange); font-weight:700; text-decoration:none;}
+  .cfg-item-help:hover{text-decoration:underline;}
+  .cfg-pontos-lista{
+    margin:0;
+    padding-left:18px;
+    font-size:12.5px;
+    color:var(--text);
+    line-height:1.7;
+  }
+
   /* ---------- TABS ---------- */
   .tabs{
     display:flex;
@@ -868,6 +982,7 @@
     <button class="tab-btn active" id="tabAgenda" data-tab="agenda">📋 Agenda</button>
     <button class="tab-btn" id="tabKpis" data-tab="kpis">📊 KPIs</button>
     <button class="tab-btn" id="tabProjetos" data-tab="projetos">🏗️ Projetos</button>
+    <button class="tab-btn" id="tabConfigWMS" data-tab="configwms">⚙️ Config. WMS</button>
   </div>
 
   <div id="viewAgenda">
@@ -1010,6 +1125,28 @@
     <section class="kpi-block">
       <h2>Estratificação de horas apontadas por etapa</h2>
       <div id="projEstratificacao" class="kpi-bars"></div>
+    </section>
+
+  </div>
+
+  <div id="viewConfigWMS" style="display:none;">
+
+    <div class="toolbar">
+      <select id="cfgProjSelect" style="min-width:260px;"></select>
+      <div class="spacer"></div>
+      <span class="proj-hint">Marque cada configuração conforme for realizando no Sankhya.</span>
+    </div>
+
+    <section class="kpi-block" id="cfgOverallBlock">
+      <h2>Progresso geral da configuração</h2>
+      <div class="fase-progress" id="cfgOverallProgress"></div>
+    </section>
+
+    <div id="cfgEtapasContainer"></div>
+
+    <section class="kpi-block">
+      <h2>⚠️ Pontos de atenção</h2>
+      <ul id="cfgPontosAtencao" class="cfg-pontos-lista"></ul>
     </section>
 
   </div>
@@ -1999,8 +2136,10 @@
       $('viewAgenda').style.display = tab==='agenda' ? '' : 'none';
       $('viewKPIs').style.display = tab==='kpis' ? '' : 'none';
       $('viewProjetos').style.display = tab==='projetos' ? '' : 'none';
+      $('viewConfigWMS').style.display = tab==='configwms' ? '' : 'none';
       if(tab==='kpis') renderKPIs(applyFilters(agendas));
       if(tab==='projetos') renderProjetos();
+      if(tab==='configwms') renderConfigWMS();
     });
   });
 
@@ -2114,6 +2253,413 @@
   // =====================================================================
   // ---------- PROJETOS (Gestão de Implantação WMS) ----------
   // =====================================================================
+  // ---------- CONFIG WMS: checklist gerado a partir da planilha do usuário ----------
+const CONFIG_WMS_ETAPAS = [
+  {
+    "nome": "Criação de Endereços",
+    "itens": [
+      {
+        "id": "e1-definir-a-mascara-para-enderecamento",
+        "subgrupo": "",
+        "nome": "Definir a Máscara para Endereçamento",
+        "importante": "Deve ser definida a máscara já prevendo uma evolução física do CD, pois futuramente pode necessitar de criar novos endereços. A máscara suporta 5 níveis, utilizando o cadastro massivo. Os endereços \"Analíticos\" devem estar sempre no último nível.",
+        "rotina": "Configurações » Avançado » Máscaras » Máscara para Endereço de Armaz.",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120513-M%C3%A1scara-para-Endere%C3%A7o-de-Armazenamento"
+      },
+      {
+        "id": "e1-criar-os-enderecos-de-armazenagem",
+        "subgrupo": "",
+        "nome": "Criar os Endereços de Armazenagem",
+        "importante": "Deve ser criado os endereços conforme estrutura física.",
+        "rotina": "WMS » Cadastros » Cadastro Massivo de Endereços",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/4403127493143-Cadastro-Massivo-de-Endere%C3%A7os"
+      }
+    ]
+  },
+  {
+    "nome": "Configuração dos Tipos de Endereço",
+    "itens": [
+      {
+        "id": "e2-picking",
+        "subgrupo": "",
+        "nome": "Picking",
+        "importante": "Endereços de picking devem ter vínculo de produto na aba/Produtos, e a Regra de Relacionamento do Produto deve ser = Permitir (cenário comum e mais utilizado).",
+        "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      },
+      {
+        "id": "e2-pulmao",
+        "subgrupo": "",
+        "nome": "Pulmão",
+        "importante": "Endereços de Pulmão não devem ter a marcação de 'Picking' e na aba/Produtos não deve ter produtos vinculados; a regra de Relacionamento deve ser = Proibir.",
+        "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      },
+      {
+        "id": "e2-enderecos-especiais-avaria-perda-sobra-d",
+        "subgrupo": "",
+        "nome": "Endereços Especiais (Avaria, Perda, Sobra, Divergência, Garantia)",
+        "importante": "Esses endereços não devem ter a marcação 'Permitir Expedição', pois são produtos impróprios para comercialização ou em estoque virtual, e devem ter a situação do endereço = BLOQUEADO. Cadastrar com os nomes de cada endereço p/facilitar o vínculo posterior nas preferências da empresa.",
+        "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      },
+      {
+        "id": "e2-checkouts",
+        "subgrupo": "",
+        "nome": "Checkouts",
+        "importante": "Os endereços de Checkout devem estar marcados como: Exclusivo p/Conferência.",
+        "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      },
+      {
+        "id": "e2-checkout-indefinido",
+        "subgrupo": "",
+        "nome": "Checkout Indefinido",
+        "importante": "Utilizado para estocar os produtos separados, de forma 'virtual', até serem enviados ao checkout físico. Não deve 'Permitir Expedição' e não deve ser marcado como 'Exclusivo p/conferência'.",
+        "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      },
+      {
+        "id": "e2-doca-entrada-saida",
+        "subgrupo": "",
+        "nome": "Doca (Entrada/Saída)",
+        "importante": "Os endereços de DOCA não podem estar com a marcação 'Permite Expedição', pois não se trata de endereços de armazenamento dentro do armazém, e sim usados para movimentação dos produtos. Devem ser vinculados ao Cadastro de Docas.",
+        "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      },
+      {
+        "id": "e2-cadastro-de-docas",
+        "subgrupo": "",
+        "nome": "Cadastro de Docas",
+        "importante": "Neste cadastro deve ser vinculado o Endereço cadastrado anteriormente (Endereços de Armazenagem).",
+        "rotina": "WMS » Cadastros » Docas",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360044612974-Docas"
+      },
+      {
+        "id": "e2-enderecos-indefinidos-p-movimentacao-e-a",
+        "subgrupo": "",
+        "nome": "Endereços Indefinidos p/Movimentação e Armazenagem",
+        "importante": "Cadastrar os endereços utilizados na Movimentação Pró-Ativa e na geração de tarefas de armazenagem — o indefinido p/armazenagem é usado quando os algoritmos não encontram endereços disponíveis. Esses endereços não devem 'Permitir Expedição'. Serão vinculados nas Preferências da Empresa (indefinido para movimentação e indefinido para armazenagem).",
+        "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      }
+    ]
+  },
+  {
+    "nome": "Configurações da Empresa (Preferências da Empresa)",
+    "itens": [
+      {
+        "id": "e3-controlado-pelo-wms",
+        "subgrupo": "Config. Gerais",
+        "nome": "Controlado pelo WMS?",
+        "importante": "Deve marcar este flag para a empresa que vai efetuar o controle de estoque com WMS.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-empresa-para-estoque-no-wms",
+        "subgrupo": "Config. Gerais",
+        "nome": "Empresa para estoque no WMS",
+        "importante": "Empresa p/utilizar o estoque do WMS.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-endereco-p-armazenagem-separacao",
+        "subgrupo": "Config. Gerais",
+        "nome": "Endereço p/armazenagem/separação",
+        "importante": "Endereço pai (primeiro da árvore) da árvore de armazenagem deve ser informado neste campo.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-cod-end-avaria",
+        "subgrupo": "Endereços Especiais",
+        "nome": "Cód. End. Avaria",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-cod-end-divergencia",
+        "subgrupo": "Endereços Especiais",
+        "nome": "Cód. End. Divergência",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-cod-end-perda",
+        "subgrupo": "Endereços Especiais",
+        "nome": "Cód. End. Perda",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-cod-end-sobra",
+        "subgrupo": "Endereços Especiais",
+        "nome": "Cód. End. Sobra",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-endereco-especial-de-garantia",
+        "subgrupo": "Endereços Especiais",
+        "nome": "Endereço especial de garantia",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": ""
+      },
+      {
+        "id": "e3-endereco-de-checkout-indefinido",
+        "subgrupo": "Expedição de Mercadoria",
+        "nome": "Endereço de checkout indefinido",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-endereco-para-retorno-de-expedicao",
+        "subgrupo": "Expedição de Mercadoria",
+        "nome": "Endereço para retorno de expedição",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-cod-end-armazenamento-indefinido",
+        "subgrupo": "Movimentação e Armazenagem",
+        "nome": "Cód. End. Armazenamento Indefinido",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-endereco-indefinido-para-movimentacao",
+        "subgrupo": "Movimentação e Armazenagem",
+        "nome": "Endereço indefinido para movimentação",
+        "importante": "Deve ser vinculado o Endereço cadastrado no Cadastro de Endereços de Armazenagem.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e3-permite-fragmentar-estoque-s",
+        "subgrupo": "Movimentação e Armazenagem",
+        "nome": "Permite fragmentar Estoque = S",
+        "importante": "Deve estar marcada para que o WMS gere tarefas fragmentando os paletes.",
+        "rotina": "Comercial » Preferências » Empresa",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      }
+    ]
+  },
+  {
+    "nome": "Configuração de Aptidão de Tarefas/Unidade/Equipamento",
+    "itens": [
+      {
+        "id": "e4-cadastro-de-equipamento",
+        "subgrupo": "",
+        "nome": "Cadastro de Equipamento",
+        "importante": "Neste cadastro serão registrados os equipamentos utilizados no CD. Exemplo: Paleteira, Carrinho, Empilhadeira etc.",
+        "rotina": "WMS » Cadastros » Cadastro de Equipamentos",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360044613014-Cadastro-de-Equipamentos"
+      },
+      {
+        "id": "e4-cadastro-de-tipo-de-equipamento",
+        "subgrupo": "",
+        "nome": "Cadastro de Tipo de Equipamento",
+        "importante": "Aqui será definido o limite de cada equipamento (peso, nível que pode operar) a partir dos equipamentos cadastrados anteriormente.",
+        "rotina": "WMS » Cadastros » Tipos de Equipamento",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360044612954-Tipos-de-Equipamento"
+      },
+      {
+        "id": "e4-configuracao-por-usuario-operador",
+        "subgrupo": "",
+        "nome": "Configuração por Usuário/Operador",
+        "importante": "Neste cadastro será definido quais tipos de tarefas serão executados por operador.",
+        "rotina": "WMS » Rotinas » Configurações por Usuário",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360044595354-Configura%C3%A7%C3%B5es-por-Usu%C3%A1rio"
+      }
+    ]
+  },
+  {
+    "nome": "Configurações das Regras de Armazenagem",
+    "itens": [
+      {
+        "id": "e5-configuracoes-de-armazenagem",
+        "subgrupo": "",
+        "nome": "Configurações de Armazenagem",
+        "importante": "Possui três algoritmos: Picking, Endereços Vazios e Completar Endereços. Dentro de cada um existem mais regras para tornar a armazenagem mais eficaz, aproveitando os melhores endereços. Requer que os produtos estejam com as medidas configuradas (aba Medidas/Estoque) e marcados para controlar WMS.",
+        "rotina": "WMS » Rotinas » Configuração de Armazenagem",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360044613234-Configura%C3%A7%C3%A3o-de-Armazenagem"
+      },
+      {
+        "id": "e5-wmsregrarmdev-regra-de-armazenagem-para-",
+        "subgrupo": "",
+        "nome": "WMSREGRARMDEV — Regra de armazenagem para devoluções de venda",
+        "importante": "Para devolução de venda existe uma regra específica, pois se trata de produtos já movimentados.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento"
+      }
+    ]
+  },
+  {
+    "nome": "Configurações para Expedição de Mercadoria",
+    "itens": [
+      {
+        "id": "e6-utiliza-doca-automaticamente-em-separaco",
+        "subgrupo": "Utilizadas no envio da OC",
+        "nome": "Utiliza doca automaticamente em separações balcão",
+        "importante": "No envio de uma venda balcão, o sistema seleciona uma Doca Balcão automaticamente.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-considerar-armazenagens-pendentes-no-env",
+        "subgrupo": "Utilizadas no envio da OC",
+        "nome": "Considerar armazenagens pendentes no envio para expedição",
+        "importante": "No envio da Ordem de Carga serão consideradas o estoque em doca de entrada que tenha tarefas de armazenagem geradas.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-envio-de-pedido-balcao-considera-entrada",
+        "subgrupo": "Utilizadas no envio da OC",
+        "nome": "Envio de pedido balcão considera entradas pendentes",
+        "importante": "No envio do pedido balcão será considerado o estoque em doca de entrada que tenha tarefas de armazenagem geradas.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-tratamento-p-falta-de-estoque-no-envio-d",
+        "subgrupo": "Utilizadas no envio da OC",
+        "nome": "Tratamento p/falta de estoque no envio da OC",
+        "importante": "Define a tratativa de falta de estoque no WMS.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-tipo-de-corte-na-separacao",
+        "subgrupo": "Utilizadas no envio da OC",
+        "nome": "Tipo de corte na separação",
+        "importante": "Define a política de corte (falta de estoque) no WMS.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-gerar-reabastecimento-corretivo",
+        "subgrupo": "Utilizadas no envio da OC",
+        "nome": "Gerar reabastecimento corretivo",
+        "importante": "Gerado no envio da Ordem de Carga quando o Picking não atende a demanda e o sistema encontra estoque nos endereços de pulmão.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-modelo-padrao-de-etiqueta-de-volume",
+        "subgrupo": "Impressão de Etiquetas",
+        "nome": "Modelo padrão de Etiqueta de Volume",
+        "importante": "Informar o modelo cadastrado em Comercial » Relatórios » Modelos de Etiquetas (na tela Etiquetas de Volumes há um modelo para baixar).",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-impressora-padrao-da-etiqueta-de-volume",
+        "subgrupo": "Impressão de Etiquetas",
+        "nome": "Impressora padrão da Etiqueta de Volume",
+        "importante": "Informar a impressora para impressão das etiquetas geradas na conferência por Pedido/Por Produto.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-impressao-de-etiqueta-de-volumes",
+        "subgrupo": "Impressão de Etiquetas",
+        "nome": "Impressão de etiqueta de volumes",
+        "importante": "Informar o momento em que serão geradas as etiquetas das áreas por Produto.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-imprimir-etiquetas-de-volume-na-conferen",
+        "subgrupo": "Impressão de Etiquetas",
+        "nome": "Imprimir etiquetas de volume na conferência",
+        "importante": "Marcar a opção para informar a quantidade de volumes formados na Conferência por Pedido.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e6-imprime-etiquetas-de-separacao-por-oc",
+        "subgrupo": "Impressão de Etiquetas",
+        "nome": "Imprime etiquetas de separação por OC",
+        "importante": "Marcar para geração das etiquetas das áreas de separação por Produto.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      }
+    ]
+  },
+  {
+    "nome": "Config. Modelo de Nota/Série/TOPs",
+    "itens": [
+      {
+        "id": "e7-nota-modelo-sobra-estoque-wms-entrada",
+        "subgrupo": "",
+        "nome": "Nota modelo sobra estoque WMS (Entrada)",
+        "importante": "Utilizado para gerar notas de ajustes após o inventário do WMS.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e7-nota-modelo-perda-estoque-wms-saida",
+        "subgrupo": "",
+        "nome": "Nota modelo perda estoque WMS (Saída)",
+        "importante": "Utilizado para gerar notas de ajustes após o inventário do WMS.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e7-local-para-ajuste-de-estoque",
+        "subgrupo": "",
+        "nome": "Local para ajuste de estoque",
+        "importante": "Utilizado no inventário para ajustar o LOCAL no estoque fiscal ao gerar as notas de ajuste.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e7-modelo-retorno-de-estoque-gerencial-wms-",
+        "subgrupo": "",
+        "nome": "Modelo Retorno de Estoque Gerencial WMS (Venda)",
+        "importante": "Utilizado para notas fiscais denegadas/canceladas que tiveram os pedidos concluídos no WMS.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e7-serie-p-devolucao-de-mercadorias",
+        "subgrupo": "",
+        "nome": "Série p/devolução de mercadorias",
+        "importante": "Utilizada para devoluções de compra geradas por divergências no Recebimento.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      },
+      {
+        "id": "e7-top-p-devolucao-de-mercadorias",
+        "subgrupo": "",
+        "nome": "TOP p/devolução de mercadorias",
+        "importante": "Utilizada para devoluções de compra geradas por divergências no Recebimento.",
+        "rotina": "Configurações » Avançado » Preferências",
+        "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
+      }
+    ]
+  }
+];
+const CONFIG_WMS_PONTOS = [
+  "Endereços Especiais (Avaria, Sobra, Divergência, Perda) não devem ter a opção \"Permite Expedição\" (Cadastro: Endereços de Armazenagem).",
+  "Endereços de Doca não devem ter a opção \"Permite Expedição\" (Cadastro: Endereços de Armazenagem).",
+  "Endereços de Movimentação Indefinido (Indefinido para movimentação e Indefinido para armazenagem) não devem permitir Expedição.",
+  "Endereços de Checkout não devem ter a opção \"Permite Expedição\" (Cadastro: Endereços de Armazenagem).",
+  "Endereço de Checkout Indefinido não pode estar marcado como \"Exclusivo p/conferência\" nem \"Permite Expedição\".",
+  "Endereços de Picking devem ter o estoque mínimo e máximo configurados, para que o WMS tenha o ponto de partida da quantidade a ser reabastecida."
+];
+
   const FASES_NOMES = [
     'Levantamento de Processo',
     'Escopo de mensuração de horas',
@@ -2796,6 +3342,122 @@
     renderProjGantt(scope);
     renderKanban(scope);
     renderEstratificacaoFases(scope);
+  }
+
+  // =====================================================================
+  // ---------- CONFIG WMS (checklist de configuração por projeto) ----------
+  // =====================================================================
+  let cfgAberta = {}; // { etapaIndex: true/false } — estado do acordeão nesta sessão
+
+  function cfgTotalItens(){
+    return CONFIG_WMS_ETAPAS.reduce((s,e)=>s+e.itens.length, 0);
+  }
+  function cfgItensFeitos(projeto){
+    if(!projeto || !projeto.configWMS) return 0;
+    let count = 0;
+    CONFIG_WMS_ETAPAS.forEach(et=> et.itens.forEach(it=>{
+      if(projeto.configWMS[it.id]) count++;
+    }));
+    return count;
+  }
+  function cfgItensFeitosEtapa(projeto, etapa){
+    if(!projeto || !projeto.configWMS) return 0;
+    return etapa.itens.filter(it=>projeto.configWMS[it.id]).length;
+  }
+  function cfgCorPct(pct){
+    if(pct >= 100) return 'var(--st-concluido)';
+    if(pct >= 50) return 'var(--st-andamento)';
+    if(pct > 0) return 'var(--st-agendado)';
+    return 'var(--muted)';
+  }
+
+  $('cfgProjSelect').addEventListener('change', renderConfigWMS);
+
+  window.__toggleCfgItem = function(projetoId, itemId, checked){
+    const projeto = projetos.find(p=>p.id===projetoId);
+    if(!projeto) return;
+    if(!projeto.configWMS) projeto.configWMS = {};
+    projeto.configWMS[itemId] = checked;
+    saveProjetos();
+    renderConfigWMS();
+  };
+  window.__toggleCfgEtapa = function(idx){
+    cfgAberta[idx] = !cfgAberta[idx];
+    renderConfigWMS();
+  };
+
+  function renderConfigWMS(){
+    const sel = $('cfgProjSelect');
+    const atual = sel.value;
+    sel.innerHTML = projetos.length
+      ? projetos.map(p=>`<option value="${p.id}">${escapeHtml(p.cliente)}</option>`).join('')
+      : '<option value="">Nenhum projeto criado</option>';
+    if(atual && projetos.some(p=>p.id===atual)) sel.value = atual;
+
+    const projeto = projetos.find(p=>p.id===sel.value);
+
+    if(!projeto){
+      $('cfgOverallProgress').innerHTML = '<div class="kpi-empty">Crie um projeto na aba 🏗️ Projetos primeiro.</div>';
+      $('cfgEtapasContainer').innerHTML = '';
+      $('cfgPontosAtencao').innerHTML = '';
+      return;
+    }
+
+    const totalGeral = cfgTotalItens();
+    const feitosGeral = cfgItensFeitos(projeto);
+    const pctGeral = totalGeral ? (feitosGeral/totalGeral*100) : 0;
+    const corGeral = cfgCorPct(pctGeral);
+
+    $('cfgOverallProgress').innerHTML = `
+      <div class="fase-progress-labels">
+        <span>${escapeHtml(projeto.cliente)}</span>
+        <span><b>${feitosGeral}</b> de <b>${totalGeral}</b> configurações concluídas</span>
+      </div>
+      <div class="fase-progress-track"><div class="fase-progress-fill" style="width:${pctGeral.toFixed(1)}%;background:${corGeral};"></div></div>
+      <div class="fase-progress-pct" style="color:${corGeral};">${pctGeral.toFixed(0)}% configurado</div>
+    `;
+
+    $('cfgEtapasContainer').innerHTML = CONFIG_WMS_ETAPAS.map((etapa, idx)=>{
+      const feitos = cfgItensFeitosEtapa(projeto, etapa);
+      const total = etapa.itens.length;
+      const pct = total ? (feitos/total*100) : 0;
+      const cor = cfgCorPct(pct);
+      const aberto = !!cfgAberta[idx];
+
+      let ultimoSubgrupo = null;
+      const itensHtml = etapa.itens.map(it=>{
+        const done = !!(projeto.configWMS && projeto.configWMS[it.id]);
+        let subHtml = '';
+        if(it.subgrupo && it.subgrupo !== ultimoSubgrupo){
+          ultimoSubgrupo = it.subgrupo;
+          subHtml = `<div class="cfg-subgrupo">${escapeHtml(it.subgrupo)}</div>`;
+        }
+        const helpHtml = it.help ? `<a href="${it.help}" target="_blank" rel="noopener" class="cfg-item-help">🔗 Ajuda</a>` : '';
+        const rotinaHtml = it.rotina ? `<span class="cfg-item-rotina">🧭 ${escapeHtml(it.rotina)}</span>` : '';
+        return `${subHtml}
+          <div class="cfg-item ${done?'done':''}">
+            <input type="checkbox" ${done?'checked':''} onchange="window.__toggleCfgItem('${projeto.id}','${it.id}', this.checked)">
+            <div class="cfg-item-body">
+              <div class="cfg-item-nome" onclick="const cb=this.parentElement.previousElementSibling; cb.checked=!cb.checked; cb.dispatchEvent(new Event('change'));">${escapeHtml(it.nome)}</div>
+              <div class="cfg-item-importante">${escapeHtml(it.importante)}</div>
+              <div class="cfg-item-meta">${rotinaHtml}${helpHtml}</div>
+            </div>
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="cfg-etapa-block">
+          <div class="cfg-etapa-header ${aberto?'open':''}" onclick="window.__toggleCfgEtapa(${idx})">
+            <span class="cfg-etapa-arrow">▶</span>
+            <span class="cfg-etapa-titulo"><span class="num">Etapa ${idx+1}</span>${escapeHtml(etapa.nome)}</span>
+            <div class="cfg-etapa-track"><div class="cfg-etapa-fill" style="width:${pct.toFixed(1)}%;background:${cor};"></div></div>
+            <span class="cfg-etapa-pct" style="color:${cor};">${feitos}/${total}</span>
+          </div>
+          <div class="cfg-etapa-body ${aberto?'open':''}">${itensHtml}</div>
+        </div>`;
+    }).join('');
+
+    $('cfgPontosAtencao').innerHTML = CONFIG_WMS_PONTOS.map(p=>`<li>${escapeHtml(p)}</li>`).join('');
   }
 
   loadProjetos();
