@@ -2650,6 +2650,678 @@ const CONFIG_WMS_ETAPAS = [
       }
     ]
   }
+,
+{
+  "nome": "Cadastro do Produto, Locais e TOPs",
+  "itens": [
+    {
+      "id": "e8-referencia-do-produto",
+      "subgrupo": "Código de Barras",
+      "nome": "Referência do produto",
+      "importante": "Cadastro da referência do produto, usada como um dos códigos de identificação no WMS.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » Aba/Geral",
+      "help": ""
+    },
+    {
+      "id": "e8-unidade-alternativa",
+      "subgrupo": "Código de Barras",
+      "nome": "Unidade Alternativa",
+      "importante": "Cadastro de unidades alternativas de venda/movimentação do produto (ex.: caixa, fardo), cada uma com seu próprio código de barras.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » Aba/Unidade Alternativa",
+      "help": ""
+    },
+    {
+      "id": "e8-aba-codigo-de-barras-quando-necessario",
+      "subgrupo": "Código de Barras",
+      "nome": "Aba/Código de Barras (quando necessário)",
+      "importante": "Cadastro de códigos de barras adicionais do produto, quando a operação exigir mais de um código por item.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » Código de Barras",
+      "help": ""
+    },
+    {
+      "id": "e8-verificar-codigos-de-barras-duplicados",
+      "subgrupo": "Código de Barras",
+      "nome": "Verificar códigos de barras duplicados",
+      "importante": "Rotina de validação que aponta produtos com código de barras duplicado, evitando erro de leitura no coletor.",
+      "rotina": "WMS » Rotinas » Validação de Configurações do WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-flag-controlado-pelo-wms-produto",
+      "subgrupo": "Medidas do Produto",
+      "nome": "Flag Controlado pelo WMS (produto)",
+      "importante": "Marca o produto para ter seu estoque controlado pelo WMS.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/Medidas e Estoque",
+      "help": ""
+    },
+    {
+      "id": "e8-peso-bruto-peso-liquido-altura-largura-e",
+      "subgrupo": "Medidas do Produto",
+      "nome": "Peso bruto, peso líquido, altura, largura e espessura/profundidade",
+      "importante": "Medidas físicas do produto, usadas pelos algoritmos de armazenagem para decidir em qual endereço o produto cabe.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/Medidas e Estoque",
+      "help": ""
+    },
+    {
+      "id": "e8-flag-recuperavel-de-avaria",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Flag Recuperável de Avaria",
+      "importante": "Indica se o produto avariado pode retornar ao estoque bom após tratativa.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-usar-controle-adicional-no-wms",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Usar controle adicional no WMS",
+      "importante": "Usado quando o produto já é controlado por lote/série no ERP e precisa de um controle adicional específico do WMS.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-fragmenta-lote-no-envio-para-separacao",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Fragmenta lote no envio para separação",
+      "importante": "Válido apenas para produtos controlados por lote — permite fragmentar o lote no momento de gerar a tarefa de separação.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-shelf-life-e-shelf-life-minimo",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Shelf Life e Shelf Life Mínimo",
+      "importante": "Configuração de validade do produto, usada quando o controle de armazenagem/separação é por FEFO.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-dias-para-expedicao-shelf-life",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Dias para expedição (Shelf Life)",
+      "importante": "Quantidade mínima de dias de validade restante exigida para o produto poder ser expedido.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-flag-controlado-pelo-wms-local",
+      "subgrupo": "Cadastro de Locais",
+      "nome": "Flag Controlado pelo WMS (Local)",
+      "importante": "Define quais Locais (filiais/depósitos) do ERP terão seu estoque controlado pelo WMS.",
+      "rotina": "Comercial » Arquivo » Cadastros » Locais",
+      "help": ""
+    },
+    {
+      "id": "e8-top-de-compra",
+      "subgrupo": "Tipo de Operação (TOP)",
+      "nome": "TOP de Compra",
+      "importante": "Configuração da aba WMS do Tipo de Operação usado em entradas de compra.",
+      "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-top-de-transferencia",
+      "subgrupo": "Tipo de Operação (TOP)",
+      "nome": "TOP de Transferência",
+      "importante": "Configuração da aba WMS do Tipo de Operação usado em transferências entre locais/empresas.",
+      "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-top-de-requisicao",
+      "subgrupo": "Tipo de Operação (TOP)",
+      "nome": "TOP de Requisição",
+      "importante": "Configuração da aba WMS do Tipo de Operação usado em requisições internas.",
+      "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-top-de-pedido-de-venda",
+      "subgrupo": "Tipo de Operação (TOP)",
+      "nome": "TOP de Pedido de Venda",
+      "importante": "Configuração da aba WMS do Tipo de Operação usado em pedidos de venda que geram separação.",
+      "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-top-de-devolucao-de-venda",
+      "subgrupo": "Tipo de Operação (TOP)",
+      "nome": "TOP de Devolução de Venda",
+      "importante": "Configuração da aba WMS do Tipo de Operação usado em devoluções de venda, que seguem regra de armazenagem específica (WMSREGRARMDEV).",
+      "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Infraestrutura Física e Equipamentos p/WMS",
+  "itens": [
+    {
+      "id": "e9-bancadas-de-checkout-instaladas-e-valida",
+      "subgrupo": "",
+      "nome": "Bancadas de checkout instaladas e validadas",
+      "importante": "Estrutura física das bancadas de conferência (checkout) prontas para operação.",
+      "rotina": "Processo físico",
+      "help": ""
+    },
+    {
+      "id": "e9-antenas-dos-coletores-instaladas-e-valid",
+      "subgrupo": "",
+      "nome": "Antenas dos coletores instaladas e validadas",
+      "importante": "Cobertura de rede Wi-Fi/RF para os coletores funcionarem em toda a área do armazém.",
+      "rotina": "Instalação",
+      "help": ""
+    },
+    {
+      "id": "e9-impressoras-zebra-instaladas-e-validadas",
+      "subgrupo": "",
+      "nome": "Impressoras Zebra instaladas e validadas",
+      "importante": "Impressoras de etiqueta (modelo Zebra ou compatível) instaladas e testadas nos pontos de uso.",
+      "rotina": "Instalação",
+      "help": ""
+    },
+    {
+      "id": "e9-emulador-instalado-android-versao-9",
+      "subgrupo": "",
+      "nome": "Emulador instalado (Android versão ≥ 9)",
+      "importante": "Aplicativo/emulador do coletor instalado em dispositivos com Android 9 ou superior.",
+      "rotina": "Instalação",
+      "help": ""
+    },
+    {
+      "id": "e9-etiquetar-enderecos-porta-pallet-pulmao-",
+      "subgrupo": "",
+      "nome": "Etiquetar endereços (porta-pallet, pulmão, picking, flowrack, docas, checkouts/carrinhos)",
+      "importante": "Aplicação física das etiquetas de código de barras em todos os endereços cadastrados.",
+      "rotina": "Instalação",
+      "help": ""
+    },
+    {
+      "id": "e9-carrinhos-suficientes-para-separacao",
+      "subgrupo": "",
+      "nome": "Carrinhos suficientes para separação",
+      "importante": "Verificar se a quantidade de carrinhos atende ao volume de operação com WMS.",
+      "rotina": "Processo físico",
+      "help": ""
+    },
+    {
+      "id": "e9-hidraulicas-paleteiras-suficientes-para-",
+      "subgrupo": "",
+      "nome": "Hidráulicas/paleteiras suficientes para separação",
+      "importante": "Verificar se a quantidade de equipamentos hidráulicos atende à operação.",
+      "rotina": "Processo físico",
+      "help": ""
+    },
+    {
+      "id": "e9-sps-sankhya-print-service-instalado",
+      "subgrupo": "",
+      "nome": "SPS — Sankhya Print Service instalado",
+      "importante": "Serviço de impressão do Sankhya instalado e configurado nas estações necessárias.",
+      "rotina": "Instalação",
+      "help": ""
+    },
+    {
+      "id": "e9-paletizacao-padronizada",
+      "subgrupo": "",
+      "nome": "Paletização padronizada",
+      "importante": "Padrão de paletização definido e seguido pela operação, compatível com as medidas cadastradas.",
+      "rotina": "Processo físico",
+      "help": ""
+    },
+    {
+      "id": "e9-ruas-sem-impedimentos-fisicos",
+      "subgrupo": "",
+      "nome": "Ruas sem impedimentos físicos",
+      "importante": "Corredores/ruas de circulação livres de obstáculos para movimentação de equipamentos e operadores.",
+      "rotina": "Processo físico",
+      "help": ""
+    },
+    {
+      "id": "e9-servidor-dedicado-para-o-wms",
+      "subgrupo": "",
+      "nome": "Servidor dedicado para o WMS",
+      "importante": "Ambiente de servidor dedicado (ou dimensionado) para suportar a operação do WMS.",
+      "rotina": "Instalação",
+      "help": ""
+    },
+    {
+      "id": "e9-modelo-de-etiqueta-porta-pallet-jrxl-cri",
+      "subgrupo": "",
+      "nome": "Modelo de etiqueta Porta-Pallet (JRXL) criado",
+      "importante": "Modelo de relatório formatado (iReport/JRXL) para impressão da etiqueta de endereço porta-pallet, disponível no Sankhya Place.",
+      "rotina": "Configurações » Avançado » Relatórios Formatados",
+      "help": ""
+    },
+    {
+      "id": "e9-impressao-e-colagem-das-etiquetas-de-end",
+      "subgrupo": "",
+      "nome": "Impressão e colagem das etiquetas de endereço",
+      "importante": "Etiquetas impressas a partir do modelo cadastrado e coladas fisicamente em cada endereço.",
+      "rotina": "Configurações » Avançado » Relatórios Formatados (Ctrl+P)",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Áreas do CD, Endereços de Conexão e Grupos",
+  "itens": [
+    {
+      "id": "e10-picking-rotativo-quando-aplicavel",
+      "subgrupo": "",
+      "nome": "Picking Rotativo (quando aplicável)",
+      "importante": "Configuração alternativa ao Picking Fixo, usada quando o produto não tem endereço fixo de picking.",
+      "rotina": "WMS » Cadastros » Endereço de Armazenamento",
+      "help": ""
+    },
+    {
+      "id": "e10-ordem-dos-enderecos",
+      "subgrupo": "",
+      "nome": "Ordem dos endereços",
+      "importante": "Define a prioridade de separação de cada endereço — o mais prioritário começa pelo número 1.",
+      "rotina": "WMS » Cadastros » Endereço de Armazenamento » Aba/Geral » Campo Ordem",
+      "help": ""
+    },
+    {
+      "id": "e10-enderecos-de-conexao-movimentacao-vertic",
+      "subgrupo": "",
+      "nome": "Endereços de Conexão (Movimentação Vertical)",
+      "importante": "Permite ao WMS diferenciar movimentações horizontais (paleteira) de verticais (empilhadeira). Cria-se um endereço sintético (pai) marcado com 'Utiliza Movimentação Vertical' e os analíticos (filhos) com endereço preferencial/secundário.",
+      "rotina": "WMS » Cadastros » Endereço de Armazenamento » Aba/Movimentação Vertical",
+      "help": ""
+    },
+    {
+      "id": "e10-docas-do-tipo-balcao",
+      "subgrupo": "",
+      "nome": "Docas do tipo Balcão",
+      "importante": "Além de Entrada e Saída, cadastro do tipo de doca usado para vendas balcão.",
+      "rotina": "WMS » Cadastros » Docas",
+      "help": ""
+    },
+    {
+      "id": "e10-area-de-armazenagem",
+      "subgrupo": "",
+      "nome": "Área de Armazenagem",
+      "importante": "Cadastro das áreas de armazenagem para permitir armazenagem por área em faixas de endereço, atendendo particularidades de determinados produtos.",
+      "rotina": "WMS » Cadastros » Área de Armazenagem",
+      "help": ""
+    },
+    {
+      "id": "e10-area-de-separacao",
+      "subgrupo": "",
+      "nome": "Área de Separação",
+      "importante": "Cadastro das áreas de separação usadas na rotina do WMS. Só se aplica se o parâmetro SEPAREACONFWMS estiver ativado.",
+      "rotina": "WMS » Cadastros » Área de Separação",
+      "help": ""
+    },
+    {
+      "id": "e10-area-de-conferencia",
+      "subgrupo": "",
+      "nome": "Área de Conferência",
+      "importante": "Cadastro das áreas de conferência relacionadas ao WMS. Só se aplica se o parâmetro SEPAREACONFWMS estiver ativado.",
+      "rotina": "WMS » Cadastros » Área de Conferência",
+      "help": ""
+    },
+    {
+      "id": "e10-grupo-de-enderecos-por-operador",
+      "subgrupo": "",
+      "nome": "Grupo de Endereços (por operador)",
+      "importante": "Permite alocar operadores em áreas de trabalho por faixa de endereço, definindo quais atividades (separação, reabastecimento, armazenagem, transferência, inventário) cada um pode executar naquela faixa.",
+      "rotina": "WMS » Cadastros » Grupos de Endereços",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Estratégias Avançadas de Armazenagem",
+  "itens": [
+    {
+      "id": "e11-produtos-compativeis",
+      "subgrupo": "",
+      "nome": "Produtos Compatíveis",
+      "importante": "Define quais produtos podem ser armazenados juntos no mesmo endereço.",
+      "rotina": "WMS » Cadastros » Produtos Compatíveis",
+      "help": ""
+    },
+    {
+      "id": "e11-priorizar-menor-data-de-validade-no-pick",
+      "subgrupo": "",
+      "nome": "Priorizar menor data de validade no Picking (WMSDTVALMINPICK)",
+      "importante": "Com o parâmetro ativado, entre produtos do mesmo lote/controle com validades diferentes, o sistema prioriza o de validade mais próxima para o picking.",
+      "rotina": "Configurações » Avançado » Preferências » WMSDTVALMINPICK",
+      "help": ""
+    },
+    {
+      "id": "e11-armazenar-utilizando-lxc-lastro-x-camada",
+      "subgrupo": "",
+      "nome": "Armazenar utilizando LxC (Lastro x Camada)",
+      "importante": "Define se a armazenagem deve respeitar as regras de lastro x camada configuradas para o produto (norma de paletização).",
+      "rotina": "WMS » Rotinas » Configuração de Armazenagem",
+      "help": ""
+    },
+    {
+      "id": "e11-geracao-automatica-de-tarefas-de-armazen",
+      "subgrupo": "",
+      "nome": "Geração automática de tarefas de armazenagem (job)",
+      "importante": "Parâmetro REGCONFARMAUTO — após gerar as tarefas, o sistema bloqueia os endereços de destino, evitando movimentação indevida em caso de divergência.",
+      "rotina": "Configurações » Avançado » Preferências » REGCONFARMAUTO",
+      "help": ""
+    },
+    {
+      "id": "e11-controle-por-fifo-first-in-first-out",
+      "subgrupo": "",
+      "nome": "Controle por FIFO (First In, First Out)",
+      "importante": "Define se a saída de estoque respeita a ordem de entrada (o lote mais antigo sai primeiro), evitando produtos parados no estoque.",
+      "rotina": "WMS » Rotinas » Configuração de Armazenagem",
+      "help": ""
+    },
+    {
+      "id": "e11-controle-por-fefo-first-expired-first-ou",
+      "subgrupo": "",
+      "nome": "Controle por FEFO (First Expired, First Out)",
+      "importante": "Define se a saída de estoque respeita a validade (o que vence primeiro sai primeiro) — depende do Shelf Life cadastrado no produto.",
+      "rotina": "WMS » Rotinas » Configuração de Armazenagem",
+      "help": ""
+    },
+    {
+      "id": "e11-lote-unico-por-endereco-loteunicoxend",
+      "subgrupo": "",
+      "nome": "Lote Único por Endereço (LOTEUNICOXEND)",
+      "importante": "Endereço só aceita um único lote por vez. Exige que os produtos sejam controlados por lote e que o endereço permita expedição.",
+      "rotina": "Configurações » Avançado » Preferências » LOTEUNICOXEND",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Motivos de Corte, Divergência e Ocorrências",
+  "itens": [
+    {
+      "id": "e12-motivo-de-corte",
+      "subgrupo": "",
+      "nome": "Motivo de Corte",
+      "importante": "Cadastro dos motivos de corte de pedidos, usado para estatística. Só aparece se o parâmetro MOTCORTEOBRIG estiver ativado.",
+      "rotina": "WMS » Cadastros » Motivos de Corte",
+      "help": ""
+    },
+    {
+      "id": "e12-motivo-de-divergencia-entrada-e-saida",
+      "subgrupo": "",
+      "nome": "Motivo de Divergência (entrada e saída)",
+      "importante": "Cadastro dos motivos de divergência levantados na rotina operacional.",
+      "rotina": "WMS » Cadastros » Motivo de Divergência",
+      "help": ""
+    },
+    {
+      "id": "e12-liberacao-de-ocorrencia-wmsregocor",
+      "subgrupo": "",
+      "nome": "Liberação de Ocorrência (WMSREGOCOR)",
+      "importante": "Rotina para liberar ou cancelar uma solicitação de liberação de ocorrência registrada no WMS.",
+      "rotina": "Configurações » Avançado » Preferências » WMSREGOCOR",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Tipos de Conferência de Entrada",
+  "itens": [
+    {
+      "id": "e13-conferencia-de-entrada",
+      "subgrupo": "",
+      "nome": "Conferência de Entrada",
+      "importante": "Exige que todos os SKUs da nota estejam conferidos para que a mercadoria seja armazenada.",
+      "rotina": "WMS » Rotinas » Configurações por Usuário",
+      "help": ""
+    },
+    {
+      "id": "e13-conferencia-parcial-de-entrada",
+      "subgrupo": "",
+      "nome": "Conferência Parcial de Entrada",
+      "importante": "Permite conferir um produto entre outros da nota e já enviar para armazenagem, sem esperar a nota inteira ser conferida — útil para produtos prioritários.",
+      "rotina": "WMS » Rotinas » Configurações por Usuário",
+      "help": ""
+    },
+    {
+      "id": "e13-registro-de-conferencia-com-u-m-a",
+      "subgrupo": "",
+      "nome": "Registro de Conferência (com U.M.A.)",
+      "importante": "Torna o processo de armazenagem mais ágil para operações com pouco espaço de recebimento — os produtos já são direcionados à armazenagem à medida que são conferidos, usando o conceito de U.M.A.",
+      "rotina": "WMS » Rotinas » Configurações por Usuário",
+      "help": ""
+    },
+    {
+      "id": "e13-registro-de-conferencia-de-entrada-rotin",
+      "subgrupo": "",
+      "nome": "Registro de Conferência de Entrada (rotina Sankhya Om)",
+      "importante": "Tela para quem não usa coletor na conferência de recebimento.",
+      "rotina": "WMS » Rotinas » Registro de Conferência de Entrada",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Tipos de Separação",
+  "itens": [
+    {
+      "id": "e14-separacao-picking-discreto",
+      "subgrupo": "",
+      "nome": "Separação (Picking Discreto)",
+      "importante": "Separação convencional, pedido a pedido, desmembrada em Áreas de Separação por Pedido/Produto.",
+      "rotina": "WMS » Cadastros » Área de Separação » Aba/Geral » Tipo: Por Pedido/Produto",
+      "help": ""
+    },
+    {
+      "id": "e14-separacao-por-esteira-flow-rack",
+      "subgrupo": "",
+      "nome": "Separação por Esteira (Flow Rack)",
+      "importante": "Define a posição da área de separação na esteira (Nenhuma/Inicial/Intermediária/Terminal), usada em separações Flow Rack.",
+      "rotina": "WMS » Cadastros » Área de Separação » Aba/Geral » Posição na Esteira",
+      "help": ""
+    },
+    {
+      "id": "e14-separacao-por-area-com-agrupamento-de-pe",
+      "subgrupo": "",
+      "nome": "Separação por Área com agrupamento de pedidos",
+      "importante": "Agrupa produtos de uma mesma Área de Separação que estão em pedidos com a mesma ordem de carga, numa única separação 'mãe'.",
+      "rotina": "WMS » Cadastros » Área de Separação » Aba/Geral » Agrupar Pedidos",
+      "help": ""
+    },
+    {
+      "id": "e14-separacao-agrupada-por-produto",
+      "subgrupo": "",
+      "nome": "Separação Agrupada por Produto",
+      "importante": "Permite que um operador separe múltiplos pedidos num único deslocamento, guiado pelos checkouts (caixa/carrinho/gaiola), aumentando produtividade.",
+      "rotina": "WMS » Cadastros » Área de Separação » Aba/Geral » Separação Agrupada por Produto",
+      "help": ""
+    },
+    {
+      "id": "e14-separacao-pulmao",
+      "subgrupo": "",
+      "nome": "Separação Pulmão",
+      "importante": "Faz a separação de mercadorias diretamente do endereço de pulmão.",
+      "rotina": "Configurações » Avançado » Preferências » Aba/WMS » Utiliza separação pulmão",
+      "help": ""
+    },
+    {
+      "id": "e14-separacao-parcial-no-pulmao",
+      "subgrupo": "",
+      "nome": "Separação Parcial no Pulmão",
+      "importante": "Aciona separação parcial nos endereços de pulmão conforme percentual configurado no cadastro do produto.",
+      "rotina": "Configurações » Avançado » Preferências » Aba/WMS » Utiliza separação parcial pulmão",
+      "help": ""
+    },
+    {
+      "id": "e14-separacao-balcao",
+      "subgrupo": "",
+      "nome": "Separação Balcão",
+      "importante": "Para pedidos realizados diretamente no CD, que não são transportados por Ordem de Carga.",
+      "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Separação em Balcão",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Reabastecimento (Corretivo e Preventivo)",
+  "itens": [
+    {
+      "id": "e15-reabastecimento-corretivo-automatico-no-",
+      "subgrupo": "",
+      "nome": "Reabastecimento Corretivo (automático no envio da OC)",
+      "importante": "Ao enviar a Ordem de Carga, se o picking não atender a demanda, gera reabastecimento automaticamente puxando do pulmão. Exige estoque máximo configurado no endereço de picking.",
+      "rotina": "Configurações » Avançado » Preferências » Aba/WMS » Gerar reabastecimento corretivo",
+      "help": ""
+    },
+    {
+      "id": "e15-reabastecimento-preventivo-rotina-manual",
+      "subgrupo": "",
+      "nome": "Reabastecimento Preventivo (rotina manual)",
+      "importante": "Permite verificar e reabastecer os endereços de picking antes do início das separações, priorizando por percentual de completude.",
+      "rotina": "WMS » Rotinas » Ressuprimento Preventivo",
+      "help": ""
+    },
+    {
+      "id": "e15-reabastecimento-preventivo-automatico-jo",
+      "subgrupo": "",
+      "nome": "Reabastecimento Preventivo automático (job — LIGAREABESTWMS)",
+      "importante": "Após a separação e retirada do produto, se o picking cair abaixo do mínimo, gera reabastecimento corretivo automaticamente via job.",
+      "rotina": "Configurações » Avançado » Preferências » LIGAREABESTWMS",
+      "help": ""
+    },
+    {
+      "id": "e15-reabastecimento-corretivo-por-ocorrencia",
+      "subgrupo": "",
+      "nome": "Reabastecimento Corretivo por ocorrência (WMSRECESTOCOR)",
+      "importante": "Quando há ocorrência na separação, o sistema busca estoque em outro picking ou no pulmão para reabastecer até a capacidade máxima.",
+      "rotina": "Configurações » Avançado » Preferências » WMSRECESTOCOR",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Otimização de Endereço e Espaço",
+  "itens": [
+    {
+      "id": "e16-remanejamento-de-estoque",
+      "subgrupo": "",
+      "nome": "Remanejamento de Estoque",
+      "importante": "Analisa o estoque nos endereços de pulmão para identificar produtos que não ocupam o espaço total, sugerindo transferência para endereços menores ou compatíveis.",
+      "rotina": "WMS » Rotinas » Remanejamento de Estoque",
+      "help": ""
+    },
+    {
+      "id": "e16-transferencia-entre-enderecos",
+      "subgrupo": "",
+      "nome": "Transferência entre Endereços",
+      "importante": "Permite selecionar um produto de um endereço e transferi-lo para outro, considerando quantidade e compatibilidade de tamanho.",
+      "rotina": "WMS » Rotinas » Transferência entre Endereços",
+      "help": ""
+    },
+    {
+      "id": "e16-movimentacao-pro-ativa-coletor",
+      "subgrupo": "",
+      "nome": "Movimentação Pró-Ativa (coletor)",
+      "importante": "Reorganização manual do depósito via coletor, sob responsabilidade do operador — usada para maximizar endereços vazios de pulmão.",
+      "rotina": "WMS » Rotinas » Configurações por Usuário",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Telas de Gestão, Consulta e Rastreabilidade",
+  "itens": [
+    {
+      "id": "e17-gerencia-do-wms",
+      "subgrupo": "",
+      "nome": "Gerência do WMS",
+      "importante": "Acompanhamento de todos os processos pendentes ou em execução no WMS, com alocação e priorização de recursos.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-recebimento-de-mercadoria-tela-de-gestao",
+      "subgrupo": "",
+      "nome": "Recebimento de Mercadoria (tela de gestão)",
+      "importante": "Administração do recebimento de mercadorias da empresa.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-expedicao-de-mercadoria-tela-de-gestao",
+      "subgrupo": "",
+      "nome": "Expedição de Mercadoria (tela de gestão)",
+      "importante": "Administração das expedições de mercadorias, apoiando o processo de expedição de pedidos.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-consulta-de-checkout",
+      "subgrupo": "",
+      "nome": "Consulta de Checkout",
+      "importante": "Visualização da situação de estoque de cada checkout. Só aparece se o parâmetro SEPAREACONFWMS estiver ativado.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-consulta-estoque-com-ocorrencias",
+      "subgrupo": "",
+      "nome": "Consulta Estoque com Ocorrências",
+      "importante": "Consulta do estoque dos endereços de avaria, perda, sobra e divergência.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-fila-de-tarefas",
+      "subgrupo": "",
+      "nome": "Fila de Tarefas",
+      "importante": "Acompanhamento do andamento e priorização das tarefas em execução no WMS.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-gestao-de-u-m-a",
+      "subgrupo": "",
+      "nome": "Gestão de U.M.A.",
+      "importante": "Consulta e gestão dos unitizadores (U.M.A.) de forma otimizada.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-estoque-enderecamento-wms-consulta",
+      "subgrupo": "",
+      "nome": "Estoque / Endereçamento WMS (consulta)",
+      "importante": "Estoque por endereço do WMS, com entradas/saídas pendentes, estoque atual e disponível, filtro de endereços vazios.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-movimentacao-por-produto-rastreabilidade",
+      "subgrupo": "",
+      "nome": "Movimentação por Produto (rastreabilidade)",
+      "importante": "Consulta de todos os movimentos realizados por um determinado produto.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    },
+    {
+      "id": "e17-movimentacao-por-endereco-rastreabilidad",
+      "subgrupo": "",
+      "nome": "Movimentação por Endereço (rastreabilidade)",
+      "importante": "Consulta de todos os movimentos realizados em um determinado endereço, origem ou destino.",
+      "rotina": "Configurações » Controle de Acesso » Acessos",
+      "help": ""
+    }
+  ]
+},
+{
+  "nome": "Faturamento Automático",
+  "itens": [
+    {
+      "id": "e18-configuracao-de-faturamento-automatico",
+      "subgrupo": "",
+      "nome": "Configuração de Faturamento Automático",
+      "importante": "Cadastro das empresas cujos pedidos devem ser faturados e ter a nota impressa automaticamente ao final da conferência.",
+      "rotina": "WMS » Rotinas » Configuração Faturamento Automático",
+      "help": ""
+    }
+  ]
+}
 ];
 const CONFIG_WMS_PONTOS = [
   "Endereços Especiais (Avaria, Sobra, Divergência, Perda) não devem ter a opção \"Permite Expedição\" (Cadastro: Endereços de Armazenagem).",
