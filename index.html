@@ -466,6 +466,7 @@
     flex-shrink:0;
   }
   .cfg-etapa-header.open .cfg-etapa-arrow{transform:rotate(90deg);}
+  .cfg-etapa-arrow.open{transform:rotate(90deg); display:inline-block;}
   .cfg-etapa-body{
     display:none;
     padding:4px 20px 16px;
@@ -488,21 +489,13 @@
     border-bottom:1px solid #F0F2F5;
   }
   .cfg-item:last-child{border-bottom:none;}
-  .cfg-item input[type=checkbox]{
-    width:18px; height:18px;
-    margin-top:2px;
-    flex-shrink:0;
-    accent-color:var(--st-concluido);
-    cursor:pointer;
-  }
   .cfg-item-body{flex:1; min-width:0;}
   .cfg-item-nome{
     font-size:13px;
     font-weight:700;
     color:var(--text);
-    cursor:pointer;
   }
-  .cfg-item.done .cfg-item-nome{color:var(--st-concluido); text-decoration:line-through; text-decoration-color:rgba(15,169,104,.4);}
+  .cfg-item.done .cfg-item-nome{color:var(--st-concluido);}
   .cfg-item-importante{
     font-size:12px;
     color:var(--muted);
@@ -519,6 +512,72 @@
   .cfg-item-rotina{color:var(--tipo-remota); font-weight:600;}
   .cfg-item-help{color:var(--orange); font-weight:700; text-decoration:none;}
   .cfg-item-help:hover{text-decoration:underline;}
+  .cfg-item-controls{
+    display:flex;
+    gap:8px;
+    margin-top:8px;
+    flex-wrap:wrap;
+  }
+  .cfg-status-select{
+    font-family:inherit;
+    font-size:11.5px;
+    font-weight:700;
+    padding:6px 10px;
+    border-radius:7px;
+    border:none;
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .cfg-obs-input{
+    flex:1;
+    min-width:140px;
+    font-family:inherit;
+    font-size:12px;
+    padding:6px 10px;
+    border-radius:7px;
+    border:1px solid var(--line);
+    background:#FAFBFC;
+  }
+  .cfg-obs-input:focus{outline:2px solid var(--orange); outline-offset:0; background:#fff;}
+
+  .cfg-mgr-etapa{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    margin-bottom:12px;
+    overflow:hidden;
+  }
+  .cfg-mgr-etapa-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 16px;
+  }
+  .cfg-mgr-etapa-nome{
+    flex:1;
+    font-weight:700;
+    font-size:13px;
+    color:var(--navy);
+  }
+  .cfg-mgr-etapa-nome .num{color:var(--orange); margin-right:6px;}
+  .cfg-mgr-etapa-body{
+    display:none;
+    padding:6px 16px 16px;
+    border-top:1px solid var(--line);
+  }
+  .cfg-mgr-etapa-body.open{display:block;}
+  .cfg-mgr-item-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:9px 0;
+    border-bottom:1px solid #F0F2F5;
+  }
+  .cfg-mgr-item-row:last-of-type{border-bottom:none;}
+  .cfg-mgr-item-info{display:flex; flex-direction:column; gap:2px;}
+  .cfg-mgr-item-nome{font-size:12.5px; font-weight:600; color:var(--text);}
+  .cfg-mgr-item-sub{font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.3px;}
   .cfg-pontos-lista{
     margin:0;
     padding-left:18px;
@@ -1192,13 +1251,38 @@
 
     <div class="toolbar">
       <select id="cfgProjSelect" style="min-width:260px;"></select>
+      <button class="btn btn-ghost btn-sm" id="btnCfgComparativo">📊 Comparativo entre Projetos</button>
+      <button class="btn btn-ghost btn-sm" id="btnCfgGerenciar">🛠️ Gerenciar Checklist</button>
       <div class="spacer"></div>
       <span class="proj-hint">Marque cada configuração conforme for realizando no Sankhya.</span>
     </div>
 
+    <div id="cfgComparativoView" style="display:none;">
+      <section class="kpi-block">
+        <h2>📊 Comparativo entre Projetos</h2>
+        <div id="cfgComparativoTable"></div>
+      </section>
+    </div>
+
+    <div id="cfgGerenciarView" style="display:none;">
+      <section class="kpi-block">
+        <h2>🛠️ Gerenciar Checklist</h2>
+        <div class="hint" style="margin-bottom:14px;">Aqui você adiciona, edita ou remove as etapas e itens de configuração usados em todos os projetos.</div>
+        <button class="btn btn-primary btn-sm" id="btnCfgNovaEtapa" style="margin-bottom:14px;">+ Nova Etapa</button>
+        <div id="cfgMgrContainer"></div>
+      </section>
+    </div>
+
+    <div id="cfgNormalView">
+
     <section class="kpi-block" id="cfgOverallBlock">
       <h2>Progresso geral da configuração</h2>
       <div class="fase-progress" id="cfgOverallProgress"></div>
+    </section>
+
+    <section class="kpi-block">
+      <h2>📊 Quanto o WMS está sendo utilizado</h2>
+      <div id="cfgUtilizacaoChart" class="kpi-bars"></div>
     </section>
 
     <section class="cfg-produto-block">
@@ -1218,6 +1302,8 @@
       <h2>⚠️ Pontos de atenção</h2>
       <ul id="cfgPontosAtencao" class="cfg-pontos-lista"></ul>
     </section>
+
+    </div>
 
   </div>
 
@@ -1448,6 +1534,43 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<div class="overlay" id="cfgItemOverlay">
+  <div class="modal">
+    <h3 id="cfgItemModalTitle">Item do checklist</h3>
+    <div class="sub" id="cfgItemModalSub">Etapa</div>
+
+    <div class="field">
+      <label>Nome do item</label>
+      <input type="text" id="cfgItemNome" placeholder="Ex.: Configurar endereço de picking" maxlength="150">
+    </div>
+
+    <div class="field">
+      <label>Subgrupo (opcional)</label>
+      <input type="text" id="cfgItemSubgrupo" placeholder="Ex.: Endereços Especiais" maxlength="80">
+    </div>
+
+    <div class="field">
+      <label>Importante (contexto/regra)</label>
+      <textarea id="cfgItemImportante" rows="3" placeholder="Explique o que essa configuração faz ou por que é importante..."></textarea>
+    </div>
+
+    <div class="field">
+      <label>Rotina (onde configurar no Sankhya)</label>
+      <input type="text" id="cfgItemRotina" placeholder="Ex.: WMS » Cadastros » Endereço de Armazenamento" maxlength="200">
+    </div>
+
+    <div class="field">
+      <label>Link de ajuda (opcional)</label>
+      <input type="text" id="cfgItemHelp" placeholder="https://ajuda.sankhya.com.br/..." maxlength="300">
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="btnCfgItemCancel">Cancelar</button>
+      <button class="btn btn-primary" id="btnCfgItemSave">Salvar</button>
+    </div>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -2381,7 +2504,7 @@
   // ---------- PROJETOS (Gestão de Implantação WMS) ----------
   // =====================================================================
   // ---------- CONFIG WMS: checklist gerado a partir da planilha do usuário ----------
-const CONFIG_WMS_ETAPAS = [
+const CONFIG_WMS_ETAPAS_SEED = [
   {
     "nome": "Criação de Endereços",
     "itens": [
@@ -2469,6 +2592,46 @@ const CONFIG_WMS_ETAPAS = [
         "importante": "Cadastrar os endereços utilizados na Movimentação Pró-Ativa e na geração de tarefas de armazenagem — o indefinido p/armazenagem é usado quando os algoritmos não encontram endereços disponíveis. Esses endereços não devem 'Permitir Expedição'. Serão vinculados nas Preferências da Empresa (indefinido para movimentação e indefinido para armazenagem).",
         "rotina": "WMS » Cadastros » Endereço de Armazenamento",
         "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045120313-Endere%C3%A7o-de-Armazenamento#preenchimentosiniciais"
+      },
+      {
+        "id": "e2s-script-ordem-dos-enderecos",
+        "subgrupo": "Scripts de Ajuste em Massa",
+        "nome": "Script ordem dos endereços",
+        "importante": "Script SQL para atualizar em massa o campo Ordem dos endereços de armazenagem, definindo a sequência de prioridade que o WMS usa para separação (o mais prioritário começa em 1).",
+        "rotina": "Script SQL — execução direta em banco",
+        "help": ""
+      },
+      {
+        "id": "e2s-script-para-descrend",
+        "subgrupo": "Scripts de Ajuste em Massa",
+        "nome": "Script para DESCREND",
+        "importante": "Script SQL para marcar em massa os endereços com a flag de ordem decrescente (DESCREND), usada para inverter o sentido de separação em corredores/ruas que precisam ser percorridos em ordem decrescente.",
+        "rotina": "Script SQL — execução direta em banco",
+        "help": ""
+      },
+      {
+        "id": "e2s-script-para-nivel-do-endereco",
+        "subgrupo": "Scripts de Ajuste em Massa",
+        "nome": "Script para Nível do endereço",
+        "importante": "Script SQL para atualizar em massa o campo Nível dos endereços (altura/andar do porta-pallet), usado pelos algoritmos de armazenagem e pela aptidão de equipamento por nível.",
+        "rotina": "Script SQL — execução direta em banco",
+        "help": ""
+      },
+      {
+        "id": "e2s-script-para-picking-s",
+        "subgrupo": "Scripts de Ajuste em Massa",
+        "nome": "Script para Picking=S",
+        "importante": "Script SQL para marcar em massa os endereços como Picking=S, quando a quantidade de endereços de picking a configurar é grande demais para fazer manualmente pela tela.",
+        "rotina": "Script SQL — execução direta em banco",
+        "help": ""
+      },
+      {
+        "id": "e2s-insert-tgwexp-picking-dos-produtos",
+        "subgrupo": "Scripts de Ajuste em Massa",
+        "nome": "INSERT TGWEXP — Picking dos produtos",
+        "importante": "Script de INSERT na tabela TGWEXP para vincular produtos aos seus endereços de picking em massa, quando o volume de produtos não permite o vínculo manual pela aba/Produtos de cada endereço.",
+        "rotina": "Script SQL — execução direta em banco",
+        "help": ""
       }
     ]
   },
@@ -3374,7 +3537,7 @@ const CONFIG_WMS_PONTOS = [
   "Endereço de Checkout Indefinido não pode estar marcado como \"Exclusivo p/conferência\" nem \"Permite Expedição\".",
   "Endereços de Picking devem ter o estoque mínimo e máximo configurados, para que o WMS tenha o ponto de partida da quantidade a ser reabastecida."
 ];
-  const CONFIG_WMS_PRODUTO = {
+  const CONFIG_WMS_PRODUTO_SEED = {
   "nome": "Cadastro do Produto (SKUs)",
   "itens": [
     {
@@ -3469,6 +3632,66 @@ const CONFIG_WMS_PONTOS = [
 };
 
 
+  // ---------- Estado editável do checklist (seedado a partir das constantes acima) ----------
+  const CHECKLIST_ETAPAS_KEY = 'controle-agendas:checklist-etapas';
+  const CHECKLIST_PRODUTO_KEY = 'controle-agendas:checklist-produto';
+  let CHECKLIST_ETAPAS = [];
+  let CHECKLIST_PRODUTO = null;
+
+  function loadChecklist(){
+    try{
+      const raw = localStorage.getItem(CHECKLIST_ETAPAS_KEY);
+      CHECKLIST_ETAPAS = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(CONFIG_WMS_ETAPAS_SEED));
+    }catch(e){
+      CHECKLIST_ETAPAS = JSON.parse(JSON.stringify(CONFIG_WMS_ETAPAS_SEED));
+    }
+    try{
+      const rawP = localStorage.getItem(CHECKLIST_PRODUTO_KEY);
+      CHECKLIST_PRODUTO = rawP ? JSON.parse(rawP) : JSON.parse(JSON.stringify(CONFIG_WMS_PRODUTO_SEED));
+    }catch(e){
+      CHECKLIST_PRODUTO = JSON.parse(JSON.stringify(CONFIG_WMS_PRODUTO_SEED));
+    }
+
+    // Reconciliação: itens novos que forem adicionados na base padrão (seed) chegam
+    // automaticamente aqui, sem apagar itens/etapas que o usuário já editou ou criou.
+    // Só entra em etapas que o usuário ainda tem (não recria etapa que ele excluiu).
+    let migrouChecklist = false;
+    const idsExistentes = new Set();
+    CHECKLIST_ETAPAS.forEach(et=> et.itens.forEach(it=> idsExistentes.add(it.id)));
+    CHECKLIST_PRODUTO.itens.forEach(it=> idsExistentes.add(it.id));
+
+    CONFIG_WMS_ETAPAS_SEED.forEach(seedEtapa=>{
+      const etapaAlvo = CHECKLIST_ETAPAS.find(e=>e.nome === seedEtapa.nome);
+      if(!etapaAlvo) return;
+      seedEtapa.itens.forEach(seedItem=>{
+        if(!idsExistentes.has(seedItem.id)){
+          etapaAlvo.itens.push(JSON.parse(JSON.stringify(seedItem)));
+          idsExistentes.add(seedItem.id);
+          migrouChecklist = true;
+        }
+      });
+    });
+    CONFIG_WMS_PRODUTO_SEED.itens.forEach(seedItem=>{
+      if(!idsExistentes.has(seedItem.id)){
+        CHECKLIST_PRODUTO.itens.push(JSON.parse(JSON.stringify(seedItem)));
+        idsExistentes.add(seedItem.id);
+        migrouChecklist = true;
+      }
+    });
+    if(migrouChecklist){
+      saveChecklistEtapas();
+      saveChecklistProduto();
+    }
+  }
+  function saveChecklistEtapas(){
+    try{ localStorage.setItem(CHECKLIST_ETAPAS_KEY, JSON.stringify(CHECKLIST_ETAPAS)); }
+    catch(e){ toast('Erro ao salvar o checklist.'); }
+  }
+  function saveChecklistProduto(){
+    try{ localStorage.setItem(CHECKLIST_PRODUTO_KEY, JSON.stringify(CHECKLIST_PRODUTO)); }
+    catch(e){ toast('Erro ao salvar o checklist.'); }
+  }
+
   const FASES_NOMES = [
     'Levantamento de Processo',
     'Escopo de mensuração de horas',
@@ -3508,6 +3731,17 @@ const CONFIG_WMS_PONTOS = [
           migrou = true;
         }
       });
+      // Migração: itens do checklist Config WMS eram boolean (true/false).
+      // Agora cada item tem {status, observacao}.
+      if(p.configWMS){
+        Object.keys(p.configWMS).forEach(itemId=>{
+          const v = p.configWMS[itemId];
+          if(typeof v === 'boolean'){
+            p.configWMS[itemId] = {status: v ? 'Concluído' : 'Em aberto', observacao: ''};
+            migrou = true;
+          }
+        });
+      }
     });
     if(migrou) await saveProjetos();
   }
@@ -4159,20 +4393,37 @@ const CONFIG_WMS_PONTOS = [
   let cfgAberta = {}; // { etapaIndex: true/false } — estado do acordeão nesta sessão
   let cfgProdutoAberto = false;
 
-  function cfgTotalItens(){
-    return CONFIG_WMS_ETAPAS.reduce((s,e)=>s+e.itens.length, 0);
+  const CFG_STATUS_OPCOES = ['Em aberto','Em andamento','Com impedimento','Não utiliza','Concluído'];
+  const CFG_STATUS_COLORS = {
+    'Em aberto':        {fg:'#8A93A3', bg:'#EEF0F3'},
+    'Em andamento':     {fg:'var(--st-andamento)', bg:'var(--st-andamento-bg)'},
+    'Com impedimento':  {fg:'var(--st-cancelado)', bg:'var(--st-cancelado-bg)'},
+    'Não utiliza':      {fg:'var(--st-reagendado)', bg:'var(--st-reagendado-bg)'},
+    'Concluído':        {fg:'var(--st-concluido)', bg:'var(--st-concluido-bg)'}
+  };
+
+  function cfgItemInfo(projeto, itemId){
+    const v = projeto && projeto.configWMS ? projeto.configWMS[itemId] : null;
+    if(v && typeof v === 'object') return {status: v.status || 'Em aberto', observacao: v.observacao || ''};
+    return {status: 'Em aberto', observacao: ''};
   }
-  function cfgItensFeitos(projeto){
-    if(!projeto || !projeto.configWMS) return 0;
+  function cfgTotalItens(){
+    return CHECKLIST_ETAPAS.reduce((s,e)=>s+e.itens.length, 0);
+  }
+  // "Resolvido" = configurado (Concluído) ou explicitamente decidido que não se aplica (Não utiliza)
+  function cfgItensResolvidos(projeto){
     let count = 0;
-    CONFIG_WMS_ETAPAS.forEach(et=> et.itens.forEach(it=>{
-      if(projeto.configWMS[it.id]) count++;
+    CHECKLIST_ETAPAS.forEach(et=> et.itens.forEach(it=>{
+      const st = cfgItemInfo(projeto, it.id).status;
+      if(st === 'Concluído' || st === 'Não utiliza') count++;
     }));
     return count;
   }
-  function cfgItensFeitosLista(projeto, itens){
-    if(!projeto || !projeto.configWMS) return 0;
-    return itens.filter(it=>projeto.configWMS[it.id]).length;
+  function cfgItensResolvidosLista(projeto, itens){
+    return itens.filter(it=>{
+      const st = cfgItemInfo(projeto, it.id).status;
+      return st === 'Concluído' || st === 'Não utiliza';
+    }).length;
   }
   function cfgCorPct(pct){
     if(pct >= 100) return 'var(--st-concluido)';
@@ -4183,7 +4434,9 @@ const CONFIG_WMS_PONTOS = [
   function cfgRenderItensHtml(projeto, itens){
     let ultimoSubgrupo = null;
     return itens.map(it=>{
-      const done = !!(projeto.configWMS && projeto.configWMS[it.id]);
+      const info = cfgItemInfo(projeto, it.id);
+      const cor = CFG_STATUS_COLORS[info.status] || CFG_STATUS_COLORS['Em aberto'];
+      const done = info.status === 'Concluído';
       let subHtml = '';
       if(it.subgrupo && it.subgrupo !== ultimoSubgrupo){
         ultimoSubgrupo = it.subgrupo;
@@ -4191,13 +4444,17 @@ const CONFIG_WMS_PONTOS = [
       }
       const helpHtml = it.help ? `<a href="${it.help}" target="_blank" rel="noopener" class="cfg-item-help">🔗 Ajuda</a>` : '';
       const rotinaHtml = it.rotina ? `<span class="cfg-item-rotina">🧭 ${escapeHtml(it.rotina)}</span>` : '';
+      const opcoesHtml = CFG_STATUS_OPCOES.map(op=>`<option value="${op}" ${op===info.status?'selected':''}>${op}</option>`).join('');
       return `${subHtml}
         <div class="cfg-item ${done?'done':''}">
-          <input type="checkbox" ${done?'checked':''} onchange="window.__toggleCfgItem('${projeto.id}','${it.id}', this.checked)">
-          <div class="cfg-item-body">
-            <div class="cfg-item-nome" onclick="const cb=this.parentElement.previousElementSibling; cb.checked=!cb.checked; cb.dispatchEvent(new Event('change'));">${escapeHtml(it.nome)}</div>
+          <div class="cfg-item-body" style="flex:1;">
+            <div class="cfg-item-nome">${escapeHtml(it.nome)}</div>
             <div class="cfg-item-importante">${escapeHtml(it.importante)}</div>
             <div class="cfg-item-meta">${rotinaHtml}${helpHtml}</div>
+            <div class="cfg-item-controls">
+              <select class="cfg-status-select" style="color:${cor.fg};background:${cor.bg};" onchange="window.__setCfgStatus('${projeto.id}','${it.id}', this.value)">${opcoesHtml}</select>
+              <input type="text" class="cfg-obs-input" placeholder="Observação..." value="${escapeHtml(info.observacao)}" onchange="window.__setCfgObs('${projeto.id}','${it.id}', this.value)">
+            </div>
           </div>
         </div>`;
     }).join('');
@@ -4205,13 +4462,283 @@ const CONFIG_WMS_PONTOS = [
 
   $('cfgProjSelect').addEventListener('change', renderConfigWMS);
 
-  window.__toggleCfgItem = function(projetoId, itemId, checked){
+  // ---------- Alternância entre Normal / Comparativo / Gerenciar ----------
+  function cfgMostrarView(view){
+    $('cfgNormalView').style.display = view==='normal' ? '' : 'none';
+    $('cfgComparativoView').style.display = view==='comparativo' ? '' : 'none';
+    $('cfgGerenciarView').style.display = view==='gerenciar' ? '' : 'none';
+    if(view==='comparativo') renderCfgComparativo();
+    if(view==='gerenciar') renderCfgGerenciar();
+  }
+  $('btnCfgComparativo').addEventListener('click', ()=>{
+    const jaAberto = $('cfgComparativoView').style.display !== 'none';
+    cfgMostrarView(jaAberto ? 'normal' : 'comparativo');
+  });
+  $('btnCfgGerenciar').addEventListener('click', ()=>{
+    const jaAberto = $('cfgGerenciarView').style.display !== 'none';
+    cfgMostrarView(jaAberto ? 'normal' : 'gerenciar');
+  });
+
+  // ---------- Comparativo entre Projetos ----------
+  function renderCfgComparativo(){
+    if(!projetos.length){
+      $('cfgComparativoTable').innerHTML = '<div class="kpi-empty">Nenhum projeto criado ainda.</div>';
+      return;
+    }
+    const todosItens = CHECKLIST_ETAPAS.flatMap(e=>e.itens).concat(CHECKLIST_PRODUTO.itens);
+    const totalTodos = todosItens.length;
+    const totalConfig = cfgTotalItens();
+
+    const linhas = projetos.map(p=>{
+      const resolvidoConfig = cfgItensResolvidos(p);
+      const pctResolvido = totalConfig ? (resolvidoConfig/totalConfig*100) : 0;
+
+      const utilizado = todosItens.filter(it=> cfgItemInfo(p, it.id).status === 'Concluído').length;
+      const pctUtilizado = totalTodos ? (utilizado/totalTodos*100) : 0;
+
+      const produtoFeitos = cfgItensResolvidosLista(p, CHECKLIST_PRODUTO.itens);
+      const produtoTotal = CHECKLIST_PRODUTO.itens.length;
+      const pctProduto = produtoTotal ? (produtoFeitos/produtoTotal*100) : 0;
+
+      return {cliente:p.cliente, pctResolvido, pctUtilizado, pctProduto};
+    }).sort((a,b)=> b.pctUtilizado - a.pctUtilizado);
+
+    $('cfgComparativoTable').innerHTML = `
+      <div class="kpi-bars">
+        ${linhas.map(l=> kpiBarRow(l.cliente+' — resolvido', l.pctResolvido, 100, cfgCorPct(l.pctResolvido), l.pctResolvido.toFixed(0)+'%')).join('')}
+      </div>
+      <div class="hint" style="margin:16px 0 8px;">Utilização real (% de recursos com status Concluído)</div>
+      <div class="kpi-bars">
+        ${linhas.map(l=> kpiBarRow(l.cliente+' — em uso', l.pctUtilizado, 100, 'var(--st-concluido)', l.pctUtilizado.toFixed(0)+'%')).join('')}
+      </div>
+      <div class="hint" style="margin:16px 0 8px;">Cadastro do Produto (SKUs)</div>
+      <div class="kpi-bars">
+        ${linhas.map(l=> kpiBarRow(l.cliente+' — produto', l.pctProduto, 100, 'var(--orange)', l.pctProduto.toFixed(0)+'%')).join('')}
+      </div>
+    `;
+  }
+
+  // ---------- Gerenciar Checklist (CRUD de etapas e itens) ----------
+  let cfgMgrAberto = {}; // { 'etapa-idx' ou 'produto': true/false }
+
+  $('btnCfgNovaEtapa').addEventListener('click', ()=>{
+    const nome = prompt('Nome da nova etapa:');
+    if(!nome || !nome.trim()) return;
+    CHECKLIST_ETAPAS.push({nome: nome.trim(), itens: []});
+    saveChecklistEtapas();
+    renderCfgGerenciar();
+    toast(`Etapa "${nome.trim()}" criada.`);
+  });
+
+  window.__cfgRenomearEtapa = function(idx){
+    const etapa = CHECKLIST_ETAPAS[idx];
+    const novoNome = prompt('Novo nome da etapa:', etapa.nome);
+    if(!novoNome || !novoNome.trim()) return;
+    etapa.nome = novoNome.trim();
+    saveChecklistEtapas();
+    renderCfgGerenciar();
+  };
+  window.__cfgExcluirEtapa = function(idx){
+    const etapa = CHECKLIST_ETAPAS[idx];
+    if(!confirm(`Excluir a etapa "${etapa.nome}" e seus ${etapa.itens.length} item(ns)? Isso não pode ser desfeito.`)) return;
+    CHECKLIST_ETAPAS.splice(idx,1);
+    saveChecklistEtapas();
+    renderCfgGerenciar();
+    toast('Etapa excluída.');
+  };
+  window.__cfgMoverEtapa = function(idx, direcao){
+    const alvo = direcao==='up' ? idx-1 : idx+1;
+    if(alvo<0 || alvo>=CHECKLIST_ETAPAS.length) return;
+    const tmp = CHECKLIST_ETAPAS[idx];
+    CHECKLIST_ETAPAS[idx] = CHECKLIST_ETAPAS[alvo];
+    CHECKLIST_ETAPAS[alvo] = tmp;
+    saveChecklistEtapas();
+    renderCfgGerenciar();
+  };
+  window.__cfgToggleMgrGrupo = function(key){
+    cfgMgrAberto[key] = !cfgMgrAberto[key];
+    renderCfgGerenciar();
+  };
+  window.__cfgRenomearProduto = function(){
+    const novoNome = prompt('Novo nome do bloco:', CHECKLIST_PRODUTO.nome);
+    if(!novoNome || !novoNome.trim()) return;
+    CHECKLIST_PRODUTO.nome = novoNome.trim();
+    saveChecklistProduto();
+    renderCfgGerenciar();
+  };
+
+  // contexto do item sendo editado no modal: {tipo:'etapa', etapaIdx} ou {tipo:'produto'}
+  let cfgItemEditContexto = null;
+  let cfgItemEditandoId = null;
+
+  function cfgListaAlvo(){
+    if(!cfgItemEditContexto) return null;
+    return cfgItemEditContexto.tipo === 'produto' ? CHECKLIST_PRODUTO.itens : CHECKLIST_ETAPAS[cfgItemEditContexto.etapaIdx].itens;
+  }
+
+  window.__cfgNovoItem = function(tipo, etapaIdx){
+    cfgItemEditContexto = tipo==='produto' ? {tipo:'produto'} : {tipo:'etapa', etapaIdx};
+    cfgItemEditandoId = null;
+    $('cfgItemModalTitle').textContent = 'Novo item';
+    $('cfgItemModalSub').textContent = tipo==='produto' ? CHECKLIST_PRODUTO.nome : CHECKLIST_ETAPAS[etapaIdx].nome;
+    $('cfgItemNome').value = '';
+    $('cfgItemSubgrupo').value = '';
+    $('cfgItemImportante').value = '';
+    $('cfgItemRotina').value = '';
+    $('cfgItemHelp').value = '';
+    $('cfgItemOverlay').classList.add('show');
+  };
+  window.__cfgEditarItem = function(tipo, etapaIdx, itemId){
+    cfgItemEditContexto = tipo==='produto' ? {tipo:'produto'} : {tipo:'etapa', etapaIdx};
+    cfgItemEditandoId = itemId;
+    const lista = cfgListaAlvo();
+    const item = lista.find(i=>i.id===itemId);
+    if(!item) return;
+    $('cfgItemModalTitle').textContent = 'Editar item';
+    $('cfgItemModalSub').textContent = tipo==='produto' ? CHECKLIST_PRODUTO.nome : CHECKLIST_ETAPAS[etapaIdx].nome;
+    $('cfgItemNome').value = item.nome || '';
+    $('cfgItemSubgrupo').value = item.subgrupo || '';
+    $('cfgItemImportante').value = item.importante || '';
+    $('cfgItemRotina').value = item.rotina || '';
+    $('cfgItemHelp').value = item.help || '';
+    $('cfgItemOverlay').classList.add('show');
+  };
+  window.__cfgExcluirItem = function(tipo, etapaIdx, itemId){
+    if(!confirm('Excluir este item do checklist? Isso não pode ser desfeito.')) return;
+    const lista = tipo==='produto' ? CHECKLIST_PRODUTO.itens : CHECKLIST_ETAPAS[etapaIdx].itens;
+    const idx = lista.findIndex(i=>i.id===itemId);
+    if(idx>-1) lista.splice(idx,1);
+    if(tipo==='produto') saveChecklistProduto(); else saveChecklistEtapas();
+    renderCfgGerenciar();
+    toast('Item excluído.');
+  };
+
+  $('btnCfgItemCancel').addEventListener('click', ()=>{
+    $('cfgItemOverlay').classList.remove('show');
+    cfgItemEditContexto = null;
+  });
+  $('cfgItemOverlay').addEventListener('click', (e)=>{ if(e.target.id==='cfgItemOverlay'){ $('cfgItemOverlay').classList.remove('show'); cfgItemEditContexto=null; } });
+
+  $('btnCfgItemSave').addEventListener('click', ()=>{
+    if(!cfgItemEditContexto) return;
+    const nome = $('cfgItemNome').value.trim();
+    if(!nome){ toast('Informe o nome do item.'); return; }
+    const dados = {
+      subgrupo: $('cfgItemSubgrupo').value.trim(),
+      nome,
+      importante: $('cfgItemImportante').value.trim(),
+      rotina: $('cfgItemRotina').value.trim(),
+      help: $('cfgItemHelp').value.trim()
+    };
+    const lista = cfgListaAlvo();
+    if(cfgItemEditandoId){
+      const item = lista.find(i=>i.id===cfgItemEditandoId);
+      Object.assign(item, dados);
+      toast('Item atualizado.');
+    } else {
+      lista.push({id: uid(), ...dados});
+      toast('Item adicionado.');
+    }
+    if(cfgItemEditContexto.tipo==='produto') saveChecklistProduto(); else saveChecklistEtapas();
+    $('cfgItemOverlay').classList.remove('show');
+    cfgItemEditContexto = null;
+    renderCfgGerenciar();
+  });
+
+  function cfgMgrItemRowHtml(tipo, etapaIdx, item, pos, total){
+    return `
+      <div class="cfg-mgr-item-row">
+        <div class="cfg-mgr-item-info">
+          <span class="cfg-mgr-item-nome">${escapeHtml(item.nome)}</span>
+          ${item.subgrupo ? `<span class="cfg-mgr-item-sub">${escapeHtml(item.subgrupo)}</span>` : ''}
+        </div>
+        <div class="row-actions">
+          <button class="icon-btn" title="Subir" ${pos===0?'disabled':''} onclick="window.__cfgMoverItem('${tipo}', ${etapaIdx}, '${item.id}', 'up')">▲</button>
+          <button class="icon-btn" title="Descer" ${pos===total-1?'disabled':''} onclick="window.__cfgMoverItem('${tipo}', ${etapaIdx}, '${item.id}', 'down')">▼</button>
+          <button class="icon-btn" title="Editar" onclick="window.__cfgEditarItem('${tipo}', ${etapaIdx}, '${item.id}')">✎</button>
+          <button class="icon-btn" title="Excluir" onclick="window.__cfgExcluirItem('${tipo}', ${etapaIdx}, '${item.id}')">🗑</button>
+        </div>
+      </div>`;
+  }
+
+  window.__cfgMoverItem = function(tipo, etapaIdx, itemId, direcao){
+    const lista = tipo==='produto' ? CHECKLIST_PRODUTO.itens : CHECKLIST_ETAPAS[etapaIdx].itens;
+    const idx = lista.findIndex(i=>i.id===itemId);
+    if(idx===-1) return;
+    const alvo = direcao==='up' ? idx-1 : idx+1;
+    if(alvo<0 || alvo>=lista.length) return;
+    const tmp = lista[idx];
+    lista[idx] = lista[alvo];
+    lista[alvo] = tmp;
+    if(tipo==='produto') saveChecklistProduto(); else saveChecklistEtapas();
+    renderCfgGerenciar();
+  };
+
+  function renderCfgGerenciar(){
+    let html = '';
+
+    // Bloco Cadastro do Produto
+    const abertoProduto = !!cfgMgrAberto['produto'];
+    html += `
+      <div class="cfg-mgr-etapa">
+        <div class="cfg-mgr-etapa-header">
+          <span class="cfg-etapa-arrow ${abertoProduto?'open':''}" onclick="window.__cfgToggleMgrGrupo('produto')" style="cursor:pointer;">▶</span>
+          <span class="cfg-mgr-etapa-nome" onclick="window.__cfgToggleMgrGrupo('produto')" style="cursor:pointer;">📦 ${escapeHtml(CHECKLIST_PRODUTO.nome)} <span style="font-weight:400;color:var(--muted);">(${CHECKLIST_PRODUTO.itens.length} itens)</span></span>
+          <div class="row-actions">
+            <button class="icon-btn" title="Renomear" onclick="window.__cfgRenomearProduto()">✎</button>
+          </div>
+        </div>
+        <div class="cfg-mgr-etapa-body ${abertoProduto?'open':''}">
+          ${CHECKLIST_PRODUTO.itens.map((it,i,arr)=>cfgMgrItemRowHtml('produto', -1, it, i, arr.length)).join('') || '<div class="fase-apont-empty">Nenhum item ainda.</div>'}
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="window.__cfgNovoItem('produto')">+ Novo item</button>
+        </div>
+      </div>`;
+
+    // Etapas numeradas
+    html += CHECKLIST_ETAPAS.map((etapa, idx)=>{
+      const aberto = !!cfgMgrAberto['etapa-'+idx];
+      return `
+      <div class="cfg-mgr-etapa">
+        <div class="cfg-mgr-etapa-header">
+          <span class="cfg-etapa-arrow ${aberto?'open':''}" onclick="window.__cfgToggleMgrGrupo('etapa-${idx}')" style="cursor:pointer;">▶</span>
+          <span class="cfg-mgr-etapa-nome" onclick="window.__cfgToggleMgrGrupo('etapa-${idx}')" style="cursor:pointer;"><span class="num">Etapa ${idx+1}</span>${escapeHtml(etapa.nome)} <span style="font-weight:400;color:var(--muted);">(${etapa.itens.length} itens)</span></span>
+          <div class="row-actions">
+            <button class="icon-btn" title="Subir" ${idx===0?'disabled':''} onclick="window.__cfgMoverEtapa(${idx},'up')">▲</button>
+            <button class="icon-btn" title="Descer" ${idx===CHECKLIST_ETAPAS.length-1?'disabled':''} onclick="window.__cfgMoverEtapa(${idx},'down')">▼</button>
+            <button class="icon-btn" title="Renomear" onclick="window.__cfgRenomearEtapa(${idx})">✎</button>
+            <button class="icon-btn" title="Excluir etapa" onclick="window.__cfgExcluirEtapa(${idx})">🗑</button>
+          </div>
+        </div>
+        <div class="cfg-mgr-etapa-body ${aberto?'open':''}">
+          ${etapa.itens.map((it,i,arr)=>cfgMgrItemRowHtml('etapa', idx, it, i, arr.length)).join('') || '<div class="fase-apont-empty">Nenhum item ainda.</div>'}
+          <button class="btn btn-ghost btn-sm" style="margin-top:10px;" onclick="window.__cfgNovoItem('etapa', ${idx})">+ Novo item</button>
+        </div>
+      </div>`;
+    }).join('');
+
+    $('cfgMgrContainer').innerHTML = html;
+  }
+
+
+
+  window.__setCfgStatus = function(projetoId, itemId, status){
     const projeto = projetos.find(p=>p.id===projetoId);
     if(!projeto) return;
     if(!projeto.configWMS) projeto.configWMS = {};
-    projeto.configWMS[itemId] = checked;
+    const atual = cfgItemInfo(projeto, itemId);
+    projeto.configWMS[itemId] = {status, observacao: atual.observacao};
     saveProjetos();
     renderConfigWMS();
+  };
+  window.__setCfgObs = function(projetoId, itemId, observacao){
+    const projeto = projetos.find(p=>p.id===projetoId);
+    if(!projeto) return;
+    if(!projeto.configWMS) projeto.configWMS = {};
+    const atual = cfgItemInfo(projeto, itemId);
+    projeto.configWMS[itemId] = {status: atual.status, observacao};
+    saveProjetos();
+    // não re-renderiza tudo (perderia o foco do campo); só atualiza os números de progresso
+    atualizarProgressoConfigWMS();
   };
   window.__toggleCfgEtapa = function(idx){
     cfgAberta[idx] = !cfgAberta[idx];
@@ -4239,58 +4766,102 @@ const CONFIG_WMS_PONTOS = [
       $('cfgProdutoBody').innerHTML = '';
       $('cfgProdutoFill').style.width = '0%';
       $('cfgProdutoPct').textContent = '';
+      $('cfgUtilizacaoChart').innerHTML = '<div class="kpi-empty">Crie um projeto primeiro.</div>';
       return;
     }
 
-    const totalGeral = cfgTotalItens();
-    const feitosGeral = cfgItensFeitos(projeto);
-    const pctGeral = totalGeral ? (feitosGeral/totalGeral*100) : 0;
-    const corGeral = cfgCorPct(pctGeral);
-
-    $('cfgOverallProgress').innerHTML = `
-      <div class="fase-progress-labels">
-        <span>${escapeHtml(projeto.cliente)}</span>
-        <span><b>${feitosGeral}</b> de <b>${totalGeral}</b> configurações concluídas</span>
-      </div>
-      <div class="fase-progress-track"><div class="fase-progress-fill" style="width:${pctGeral.toFixed(1)}%;background:${corGeral};"></div></div>
-      <div class="fase-progress-pct" style="color:${corGeral};">${pctGeral.toFixed(0)}% configurado</div>
-    `;
-
     // Bloco separado: Cadastro do Produto (dados mestres, fora da contagem geral de configuração)
-    const feitosProduto = cfgItensFeitosLista(projeto, CONFIG_WMS_PRODUTO.itens);
-    const totalProduto = CONFIG_WMS_PRODUTO.itens.length;
-    const pctProduto = totalProduto ? (feitosProduto/totalProduto*100) : 0;
-    const corProduto = cfgCorPct(pctProduto);
-    $('cfgProdutoFill').style.width = pctProduto.toFixed(1)+'%';
-    $('cfgProdutoFill').style.background = corProduto;
-    $('cfgProdutoPct').textContent = `${feitosProduto}/${totalProduto}`;
-    $('cfgProdutoPct').style.color = corProduto;
+    const totalProduto = CHECKLIST_PRODUTO.itens.length;
     document.querySelector('.cfg-produto-header').classList.toggle('open', cfgProdutoAberto);
     $('cfgProdutoBody').classList.toggle('open', cfgProdutoAberto);
-    $('cfgProdutoBody').innerHTML = cfgRenderItensHtml(projeto, CONFIG_WMS_PRODUTO.itens);
+    $('cfgProdutoBody').innerHTML = cfgRenderItensHtml(projeto, CHECKLIST_PRODUTO.itens);
 
-    $('cfgEtapasContainer').innerHTML = CONFIG_WMS_ETAPAS.map((etapa, idx)=>{
-      const feitos = cfgItensFeitosLista(projeto, etapa.itens);
-      const total = etapa.itens.length;
-      const pct = total ? (feitos/total*100) : 0;
-      const cor = cfgCorPct(pct);
+    $('cfgEtapasContainer').innerHTML = CHECKLIST_ETAPAS.map((etapa, idx)=>{
       const aberto = !!cfgAberta[idx];
       const itensHtml = cfgRenderItensHtml(projeto, etapa.itens);
-
       return `
         <div class="cfg-etapa-block">
           <div class="cfg-etapa-header ${aberto?'open':''}" onclick="window.__toggleCfgEtapa(${idx})">
             <span class="cfg-etapa-arrow">▶</span>
             <span class="cfg-etapa-titulo"><span class="num">Etapa ${idx+1}</span>${escapeHtml(etapa.nome)}</span>
-            <div class="cfg-etapa-track"><div class="cfg-etapa-fill" style="width:${pct.toFixed(1)}%;background:${cor};"></div></div>
-            <span class="cfg-etapa-pct" style="color:${cor};">${feitos}/${total}</span>
+            <div class="cfg-etapa-track"><div class="cfg-etapa-fill" id="cfgEtapaFill-${idx}"></div></div>
+            <span class="cfg-etapa-pct" id="cfgEtapaPct-${idx}"></span>
           </div>
           <div class="cfg-etapa-body ${aberto?'open':''}">${itensHtml}</div>
         </div>`;
     }).join('');
 
     $('cfgPontosAtencao').innerHTML = CONFIG_WMS_PONTOS.map(p=>`<li>${escapeHtml(p)}</li>`).join('');
+
+    atualizarProgressoConfigWMS();
   }
+
+  // Atualiza só os números/barras de progresso (sem recriar os campos), pra não perder o foco
+  // do campo de observação enquanto o usuário digita.
+  function atualizarProgressoConfigWMS(){
+    const projeto = projetos.find(p=>p.id===$('cfgProjSelect').value);
+    if(!projeto) return;
+
+    const totalGeral = cfgTotalItens();
+    const feitosGeral = cfgItensResolvidos(projeto);
+    const pctGeral = totalGeral ? (feitosGeral/totalGeral*100) : 0;
+    const corGeral = cfgCorPct(pctGeral);
+    $('cfgOverallProgress').innerHTML = `
+      <div class="fase-progress-labels">
+        <span>${escapeHtml(projeto.cliente)}</span>
+        <span><b>${feitosGeral}</b> de <b>${totalGeral}</b> configurações resolvidas (concluídas ou marcadas como não utilizadas)</span>
+      </div>
+      <div class="fase-progress-track"><div class="fase-progress-fill" style="width:${pctGeral.toFixed(1)}%;background:${corGeral};"></div></div>
+      <div class="fase-progress-pct" style="color:${corGeral};">${pctGeral.toFixed(0)}% resolvido</div>
+    `;
+
+    const feitosProduto = cfgItensResolvidosLista(projeto, CHECKLIST_PRODUTO.itens);
+    const totalProduto = CHECKLIST_PRODUTO.itens.length;
+    const pctProduto = totalProduto ? (feitosProduto/totalProduto*100) : 0;
+    const corProduto = cfgCorPct(pctProduto);
+    $('cfgProdutoFill').style.width = pctProduto.toFixed(1)+'%';
+    $('cfgProdutoFill').style.background = corProduto;
+    $('cfgProdutoPct').textContent = `${feitosProduto}/${totalProduto}`;
+    $('cfgProdutoPct').style.color = corProduto;
+
+    CHECKLIST_ETAPAS.forEach((etapa, idx)=>{
+      const feitos = cfgItensResolvidosLista(projeto, etapa.itens);
+      const total = etapa.itens.length;
+      const pct = total ? (feitos/total*100) : 0;
+      const cor = cfgCorPct(pct);
+      const fillEl = $(`cfgEtapaFill-${idx}`);
+      const pctEl = $(`cfgEtapaPct-${idx}`);
+      if(fillEl){ fillEl.style.width = pct.toFixed(1)+'%'; fillEl.style.background = cor; }
+      if(pctEl){ pctEl.textContent = `${feitos}/${total}`; pctEl.style.color = cor; }
+    });
+
+    // Gráfico: quanto o WMS é utilizado (todos os itens, todas as etapas + produto, agrupados por status)
+    const todosItens = CHECKLIST_ETAPAS.flatMap(e=>e.itens).concat(CHECKLIST_PRODUTO.itens);
+    const totalTodos = todosItens.length;
+    const contagem = {};
+    CFG_STATUS_OPCOES.forEach(op=> contagem[op] = 0);
+    todosItens.forEach(it=>{
+      const st = cfgItemInfo(projeto, it.id).status;
+      contagem[st] = (contagem[st]||0) + 1;
+    });
+    const utilizado = contagem['Concluído'];
+    const pctUtilizado = totalTodos ? (utilizado/totalTodos*100) : 0;
+
+    $('cfgUtilizacaoChart').innerHTML = `
+      <div class="fase-progress-labels" style="margin-bottom:10px;">
+        <span>Recursos do WMS realmente em uso (status <b>Concluído</b>)</span>
+        <span style="font-size:20px; font-weight:800; color:${cfgCorPct(pctUtilizado)};">${pctUtilizado.toFixed(0)}%</span>
+      </div>
+      ${CFG_STATUS_OPCOES.map(op=>{
+        const n = contagem[op];
+        const pct = totalTodos ? (n/totalTodos*100) : 0;
+        const cor = CFG_STATUS_COLORS[op].fg;
+        return kpiBarRow(op, n, totalTodos, cor, `${n} (${pct.toFixed(0)}%)`);
+      }).join('')}
+    `;
+  }
+
+  loadChecklist();
 
   loadProjetos();
 
