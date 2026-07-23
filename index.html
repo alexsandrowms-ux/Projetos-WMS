@@ -527,6 +527,39 @@
     line-height:1.7;
   }
 
+  .cfg-produto-block{
+    background:linear-gradient(180deg, #FFFBF5 0%, #FFF6EA 100%);
+    border:1.5px solid #F0D9B5;
+    border-radius:14px;
+    margin-bottom:20px;
+    overflow:hidden;
+    box-shadow:
+      0 1px 0 rgba(255,255,255,.7) inset,
+      0 1px 2px rgba(15,23,33,.04),
+      0 8px 18px -6px rgba(15,23,33,.12);
+  }
+  .cfg-produto-header{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px 20px;
+    cursor:pointer;
+    user-select:none;
+  }
+  .cfg-produto-icon{font-size:20px;}
+  .cfg-produto-titulo{
+    font-weight:800;
+    font-size:14.5px;
+    color:#8A5A00;
+    flex:1;
+  }
+  .cfg-produto-sub{
+    font-weight:400;
+    font-size:11.5px;
+    color:var(--muted);
+  }
+  .cfg-produto-header.open .cfg-etapa-arrow{transform:rotate(90deg);}
+
   /* ---------- TABS ---------- */
   .tabs{
     display:flex;
@@ -813,6 +846,31 @@
   .status-pill .dot{width:6px;height:6px;border-radius:50%;}
 
   .row-actions{display:flex; gap:6px;}
+  .prior-cell{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .prior-num{
+    font-weight:800;
+    font-size:12.5px;
+    color:var(--navy);
+    background:#F0F2F5;
+    border-radius:6px;
+    padding:3px 7px;
+    min-width:26px;
+    text-align:center;
+  }
+  .prior-num.prior-unica{color:var(--muted); background:transparent; padding:3px 0;}
+  .prior-arrows{display:flex; flex-direction:column; gap:2px;}
+  .icon-btn.prior-btn{
+    width:20px; height:16px;
+    padding:0;
+    font-size:9px;
+    line-height:16px;
+    border-radius:4px;
+  }
+  .icon-btn.prior-btn:disabled{opacity:.25; cursor:not-allowed;}
   .icon-btn{
     width:28px;height:28px;
     border-radius:7px;
@@ -1033,6 +1091,7 @@
     <table>
       <thead>
         <tr>
+          <th>Prior.</th>
           <th>Data</th>
           <th>Início</th>
           <th>Intervalo</th>
@@ -1140,6 +1199,17 @@
     <section class="kpi-block" id="cfgOverallBlock">
       <h2>Progresso geral da configuração</h2>
       <div class="fase-progress" id="cfgOverallProgress"></div>
+    </section>
+
+    <section class="cfg-produto-block">
+      <div class="cfg-produto-header" onclick="window.__toggleCfgProduto()">
+        <span class="cfg-produto-icon">📦</span>
+        <span class="cfg-produto-titulo">Cadastro do Produto (SKUs) <span class="cfg-produto-sub">— dados mestres, à parte das configurações do sistema</span></span>
+        <div class="cfg-etapa-track"><div class="cfg-etapa-fill" id="cfgProdutoFill"></div></div>
+        <span class="cfg-etapa-pct" id="cfgProdutoPct"></span>
+        <span class="cfg-etapa-arrow" id="cfgProdutoArrow">▶</span>
+      </div>
+      <div class="cfg-etapa-body" id="cfgProdutoBody"></div>
     </section>
 
     <div id="cfgEtapasContainer"></div>
@@ -1883,9 +1953,14 @@
   // ---------- Table ----------
   function renderTable(list){
     const sorted = [...list].sort((a,b)=>{
-      const da = dateToSortable(a.data)+a.horaIni.replace(':','');
-      const db = dateToSortable(b.data)+b.horaIni.replace(':','');
-      return da.localeCompare(db); // menor data primeiro
+      const dCompare = dateToSortable(a.data).localeCompare(dateToSortable(b.data));
+      if(dCompare !== 0) return dCompare;
+      const oa = (a.ordem !== undefined && a.ordem !== null) ? a.ordem : null;
+      const ob = (b.ordem !== undefined && b.ordem !== null) ? b.ordem : null;
+      if(oa !== null || ob !== null){
+        return (oa ?? 999999) - (ob ?? 999999);
+      }
+      return a.horaIni.localeCompare(b.horaIni); // menor hora primeiro, dentro do mesmo dia
     });
 
     $('emptyState').style.display = sorted.length ? 'none' : 'block';
@@ -1893,6 +1968,10 @@
     const hojeStr = fmtDateObj(new Date());
     const hojeSortable = dateToSortable(hojeStr);
     const ATIVOS = ['Agendado','Em Andamento'];
+
+    // posição de cada atividade dentro do seu próprio dia (pra numerar e habilitar ▲▼)
+    const porData = {};
+    sorted.forEach(a=>{ (porData[a.data] = porData[a.data] || []).push(a.id); });
 
     $('tbody').innerHTML = sorted.map(a=>{
       const c = STATUS_COLORS[a.status] || STATUS_COLORS['Agendado'];
@@ -1905,8 +1984,23 @@
       const isAtrasada = dataOk && dateToSortable(a.data) < hojeSortable && ATIVOS.includes(a.status);
       const rowClass = isHoje ? 'row-hoje' : (isAtrasada ? 'row-atrasada' : '');
 
+      const grupo = porData[a.data];
+      const pos = grupo.indexOf(a.id);
+      const podeSubir = pos > 0;
+      const podeDescer = pos < grupo.length - 1;
+      const temIrmaos = grupo.length > 1;
+
       return `
       <tr class="${rowClass}">
+        <td data-label="Prioridade">
+          <div class="prior-cell">
+            ${temIrmaos ? `<span class="prior-num">${pos+1}º</span>` : '<span class="prior-num prior-unica">—</span>'}
+            <div class="prior-arrows">
+              <button class="icon-btn prior-btn" data-move-up="${a.id}" title="Subir prioridade" ${!podeSubir?'disabled':''}>▲</button>
+              <button class="icon-btn prior-btn" data-move-down="${a.id}" title="Descer prioridade" ${!podeDescer?'disabled':''}>▼</button>
+            </div>
+          </div>
+        </td>
         <td data-label="Data">${a.data}${isHoje ? ' <span class="tag-hoje">HOJE</span>' : ''}${isAtrasada ? ' <span class="tag-atrasada">⚠ ATRASADA</span>' : ''}</td>
         <td data-label="Início">${a.horaIni}</td>
         <td data-label="Intervalo">${a.intervalo && a.intervalo !== '00:00' ? a.intervalo : '—'}</td>
@@ -1948,6 +2042,39 @@
     $('tbody').querySelectorAll('[data-del]').forEach(btn=>{
       btn.addEventListener('click', ()=> deleteItem(btn.dataset.del));
     });
+    $('tbody').querySelectorAll('[data-move-up]').forEach(btn=>{
+      btn.addEventListener('click', ()=> moverPrioridade(btn.dataset.moveUp, 'up'));
+    });
+    $('tbody').querySelectorAll('[data-move-down]').forEach(btn=>{
+      btn.addEventListener('click', ()=> moverPrioridade(btn.dataset.moveDown, 'down'));
+    });
+  }
+
+  // Troca a prioridade (ordem manual) entre uma atividade e a vizinha do mesmo dia
+  async function moverPrioridade(id, direcao){
+    const item = agendas.find(a=>a.id===id);
+    if(!item) return;
+
+    const mesmaData = agendas.filter(a=>a.data===item.data);
+    mesmaData.sort((a,b)=>{
+      const oa = (a.ordem !== undefined && a.ordem !== null) ? a.ordem : null;
+      const ob = (b.ordem !== undefined && b.ordem !== null) ? b.ordem : null;
+      if(oa !== null || ob !== null) return (oa ?? 999999) - (ob ?? 999999);
+      return a.horaIni.localeCompare(b.horaIni);
+    });
+    // normaliza a ordem de todos os itens desse dia com base na ordenação atual
+    mesmaData.forEach((a,idx)=> a.ordem = idx);
+
+    const idx = mesmaData.findIndex(a=>a.id===id);
+    const alvoIdx = direcao === 'up' ? idx - 1 : idx + 1;
+    if(alvoIdx < 0 || alvoIdx >= mesmaData.length) return;
+
+    const tmp = mesmaData[idx].ordem;
+    mesmaData[idx].ordem = mesmaData[alvoIdx].ordem;
+    mesmaData[alvoIdx].ordem = tmp;
+
+    await saveData();
+    render();
   }
 
   // ---------- Export CSV ----------
@@ -2649,142 +2776,58 @@ const CONFIG_WMS_ETAPAS = [
         "help": "https://ajuda.sankhya.com.br/hc/pt-br/articles/360045114893-Prefer%C3%AAncias-da-Empresa#abawms"
       }
     ]
-  }
-,
+  },
 {
-  "nome": "Cadastro do Produto, Locais e TOPs",
+  "nome": "Cadastro de Locais",
   "itens": [
     {
-      "id": "e8-referencia-do-produto",
-      "subgrupo": "Código de Barras",
-      "nome": "Referência do produto",
-      "importante": "Cadastro da referência do produto, usada como um dos códigos de identificação no WMS.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » Aba/Geral",
-      "help": ""
-    },
-    {
-      "id": "e8-unidade-alternativa",
-      "subgrupo": "Código de Barras",
-      "nome": "Unidade Alternativa",
-      "importante": "Cadastro de unidades alternativas de venda/movimentação do produto (ex.: caixa, fardo), cada uma com seu próprio código de barras.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » Aba/Unidade Alternativa",
-      "help": ""
-    },
-    {
-      "id": "e8-aba-codigo-de-barras-quando-necessario",
-      "subgrupo": "Código de Barras",
-      "nome": "Aba/Código de Barras (quando necessário)",
-      "importante": "Cadastro de códigos de barras adicionais do produto, quando a operação exigir mais de um código por item.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » Código de Barras",
-      "help": ""
-    },
-    {
-      "id": "e8-verificar-codigos-de-barras-duplicados",
-      "subgrupo": "Código de Barras",
-      "nome": "Verificar códigos de barras duplicados",
-      "importante": "Rotina de validação que aponta produtos com código de barras duplicado, evitando erro de leitura no coletor.",
-      "rotina": "WMS » Rotinas » Validação de Configurações do WMS",
-      "help": ""
-    },
-    {
-      "id": "e8-flag-controlado-pelo-wms-produto",
-      "subgrupo": "Medidas do Produto",
-      "nome": "Flag Controlado pelo WMS (produto)",
-      "importante": "Marca o produto para ter seu estoque controlado pelo WMS.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/Medidas e Estoque",
-      "help": ""
-    },
-    {
-      "id": "e8-peso-bruto-peso-liquido-altura-largura-e",
-      "subgrupo": "Medidas do Produto",
-      "nome": "Peso bruto, peso líquido, altura, largura e espessura/profundidade",
-      "importante": "Medidas físicas do produto, usadas pelos algoritmos de armazenagem para decidir em qual endereço o produto cabe.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/Medidas e Estoque",
-      "help": ""
-    },
-    {
-      "id": "e8-flag-recuperavel-de-avaria",
-      "subgrupo": "Aba/WMS do Produto",
-      "nome": "Flag Recuperável de Avaria",
-      "importante": "Indica se o produto avariado pode retornar ao estoque bom após tratativa.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
-      "help": ""
-    },
-    {
-      "id": "e8-usar-controle-adicional-no-wms",
-      "subgrupo": "Aba/WMS do Produto",
-      "nome": "Usar controle adicional no WMS",
-      "importante": "Usado quando o produto já é controlado por lote/série no ERP e precisa de um controle adicional específico do WMS.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
-      "help": ""
-    },
-    {
-      "id": "e8-fragmenta-lote-no-envio-para-separacao",
-      "subgrupo": "Aba/WMS do Produto",
-      "nome": "Fragmenta lote no envio para separação",
-      "importante": "Válido apenas para produtos controlados por lote — permite fragmentar o lote no momento de gerar a tarefa de separação.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
-      "help": ""
-    },
-    {
-      "id": "e8-shelf-life-e-shelf-life-minimo",
-      "subgrupo": "Aba/WMS do Produto",
-      "nome": "Shelf Life e Shelf Life Mínimo",
-      "importante": "Configuração de validade do produto, usada quando o controle de armazenagem/separação é por FEFO.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
-      "help": ""
-    },
-    {
-      "id": "e8-dias-para-expedicao-shelf-life",
-      "subgrupo": "Aba/WMS do Produto",
-      "nome": "Dias para expedição (Shelf Life)",
-      "importante": "Quantidade mínima de dias de validade restante exigida para o produto poder ser expedido.",
-      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
-      "help": ""
-    },
-    {
-      "id": "e8-flag-controlado-pelo-wms-local",
-      "subgrupo": "Cadastro de Locais",
+      "id": "e8b-flag-controlado-pelo-wms-local",
+      "subgrupo": "",
       "nome": "Flag Controlado pelo WMS (Local)",
       "importante": "Define quais Locais (filiais/depósitos) do ERP terão seu estoque controlado pelo WMS.",
       "rotina": "Comercial » Arquivo » Cadastros » Locais",
       "help": ""
-    },
+    }
+  ]
+},
+{
+  "nome": "Tipo de Operação (TOP)",
+  "itens": [
     {
-      "id": "e8-top-de-compra",
-      "subgrupo": "Tipo de Operação (TOP)",
+      "id": "e8c-top-de-compra",
+      "subgrupo": "",
       "nome": "TOP de Compra",
       "importante": "Configuração da aba WMS do Tipo de Operação usado em entradas de compra.",
       "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
       "help": ""
     },
     {
-      "id": "e8-top-de-transferencia",
-      "subgrupo": "Tipo de Operação (TOP)",
+      "id": "e8c-top-de-transferencia",
+      "subgrupo": "",
       "nome": "TOP de Transferência",
       "importante": "Configuração da aba WMS do Tipo de Operação usado em transferências entre locais/empresas.",
       "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
       "help": ""
     },
     {
-      "id": "e8-top-de-requisicao",
-      "subgrupo": "Tipo de Operação (TOP)",
+      "id": "e8c-top-de-requisicao",
+      "subgrupo": "",
       "nome": "TOP de Requisição",
       "importante": "Configuração da aba WMS do Tipo de Operação usado em requisições internas.",
       "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
       "help": ""
     },
     {
-      "id": "e8-top-de-pedido-de-venda",
-      "subgrupo": "Tipo de Operação (TOP)",
+      "id": "e8c-top-de-pedido-de-venda",
+      "subgrupo": "",
       "nome": "TOP de Pedido de Venda",
       "importante": "Configuração da aba WMS do Tipo de Operação usado em pedidos de venda que geram separação.",
       "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
       "help": ""
     },
     {
-      "id": "e8-top-de-devolucao-de-venda",
-      "subgrupo": "Tipo de Operação (TOP)",
+      "id": "e8c-top-de-devolucao-de-venda",
+      "subgrupo": "",
       "nome": "TOP de Devolução de Venda",
       "importante": "Configuração da aba WMS do Tipo de Operação usado em devoluções de venda, que seguem regra de armazenagem específica (WMSREGRARMDEV).",
       "rotina": "Comercial » Arquivo » Cadastros » Tipos de Operação - TOP » Aba/WMS",
@@ -3331,6 +3374,100 @@ const CONFIG_WMS_PONTOS = [
   "Endereço de Checkout Indefinido não pode estar marcado como \"Exclusivo p/conferência\" nem \"Permite Expedição\".",
   "Endereços de Picking devem ter o estoque mínimo e máximo configurados, para que o WMS tenha o ponto de partida da quantidade a ser reabastecida."
 ];
+  const CONFIG_WMS_PRODUTO = {
+  "nome": "Cadastro do Produto (SKUs)",
+  "itens": [
+    {
+      "id": "e8-referencia-do-produto",
+      "subgrupo": "Código de Barras",
+      "nome": "Referência do produto",
+      "importante": "Cadastro da referência do produto, usada como um dos códigos de identificação no WMS.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » Aba/Geral",
+      "help": ""
+    },
+    {
+      "id": "e8-unidade-alternativa",
+      "subgrupo": "Código de Barras",
+      "nome": "Unidade Alternativa",
+      "importante": "Cadastro de unidades alternativas de venda/movimentação do produto (ex.: caixa, fardo), cada uma com seu próprio código de barras.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » Aba/Unidade Alternativa",
+      "help": ""
+    },
+    {
+      "id": "e8-aba-codigo-de-barras-quando-necessario",
+      "subgrupo": "Código de Barras",
+      "nome": "Aba/Código de Barras (quando necessário)",
+      "importante": "Cadastro de códigos de barras adicionais do produto, quando a operação exigir mais de um código por item.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » Código de Barras",
+      "help": ""
+    },
+    {
+      "id": "e8-verificar-codigos-de-barras-duplicados",
+      "subgrupo": "Código de Barras",
+      "nome": "Verificar códigos de barras duplicados",
+      "importante": "Rotina de validação que aponta produtos com código de barras duplicado, evitando erro de leitura no coletor.",
+      "rotina": "WMS » Rotinas » Validação de Configurações do WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-flag-controlado-pelo-wms-produto",
+      "subgrupo": "Medidas do Produto",
+      "nome": "Flag Controlado pelo WMS (produto)",
+      "importante": "Marca o produto para ter seu estoque controlado pelo WMS.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/Medidas e Estoque",
+      "help": ""
+    },
+    {
+      "id": "e8-peso-bruto-peso-liquido-altura-largura-e",
+      "subgrupo": "Medidas do Produto",
+      "nome": "Peso bruto, peso líquido, altura, largura e espessura/profundidade",
+      "importante": "Medidas físicas do produto, usadas pelos algoritmos de armazenagem para decidir em qual endereço o produto cabe.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/Medidas e Estoque",
+      "help": ""
+    },
+    {
+      "id": "e8-flag-recuperavel-de-avaria",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Flag Recuperável de Avaria",
+      "importante": "Indica se o produto avariado pode retornar ao estoque bom após tratativa.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-usar-controle-adicional-no-wms",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Usar controle adicional no WMS",
+      "importante": "Usado quando o produto já é controlado por lote/série no ERP e precisa de um controle adicional específico do WMS.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-fragmenta-lote-no-envio-para-separacao",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Fragmenta lote no envio para separação",
+      "importante": "Válido apenas para produtos controlados por lote — permite fragmentar o lote no momento de gerar a tarefa de separação.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-shelf-life-e-shelf-life-minimo",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Shelf Life e Shelf Life Mínimo",
+      "importante": "Configuração de validade do produto, usada quando o controle de armazenagem/separação é por FEFO.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    },
+    {
+      "id": "e8-dias-para-expedicao-shelf-life",
+      "subgrupo": "Aba/WMS do Produto",
+      "nome": "Dias para expedição (Shelf Life)",
+      "importante": "Quantidade mínima de dias de validade restante exigida para o produto poder ser expedido.",
+      "rotina": "Configurações » Cadastros » Produtos » Produtos » aba/WMS",
+      "help": ""
+    }
+  ]
+};
+
 
   const FASES_NOMES = [
     'Levantamento de Processo',
@@ -4020,6 +4157,7 @@ const CONFIG_WMS_PONTOS = [
   // ---------- CONFIG WMS (checklist de configuração por projeto) ----------
   // =====================================================================
   let cfgAberta = {}; // { etapaIndex: true/false } — estado do acordeão nesta sessão
+  let cfgProdutoAberto = false;
 
   function cfgTotalItens(){
     return CONFIG_WMS_ETAPAS.reduce((s,e)=>s+e.itens.length, 0);
@@ -4032,15 +4170,37 @@ const CONFIG_WMS_PONTOS = [
     }));
     return count;
   }
-  function cfgItensFeitosEtapa(projeto, etapa){
+  function cfgItensFeitosLista(projeto, itens){
     if(!projeto || !projeto.configWMS) return 0;
-    return etapa.itens.filter(it=>projeto.configWMS[it.id]).length;
+    return itens.filter(it=>projeto.configWMS[it.id]).length;
   }
   function cfgCorPct(pct){
     if(pct >= 100) return 'var(--st-concluido)';
     if(pct >= 50) return 'var(--st-andamento)';
     if(pct > 0) return 'var(--st-agendado)';
     return 'var(--muted)';
+  }
+  function cfgRenderItensHtml(projeto, itens){
+    let ultimoSubgrupo = null;
+    return itens.map(it=>{
+      const done = !!(projeto.configWMS && projeto.configWMS[it.id]);
+      let subHtml = '';
+      if(it.subgrupo && it.subgrupo !== ultimoSubgrupo){
+        ultimoSubgrupo = it.subgrupo;
+        subHtml = `<div class="cfg-subgrupo">${escapeHtml(it.subgrupo)}</div>`;
+      }
+      const helpHtml = it.help ? `<a href="${it.help}" target="_blank" rel="noopener" class="cfg-item-help">🔗 Ajuda</a>` : '';
+      const rotinaHtml = it.rotina ? `<span class="cfg-item-rotina">🧭 ${escapeHtml(it.rotina)}</span>` : '';
+      return `${subHtml}
+        <div class="cfg-item ${done?'done':''}">
+          <input type="checkbox" ${done?'checked':''} onchange="window.__toggleCfgItem('${projeto.id}','${it.id}', this.checked)">
+          <div class="cfg-item-body">
+            <div class="cfg-item-nome" onclick="const cb=this.parentElement.previousElementSibling; cb.checked=!cb.checked; cb.dispatchEvent(new Event('change'));">${escapeHtml(it.nome)}</div>
+            <div class="cfg-item-importante">${escapeHtml(it.importante)}</div>
+            <div class="cfg-item-meta">${rotinaHtml}${helpHtml}</div>
+          </div>
+        </div>`;
+    }).join('');
   }
 
   $('cfgProjSelect').addEventListener('change', renderConfigWMS);
@@ -4055,6 +4215,10 @@ const CONFIG_WMS_PONTOS = [
   };
   window.__toggleCfgEtapa = function(idx){
     cfgAberta[idx] = !cfgAberta[idx];
+    renderConfigWMS();
+  };
+  window.__toggleCfgProduto = function(){
+    cfgProdutoAberto = !cfgProdutoAberto;
     renderConfigWMS();
   };
 
@@ -4072,6 +4236,9 @@ const CONFIG_WMS_PONTOS = [
       $('cfgOverallProgress').innerHTML = '<div class="kpi-empty">Crie um projeto na aba 🏗️ Projetos primeiro.</div>';
       $('cfgEtapasContainer').innerHTML = '';
       $('cfgPontosAtencao').innerHTML = '';
+      $('cfgProdutoBody').innerHTML = '';
+      $('cfgProdutoFill').style.width = '0%';
+      $('cfgProdutoPct').textContent = '';
       return;
     }
 
@@ -4089,33 +4256,26 @@ const CONFIG_WMS_PONTOS = [
       <div class="fase-progress-pct" style="color:${corGeral};">${pctGeral.toFixed(0)}% configurado</div>
     `;
 
+    // Bloco separado: Cadastro do Produto (dados mestres, fora da contagem geral de configuração)
+    const feitosProduto = cfgItensFeitosLista(projeto, CONFIG_WMS_PRODUTO.itens);
+    const totalProduto = CONFIG_WMS_PRODUTO.itens.length;
+    const pctProduto = totalProduto ? (feitosProduto/totalProduto*100) : 0;
+    const corProduto = cfgCorPct(pctProduto);
+    $('cfgProdutoFill').style.width = pctProduto.toFixed(1)+'%';
+    $('cfgProdutoFill').style.background = corProduto;
+    $('cfgProdutoPct').textContent = `${feitosProduto}/${totalProduto}`;
+    $('cfgProdutoPct').style.color = corProduto;
+    document.querySelector('.cfg-produto-header').classList.toggle('open', cfgProdutoAberto);
+    $('cfgProdutoBody').classList.toggle('open', cfgProdutoAberto);
+    $('cfgProdutoBody').innerHTML = cfgRenderItensHtml(projeto, CONFIG_WMS_PRODUTO.itens);
+
     $('cfgEtapasContainer').innerHTML = CONFIG_WMS_ETAPAS.map((etapa, idx)=>{
-      const feitos = cfgItensFeitosEtapa(projeto, etapa);
+      const feitos = cfgItensFeitosLista(projeto, etapa.itens);
       const total = etapa.itens.length;
       const pct = total ? (feitos/total*100) : 0;
       const cor = cfgCorPct(pct);
       const aberto = !!cfgAberta[idx];
-
-      let ultimoSubgrupo = null;
-      const itensHtml = etapa.itens.map(it=>{
-        const done = !!(projeto.configWMS && projeto.configWMS[it.id]);
-        let subHtml = '';
-        if(it.subgrupo && it.subgrupo !== ultimoSubgrupo){
-          ultimoSubgrupo = it.subgrupo;
-          subHtml = `<div class="cfg-subgrupo">${escapeHtml(it.subgrupo)}</div>`;
-        }
-        const helpHtml = it.help ? `<a href="${it.help}" target="_blank" rel="noopener" class="cfg-item-help">🔗 Ajuda</a>` : '';
-        const rotinaHtml = it.rotina ? `<span class="cfg-item-rotina">🧭 ${escapeHtml(it.rotina)}</span>` : '';
-        return `${subHtml}
-          <div class="cfg-item ${done?'done':''}">
-            <input type="checkbox" ${done?'checked':''} onchange="window.__toggleCfgItem('${projeto.id}','${it.id}', this.checked)">
-            <div class="cfg-item-body">
-              <div class="cfg-item-nome" onclick="const cb=this.parentElement.previousElementSibling; cb.checked=!cb.checked; cb.dispatchEvent(new Event('change'));">${escapeHtml(it.nome)}</div>
-              <div class="cfg-item-importante">${escapeHtml(it.importante)}</div>
-              <div class="cfg-item-meta">${rotinaHtml}${helpHtml}</div>
-            </div>
-          </div>`;
-      }).join('');
+      const itensHtml = cfgRenderItensHtml(projeto, etapa.itens);
 
       return `
         <div class="cfg-etapa-block">
