@@ -2105,8 +2105,8 @@
           const c = STATUS_COLORS[domStatus] || STATUS_COLORS['Agendado'];
           const totalHoras = entries.reduce((s,e)=>s+parseHoras(e.horas),0);
           const tip = entries.map(e=>`${e.horaIni}–${e.horaFim} (${e.status})`).join(' | ');
-          const title = `${escapeHtml(cliente)} · ${dStr} · ${totalHoras.toFixed(2).replace('.',',')}h — ${escapeHtml(tip)}`;
-          html += `<div class="g-cell g-bar-wrap"><div class="g-bar" style="background:${c.fg};" title="${title}"></div></div>`;
+          const title = `${escapeHtml(cliente)} · ${dStr} · ${totalHoras.toFixed(2).replace('.',',')}h — ${escapeHtml(tip)} — clique para excluir`;
+          html += `<div class="g-cell g-bar-wrap"><div class="g-bar" style="background:${c.fg};" title="${title}" onclick="window.__excluirDoGantt('${escapeHtml(cliente).replace(/'/g,"\\'")}','${dStr}')"></div></div>`;
         } else {
           html += `<div class="g-cell g-bar-wrap"></div>`;
         }
@@ -2120,6 +2120,29 @@
       return `<span><span class="sw" style="background:${c.fg};"></span>${s}</span>`;
     }).join('');
   }
+
+  // Exclui direto pelo Gantt: clique num bloco colorido apaga a(s) atividade(s) daquele cliente/dia
+  window.__excluirDoGantt = async function(cliente, dataStr){
+    const entradas = agendas.filter(a=>a.cliente===cliente && a.data===dataStr);
+    if(!entradas.length) return;
+
+    let msg;
+    if(entradas.length === 1){
+      const a = entradas[0];
+      msg = `Excluir esta atividade?\n\n${cliente} — ${dataStr}\n${a.horaIni}–${a.horaFim} · ${a.status} · ${a.horas}h`;
+    } else {
+      const linhas = entradas.map(a=>`• ${a.horaIni}–${a.horaFim} · ${a.status} · ${a.horas}h`).join('\n');
+      msg = `Existem ${entradas.length} atividades de "${cliente}" em ${dataStr}. Excluir TODAS elas?\n\n${linhas}\n\nPara excluir só uma, use a tabela abaixo com filtro por cliente/data.`;
+    }
+    if(!confirm(msg)) return;
+
+    entradas.forEach(desvincularDoProjeto);
+    const idsRemover = new Set(entradas.map(a=>a.id));
+    agendas = agendas.filter(a=>!idsRemover.has(a.id));
+    await saveData();
+    render();
+    toast(`${entradas.length} atividade(s) excluída(s).`);
+  };
 
   // ---------- Table ----------
   function renderTable(list){
