@@ -751,6 +751,49 @@
     font-weight:600;
   }
 
+  .kpi-compare{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:28px;
+    flex-wrap:wrap;
+    padding:6px 0;
+  }
+  .kpi-compare-col{
+    text-align:center;
+  }
+  .kpi-compare-val{
+    font-family:'Montserrat',sans-serif;
+    font-size:28px;
+    font-weight:800;
+    color:var(--navy);
+    line-height:1.1;
+  }
+  .kpi-compare-lbl{
+    font-size:12px;
+    color:var(--muted);
+    margin-top:4px;
+    font-weight:600;
+  }
+  .kpi-compare-arrow{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+  }
+  .kpi-compare-arrow .arrow-icon{font-size:26px; line-height:1;}
+  .kpi-compare-pct{
+    font-family:'Montserrat',sans-serif;
+    font-size:15px;
+    font-weight:800;
+  }
+  .kpi-compare-sub{
+    font-size:10.5px;
+    color:var(--muted);
+    text-align:center;
+    margin-top:2px;
+  }
+
   /* ---------- TOOLBAR ---------- */
   .toolbar{
     display:flex;
@@ -1198,6 +1241,11 @@
     <section class="kpi-block">
       <h2>Horas por mês</h2>
       <div id="kpiMesChart" class="kpi-month-chart"></div>
+    </section>
+
+    <section class="kpi-block">
+      <h2>📈 Comparação entre meses</h2>
+      <div id="kpiComparacaoMeses" class="kpi-compare"></div>
     </section>
   </div>
 
@@ -2487,6 +2535,46 @@
             </div>`;
         }).join('')
       : '<div class="kpi-empty">Nenhuma atividade no período selecionado.</div>';
+
+    // Comparação entre meses (os dois meses mais recentes que têm dados)
+    if(mesesOrdenados.length < 2){
+      $('kpiComparacaoMeses').innerHTML = '<div class="kpi-empty">Precisa de pelo menos 2 meses com atividades para comparar.</div>';
+    } else {
+      const keyAtual = mesesOrdenados[mesesOrdenados.length-1];
+      const keyAnterior = mesesOrdenados[mesesOrdenados.length-2];
+      const horasAtual = porMes[keyAtual];
+      const horasAnterior = porMes[keyAnterior];
+      const [aaaaA, mmA] = keyAtual.split('-');
+      const [aaaaP, mmP] = keyAnterior.split('-');
+      const lblAtual = MONTHS_PT[parseInt(mmA,10)-1] + '/' + aaaaA.slice(2);
+      const lblAnterior = MONTHS_PT[parseInt(mmP,10)-1] + '/' + aaaaP.slice(2);
+
+      let deltaPct = 0, subiu = null;
+      if(horasAnterior > 0){
+        deltaPct = ((horasAtual - horasAnterior) / horasAnterior) * 100;
+        subiu = deltaPct > 0.05 ? true : (deltaPct < -0.05 ? false : null);
+      } else if(horasAtual > 0){
+        subiu = true; deltaPct = 100;
+      }
+      const cor = subiu === true ? 'var(--st-concluido)' : (subiu === false ? 'var(--st-cancelado)' : 'var(--muted)');
+      const seta = subiu === true ? '▲' : (subiu === false ? '▼' : '—');
+
+      $('kpiComparacaoMeses').innerHTML = `
+        <div class="kpi-compare-col">
+          <div class="kpi-compare-val">${fmtHorasHM(horasAnterior)}</div>
+          <div class="kpi-compare-lbl">${lblAnterior}</div>
+        </div>
+        <div class="kpi-compare-arrow">
+          <span class="arrow-icon" style="color:${cor};">${seta}</span>
+          <span class="kpi-compare-pct" style="color:${cor};">${Math.abs(deltaPct).toFixed(0)}%</span>
+          <span class="kpi-compare-sub">${subiu===true?'a mais':subiu===false?'a menos':'sem variação'}</span>
+        </div>
+        <div class="kpi-compare-col">
+          <div class="kpi-compare-val" style="color:var(--orange);">${fmtHorasHM(horasAtual)}</div>
+          <div class="kpi-compare-lbl">${lblAtual}</div>
+        </div>
+      `;
+    }
   }
 
   // ---------- Render orchestration ----------
@@ -3778,26 +3866,43 @@ const CONFIG_WMS_PONTOS = [
     toast(`Projeto "${cliente.trim()}" criado com as 8 fases padrão.`);
   });
 
-  $('btnExcluirProjeto').addEventListener('click', ()=>{
+  $('btnExcluirProjeto').addEventListener('click', async ()=>{
     const id = $('projSelect').value;
     const projeto = projetos.find(p=>p.id===id);
     if(!projeto){ toast('Selecione um projeto para excluir.'); return; }
-    if(!confirm(`Excluir o projeto "${projeto.cliente}" e todas as suas fases? As atividades já geradas na agenda NÃO serão apagadas automaticamente.`)) return;
+    const clienteAlvo = projeto.cliente.trim().toLowerCase();
+    const vinculadas = agendas.filter(a=> a.projetoId===id || (a.cliente||'').trim().toLowerCase()===clienteAlvo);
+    if(!confirm(`Excluir o projeto "${projeto.cliente}", todas as suas fases E as ${vinculadas.length} atividade(s) na agenda desse cliente (vinculadas ao projeto ou não)? Essa ação não pode ser desfeita.`)) return;
     projetos = projetos.filter(p=>p.id!==id);
     saveProjetos();
+    if(vinculadas.length){
+      const idsRemover = new Set(vinculadas.map(a=>a.id));
+      agendas = agendas.filter(a=>!idsRemover.has(a.id));
+      await saveData();
+      render();
+    }
     renderProjetos();
-    toast('Projeto excluído.');
+    toast(`Projeto excluído junto com ${vinculadas.length} atividade(s) da agenda.`);
   });
 
   $('btnExcluirTodosProjetos').addEventListener('click', async ()=>{
     if(!projetos.length){ toast('Não há projetos cadastrados.'); return; }
     const total = projetos.length;
-    const digitado = prompt(`Isso vai excluir TODOS os ${total} projeto(s) e o planejamento de todas as fases (datas planejadas). As atividades já geradas na agenda NÃO serão apagadas automaticamente — use "Excluir TODAS" na aba Agenda se quiser limpar isso também.\n\nDigite EXCLUIR para confirmar:`);
+    const idsProjetos = new Set(projetos.map(p=>p.id));
+    const clientesAlvo = new Set(projetos.map(p=>p.cliente.trim().toLowerCase()));
+    const vinculadas = agendas.filter(a=> idsProjetos.has(a.projetoId) || clientesAlvo.has((a.cliente||'').trim().toLowerCase()));
+    const digitado = prompt(`Isso vai excluir TODOS os ${total} projeto(s), o planejamento de todas as fases E as ${vinculadas.length} atividade(s) na agenda desses clientes (vinculadas ou não). Essa ação não pode ser desfeita.\n\nDigite EXCLUIR para confirmar:`);
     if(digitado !== 'EXCLUIR'){ toast('Exclusão cancelada.'); return; }
     projetos = [];
     await saveProjetos();
+    if(vinculadas.length){
+      const idsRemover = new Set(vinculadas.map(a=>a.id));
+      agendas = agendas.filter(a=>!idsRemover.has(a.id));
+      await saveData();
+      render();
+    }
     renderProjetos();
-    toast(`Todos os ${total} projeto(s) e seus planejamentos foram excluídos.`);
+    toast(`Todos os ${total} projeto(s) e ${vinculadas.length} atividade(s) foram excluídos.`);
   });
 
   $('projSelect').addEventListener('change', ()=> renderProjetos($('projSelect').value));
