@@ -888,6 +888,11 @@
     border-left:3px solid var(--st-agendado);
   }
   tr.row-atrasada:hover td{ background-color:#FFF0BE !important; }
+  .dia-semana{
+    font-size:11px;
+    font-weight:600;
+    color:var(--muted);
+  }
   .tag-hoje{
     display:inline-block;
     font-size:9.5px;
@@ -1802,6 +1807,11 @@
     const [dd,mm,aaaa] = d.split('/').map(Number);
     return new Date(aaaa, mm-1, dd);
   }
+  const DIAS_SEMANA_PT = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  function diaDaSemana(dataStr){
+    if(!isValidDate(dataStr)) return '';
+    return DIAS_SEMANA_PT[toDateObj(dataStr).getDay()];
+  }
   function fmtDateObj(d){
     const dd = String(d.getDate()).padStart(2,'0');
     const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -2195,7 +2205,7 @@
             </div>
           </div>
         </td>
-        <td data-label="Data">${a.data}${isHoje ? ' <span class="tag-hoje">HOJE</span>' : ''}${isAtrasada ? ' <span class="tag-atrasada">⚠ ATRASADA</span>' : ''}</td>
+        <td data-label="Data">${a.data} <span class="dia-semana">${diaDaSemana(a.data)}</span>${isHoje ? ' <span class="tag-hoje">HOJE</span>' : ''}${isAtrasada ? ' <span class="tag-atrasada">⚠ ATRASADA</span>' : ''}</td>
         <td data-label="Início">${a.horaIni}</td>
         <td data-label="Intervalo">${a.intervalo && a.intervalo !== '00:00' ? a.intervalo : '—'}</td>
         <td data-label="Fim">${a.horaFim}</td>
